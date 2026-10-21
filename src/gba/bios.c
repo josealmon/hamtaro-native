@@ -1,5 +1,25 @@
 #include "gba/bios.h"
 #include <limits.h>
+#include <math.h>
+void hn_bios_obj_matrix(int16_t x,int16_t y,uint16_t angle,int16_t out[4])
+{
+    float radians=(float)(((angle>>8)/128.0f)*3.14159265358979323846);
+    float sine=sinf(radians),cosine=cosf(radians),sx=x/256.0f,sy=y/256.0f;
+    out[0]=(int16_t)(int32_t)((cosine*sx)*256.0f);
+    out[1]=(int16_t)(int32_t)((-sine*sx)*256.0f);
+    out[2]=(int16_t)(int32_t)((sine*sy)*256.0f);
+    out[3]=(int16_t)(int32_t)((cosine*sy)*256.0f);
+}
+bool hn_bios_obj_affine(HNMemory *m,GameAddr source,GameAddr destination,uint32_t count,uint32_t stride)
+{
+    if(count>1024||stride>0x1000)return false;
+    for(unsigned i=0;i<count&&!m->fault;i++){
+        int16_t matrix[4];hn_bios_obj_matrix((int16_t)hn_read16(m,source),(int16_t)hn_read16(m,source+2),hn_read16(m,source+4),matrix);
+        for(unsigned j=0;j<4;j++)hn_write16(m,destination+j*stride,(uint16_t)matrix[j]);
+        source+=8;destination+=stride*4;
+    }
+    return !m->fault;
+}
 static bool copy_units(HNMemory *m, GameAddr src, GameAddr dst, uint32_t count, unsigned width, bool fill)
 {
     src &= ~(width-1); dst &= ~(width-1);

@@ -16,6 +16,7 @@ void hn_render_priority_init(HNMemory *);
 int32_t hn_render_key(HNMemory *,uint32_t index);
 void hn_background_state_init(HNMemory *);
 void hn_background_layers_reset(HNMemory *,uint8_t mask);
+void hn_background_offset(HNMemory *,uint8_t layer,int32_t x,int32_t y,uint32_t *out_x,uint32_t *out_y);
 bool hn_map_initialize(HNMemory *,uint8_t bank,uint8_t index);
 #ifdef __cplusplus
 }

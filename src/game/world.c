@@ -169,3 +169,20 @@ bool hn_map_initialize(HNMemory *m,uint8_t bank,uint8_t index)
     if(hn_read8(m,descriptor+15))hn_write8(m,0x03002C00,hn_read8(m,descriptor+15));
     return !m->fault;
 }
+void hn_background_offset(HNMemory *m,uint8_t layer,int32_t x_input,int32_t y_input,uint32_t *out_x,uint32_t *out_y)
+{
+    GameAddr p=HN_LAYER_OFFSETS+layer*44,bounds=HN_BACKGROUND_BOUNDS+layer*12;
+    unsigned x=((0u-((uint32_t)(uint16_t)x_input<<16))+0x8000u)>>16;
+    unsigned y=(0x8000u-((uint32_t)(uint16_t)y_input<<16))>>16;
+    if(hn_read8(m,bounds+8)&1){
+        int left=(int16_t)hn_read16(m,bounds),right=(int16_t)hn_read16(m,bounds+2);
+        int top=(int16_t)hn_read16(m,bounds+4),bottom=(int16_t)hn_read16(m,bounds+6);
+        if((int16_t)x>=-left)x=(uint16_t)-left;
+        else if((int16_t)x<=240-right)x=(uint16_t)(240-right);
+        if((int16_t)y>=-top)y=(uint16_t)-top;
+        else if((int16_t)y<=160-bottom)y=(uint16_t)(160-bottom);
+    }
+    hn_write32(m,p,((uint32_t)x<<16)+0x8000);hn_write32(m,p+4,((uint32_t)y<<16)|0x8000);
+    *out_x=(0u-((uint32_t)x<<16))-hn_read32(m,p+0x10);
+    *out_y=(0u-((uint32_t)y<<16))-hn_read32(m,p+0x14);
+}

@@ -9,12 +9,30 @@ void hn_transfer_reset(HNMemory *m)
     hn_write8(m,HN_CPU_TRANSFER_READ,0);hn_write8(m,HN_CPU_TRANSFER_WRITE,0);
     hn_write32(m,HN_TRANSFER_AUX_INDEX,0);
 }
-void hn_transfer_queue(HNMemory *m,GameAddr source,GameAddr destination,uint32_t bytes)
+static void enqueue(HNMemory *m,GameAddr source,GameAddr destination,uint32_t bytes)
 {
-    if(!bytes)return;
     unsigned index=hn_read8(m,HN_TRANSFER_WRITE);GameAddr record=HN_TRANSFER_A+index*4;
     hn_write32(m,record,source);hn_write32(m,record+4,destination);hn_write32(m,record+8,bytes);
     hn_write8(m,HN_TRANSFER_WRITE,(uint8_t)(index==252?0:index+3));
+}
+void hn_transfer_cpu_queue(HNMemory *m,GameAddr source,GameAddr destination,uint32_t bytes)
+{
+    if(!bytes)return;
+    unsigned index=hn_read8(m,HN_CPU_TRANSFER_WRITE);
+    const uint32_t words[3]={source,destination,bytes};
+    for(unsigned i=0;i<3;i++){
+        hn_write32(m,HN_TRANSFER_B+index*4,words[i]);index=(index+1)&127;
+    }
+    hn_write8(m,HN_CPU_TRANSFER_WRITE,(uint8_t)index);
+}
+void hn_transfer_queue(HNMemory *m,GameAddr source,GameAddr destination,uint32_t bytes)
+{if(bytes)enqueue(m,source,destination,bytes);}
+void hn_transfer_tiles(HNMemory *m,GameAddr source,GameAddr destination,uint32_t width,uint32_t rows)
+{
+    unsigned bytes=(width&255)*32;
+    for(unsigned i=0;i<(rows&255);i++){
+        enqueue(m,source,destination,bytes);source+=bytes;destination+=1024;
+    }
 }
 void hn_transfer_queue_fill(HNMemory *m,uint32_t value,GameAddr destination,uint32_t bytes)
 {

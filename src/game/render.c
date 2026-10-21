@@ -1,0 +1,136 @@
+#include "game/render.h"
+#include "game/state.h"
+#include <string.h>
+void hn_render_init(HNRender *r,HNMemory *m,const HNAnimationCallback *callbacks,size_t count)
+{memset(r,0,sizeof(*r));r->memory=m;r->callbacks=callbacks;r->callback_count=count;}
+GameAddr hn_render_slot(HNMemory *m,uint32_t index)
+{return hn_read32(m,HN_RENDER_SLOTS)+index*0x68;}
+uint8_t hn_render_find_slot(HNMemory *m,GameAddr slot)
+{
+    GameAddr base=hn_read32(m,HN_RENDER_SLOTS);
+    unsigned delta=slot-base,index=delta/0x68;
+    return delta%0x68||index>=hn_read8(m,HN_RENDER_INFO+0x10)?255:(uint8_t)index;
+}
+int32_t hn_render_class(HNMemory *m,GameAddr slot)
+{
+    static const GameAddr classes[]={0x03002C0C,0x03001F50,0x03002C04,0x03002C00};
+    unsigned id=hn_render_find_slot(m,slot);
+    for(unsigned i=0;i<4;i++)if(hn_read8(m,classes[i])==id)return (int32_t)i+42;
+    return -1;
+}
+void hn_render_error(HNMemory *m,uint16_t code)
+{
+    unsigned i=hn_read32(m,0x03002C78);
+    hn_write16(m,0x03002DE0+i*2,code);hn_write32(m,0x03002C78,(i+1)&7);
+}
+void hn_render_set_animation(HNMemory *m,uint32_t index,GameAddr animation)
+{
+    GameAddr slot=hn_render_slot(m,index);
+    hn_write32(m,slot+4,animation);hn_write16(m,slot+0x4C,0);hn_write8(m,slot+0x63,0);
+    for(unsigned i=0;i<4;i++){hn_write32(m,slot+8+i*4,0);hn_write16(m,slot+0x56+i*2,0);}
+    unsigned flag=hn_read8(m,0x03002182),value=hn_read8(m,slot+0x61);
+    if(flag&128){hn_write8(m,0x03002182,(uint8_t)(flag&127));value|=64;}
+    else value&=~64u;
+    hn_write8(m,slot+0x61,(uint8_t)value);
+}
+void hn_render_flags(HNMemory *m,uint32_t index,uint8_t mask,uint8_t value)
+{
+    GameAddr p=hn_render_slot(m,index)+0x61;
+    hn_write8(m,p,(uint8_t)((hn_read8(m,p)&~mask)|value));
+}
+void hn_render_physics(HNMemory *m,GameAddr slot)
+{
+    for(unsigned i=0;i<3;i++){
+        hn_write32(m,slot+0x18+i*4,hn_read32(m,slot+0x18+i*4)+hn_read32(m,slot+0x24+i*4));
+        hn_write32(m,slot+0x24+i*4,hn_read32(m,slot+0x24+i*4)+hn_read32(m,slot+0x30+i*4));
+    }
+    for(unsigned i=0;i<2;i++){
+        uint16_t value=(uint16_t)(hn_read16(m,slot+0x3C+i*2)+hn_read16(m,slot+0x44+i*2));
+        if((int16_t)value>511)value=512;
+        hn_write16(m,slot+0x3C+i*2,value);
+    }
+    hn_write16(m,slot+0x40,(uint16_t)(hn_read16(m,slot+0x40)+hn_read16(m,slot+0x48)));
+}
+uint8_t hn_render_find_affine(HNMemory *m)
+{
+    unsigned i=0;while(i<32&&hn_read8(m,HN_AFFINE_USAGE+i)!=255)i++;
+    return (uint8_t)i;
+}
+void hn_render_screen_position(HNMemory *m,GameAddr slot)
+{
+    uint32_t camera_x=hn_read32(m,HN_RENDER_INFO),camera_y=hn_read32(m,HN_RENDER_INFO+4);
+    unsigned x=(hn_read32(m,slot+0x18)+camera_x)>>16;
+    unsigned y=(uint16_t)((hn_read32(m,slot+0x1C)>>16)+(hn_read32(m,slot+0x20)>>16)+(camera_y>>16));
+    unsigned flags=hn_read8(m,slot+0x62);GameAddr reference=slot;
+    if((flags&192)==128){
+        reference=hn_render_slot(m,hn_read8(m,slot+0x65));
+        x=(uint16_t)(x+(hn_read32(m,reference+0x18)>>16));
+        y=(uint16_t)(y+(hn_read32(m,reference+0x1C)>>16)+(hn_read32(m,reference+0x20)>>16));
+    }
+    unsigned layers=hn_read8(m,reference+0x62)&15,ox=0,oy=0;
+    for(unsigned i=0;i<4;i++)if(layers&(1u<<i)){
+        GameAddr p=HN_LAYER_OFFSETS+i*44;
+        ox=(hn_read32(m,p)+hn_read32(m,p+0x10))>>16;
+        oy=(hn_read32(m,p+4)+hn_read32(m,p+0x14))>>16;break;
+    }
+    if(flags&16)x=(uint16_t)(x+ox);
+    if(flags&32)y=(uint16_t)(y+oy);
+    hn_write16(m,slot+0x4E,x<=511?(uint16_t)(x-(camera_x>>16)):hn_read16(m,HN_RENDER_INFO+8));
+    hn_write16(m,slot+0x50,y<=255?(uint16_t)(y-(camera_y>>16)):hn_read16(m,HN_RENDER_INFO+10));
+}
+void hn_render_mark_affine(HNMemory *m)
+{
+    unsigned count=hn_read8(m,HN_RENDER_INFO+0x10);
+    for(unsigned i=0;i<count;i++){
+        unsigned matrix=hn_read8(m,hn_render_slot(m,i)+0x64);
+        if(matrix!=255)hn_write8(m,HN_AFFINE_USAGE+matrix,1);
+    }
+}
+bool hn_render_assign_affine(HNMemory *m)
+{
+    for(unsigned i=0;i<32;i++)hn_write8(m,HN_AFFINE_USAGE+i,255);
+    unsigned count=hn_read8(m,HN_RENDER_INFO+0x10),next=0;
+    for(unsigned i=0;i<count;i++){
+        GameAddr slot=hn_render_slot(m,i);
+        if(!hn_read8(m,slot+0x60)||hn_read8(m,slot+0x64)==255)continue;
+        bool found=false;
+        for(unsigned j=0;j<i;j++){
+            GameAddr previous=hn_render_slot(m,j);
+            if(hn_read8(m,previous+0x60)&&hn_read8(m,previous+0x64)!=255&&
+               hn_read32(m,slot+0x3C)==hn_read32(m,previous+0x3C)&&
+               hn_read16(m,slot+0x40)==hn_read16(m,previous+0x40)){
+                hn_write8(m,slot+0x64,hn_read8(m,previous+0x64));found=true;break;
+            }
+        }
+        if(!found){
+            if(next>=32)return false;
+            hn_write8(m,slot+0x64,(uint8_t)next);hn_write8(m,HN_AFFINE_USAGE+next++,1);
+        }
+    }
+    return !m->fault;
+}
+bool hn_render_reorder(HNMemory *m,uint8_t moving,uint8_t anchor,uint8_t mode)
+{
+    if(mode>1)return false;
+    GameAddr order=hn_read32(m,HN_RENDER_ORDER),priority=hn_read32(m,HN_RENDER_PRIORITY);
+    unsigned count=hn_read8(m,HN_RENDER_INFO+0x10),remaining=count,entry=0,write=0;
+    bool found=false;
+    for(unsigned i=0;i<count;i++){
+        unsigned id=hn_read8(m,order+i);hn_write8(m,priority+i*8+5,(uint8_t)id);
+        if(id==anchor)found=true;
+    }
+    if(!found)return false;
+    for(;;){
+        unsigned id=hn_read8(m,priority+entry*8+5);
+        if(id==anchor)break;
+        if(id!=moving)hn_write8(m,order+write++,(uint8_t)id);
+        entry++;remaining--;
+    }
+    if(mode){hn_write8(m,order+write++,hn_read8(m,priority+entry*8+5));entry++;}
+    hn_write8(m,order+write++,moving);remaining--;
+    while(remaining--){
+        unsigned id=hn_read8(m,priority+entry++*8+5);
+        if(id!=moving)hn_write8(m,order+write++,(uint8_t)id);
+    }
+    return !m->fault;
+}

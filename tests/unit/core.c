@@ -117,11 +117,17 @@ static void video_contract(void)
     hn_write16(&memory,0x05000202,31);
     hn_video_render(&memory,frame);
     CHECK(frame[0]==0xFF0000FFu && frame[4]==0xFF000000u);
-    /* Mode 4 palette index zero is an opaque bitmap pixel. */
+    /* Mode 4 index zero reveals a lower-priority OBJ; index one covers it. */
     reset();hn_write16(&memory,0x04000000,0x0404);
     hn_write16(&memory,0x04000020,256);hn_write16(&memory,0x04000026,256);
     hn_write16(&memory,0x05000000,31<<10);
     hn_video_render(&memory,frame);CHECK(frame[0]==0xFFFF0000u);
+    for(unsigned n=0;n<128;n++)hn_write16(&memory,0x07000000+n*8,0x200);
+    hn_write16(&memory,0x04000000,0x1444);hn_write16(&memory,0x07000000,0);
+    hn_write16(&memory,0x07000004,512|(3<<10));hn_write16(&memory,0x06014000,0x1111);
+    hn_write16(&memory,0x05000202,31);hn_write16(&memory,0x05000002,31<<5);
+    hn_write16(&memory,0x06000000,1);hn_video_render(&memory,frame);
+    CHECK(frame[0]==0xFF00FF00u&&frame[1]==0xFF0000FFu);
 }
 static void game_contract(void)
 {

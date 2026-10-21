@@ -32,17 +32,19 @@ SDL's device conversion happens after game PCM generation.
 | Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, deadzone, remapping, disconnect; physical models not tested |
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
-| BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77 and compiler division semantics |
-| Software video | Foundation | Synthetic text/affine/bitmap/OBJ/window/blending paths; no game-scene comparison yet |
+| BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division semantics and modeled ObjAffine; hardware matrix rounding remains unverified |
+| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; seven private ROM snapshots compared; raster timing still pending |
 | Video timing and IRQ | Foundation | Scanline/VBlank/HBlank events and DMA, tested independently; CPU/timer/audio timing still pending |
 | Native game helpers | Foundation | Button transitions/repeat and integer PRNG |
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |
 | Video state and transfer queues | Adapted | Original video shadows, mosaic/blend/fade updates, DMA queue wrap/fill/flush; private function comparisons |
 | Map and core initialization | Adapted | Runtime tables read from ROM, task sentinel, render slots/order, background state and all 11 map banks tested at index 0 |
+| Objects and animation scripts | Partial | Physics, screen positions, original priority ordering, affine matrix reuse, OAM emission and animation commands compared; animation callbacks and unsuppressed sound remain pending |
+| Background scripts and transforms | Adapted | All 61 command handlers, repeat/call flow, motion, clamping, affine layers and tilemap copies compared; invalid stacks/resources fail explicitly |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, fades and typed callbacks; unsupported opcodes fail explicitly |
-| Native boot/title | Pending | Core initialization and 24 Main-only script iterations compared; background/render/graphics/task updates and audio are not connected |
+| Native boot/title | Pending | 88 Main-only and 180 coupled Main/background/object iterations compared; graphics/task/actor updates, real IRQ cadence and audio are not connected |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
 | Music and effects | Pending | Native sequencer/mixer and PSG; the host stream is ready |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
@@ -77,19 +79,47 @@ comparison tool reads the player's ROM and the reference function-symbol map,
 runs selected ARM/Thumb functions in Unicorn, and compares them with compiled
 native operations. It models the BIOS services, immediate DMA and IO masks needed
 by these functions; it does not provide a complete machine/timing oracle.
-Heap layouts, input, PRNG, expressions, video, transfers, maps, core initialization
-and save operations are compared. Synthetic fixtures exercise resource commands
-without embedding a game resource. The first 24 Main-only iterations read real
-scripts from the private ROM and compare persistent RAM, SRAM and video memory.
-This does not run the other per-frame systems, so it is not an executed native
-boot, title screen or playthrough. The source checkout's docs/testing.md records
-the reproducible command and current check count.
+Heap layouts, input, PRNG, expressions, video, transfers, object/background
+rendering, maps, core initialization and save operations are compared. Synthetic
+fixtures exercise resource commands without embedding a game resource. Tests
+also run 88 Main-only iterations and 180 coupled Main/background/object iterations
+using private ROM scripts, including OAM transfer, video commit and DMA flush.
+Seven resulting static PPU snapshots match a separate mGBA renderer; five contain
+multiple colors. This schedule omits graphics/task/actor systems, the real IRQ
+cadence and audio. It is not a verified native boot, title screen or playthrough.
+The source checkout's docs/testing.md records the command and current check count.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
 in their original 32-bit memory views. Callback bindings accept a specific typed
 Main signature, never a cast of a ROM address to a host function pointer. Unknown
 commands/callbacks and invalid stacks return a fault with the guest address;
 a per-frame command budget also reports an explicit fault instead of hanging.
+
+Object animations retain original 32-bit resource references and explicit typed
+callback dispatch. Missing callback bindings and sound requests fail visibly;
+only the original sound-suppressed command path is currently supported. OAM
+sorting preserves the original algorithm's distinct priority/key/index exits,
+including its order for equal keys. Background scripts retain separate local
+and committed cursors, original wait/repeat behavior and shared queued-write
+storage. Their native adapters reject overflowing script stacks and invalid
+tilemap rectangles rather than letting malformed inputs overwrite adjacent state.
+
+The optional mGBA 0.10.5 software PPU oracle is a separate test build; its code and
+runtime never enter the application or package. Static synthetic comparisons
+cover text, affine, bitmap and object layers, windows, mosaic and color effects.
+The oracle uses RGB555 output and renders each color channel through red before
+reassembling RGBA, avoiding mGBA's channel-dependent darkening precision. Fixtures
+isolate mosaic and windows because that reference version has carry-pixel artifacts
+when clipping mosaic blocks. Analytic regressions cover the combined global
+mosaic/window phase and mode-5 out-of-bounds backdrop selection. Raster changes,
+timing and general gameplay image parity remain unverified.
+
+The ObjAffine helper follows a single-precision HLE model, independently implemented
+from the documented scale/angle contract. Comparison with a CPU oracle using the
+same BIOS model does not establish the real BIOS's exact rounding. See the
+[mGBA BIOS implementation](https://github.com/mgba-emu/mgba/blob/0.10.5/src/gba/bios.c)
+and [GBA video documentation](https://mgba-emu.github.io/gbatek/) for those external
+contracts; hardware-level conformance needs separate evidence.
 
 SRAM adapters retain the original guest callback images by reading them from the
 ROM into guest RAM as data. Save operations call typed native functions; the copied
@@ -101,8 +131,8 @@ are rejected; the unused group-0 record write/load path is not exposed.
 
 ## Remaining integration order
 
-1. Connect verified native initialization, typed callback resolution and the main
-   script loop, then add the background/graphics/task systems needed for boot.
+1. Add graphics/task/actor systems and audio, then connect the verified native
+   initialization, typed callbacks and script/render systems to the real game loop.
 2. Establish a deterministic title/new-game/movement/save-load scenario.
 3. Compare the native core against the reference's existing opening and first
    reconciliation schedules, then expand to the remaining story and minigames.

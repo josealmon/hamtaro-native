@@ -4,6 +4,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+void hn_bios_obj_matrix(int16_t x_scale,int16_t y_scale,uint16_t angle,int16_t out[4]);
+bool hn_bios_obj_affine(HNMemory *,GameAddr source,GameAddr destination,uint32_t count,uint32_t stride);
 bool hn_bios_cpu_set(HNMemory *, GameAddr source, GameAddr destination, uint32_t control);
 bool hn_bios_cpu_fast_set(HNMemory *, GameAddr source, GameAddr destination, uint32_t control);
 bool hn_bios_lz77(HNMemory *, GameAddr source, GameAddr destination, size_t capacity);

@@ -77,9 +77,10 @@ static Pixel bitmap(const HNMemory *m,int x,int y,unsigned mode,unsigned display
     int w=mode==5?160:240,h=mode==5?128:160;
     if(sx<0||sy<0||sx>=w||sy>=h) return p;
     unsigned page=(mode!=3 && (display&16))?0xA000:0;
+    unsigned offset=(unsigned)(sy*w+sx),index=mode==4?vram(m,page+offset):0;
+    if(mode==4&&!index)return p;
     p.layer=2; p.priority=(uint8_t)(cnt&3); p.opaque=true;
-    unsigned offset=(unsigned)(sy*w+sx);
-    p.color=mode==4?palette(m,vram(m,page+offset)):vram16(m,page+offset*2);
+    p.color=mode==4?palette(m,index):vram16(m,page+offset*2);
     return p;
 }
 static bool in_range(int value,unsigned interval)
@@ -102,11 +103,17 @@ static Pixel object(const HNMemory *m,unsigned n,int x,int y,unsigned display,un
     if(ox>=256) ox-=512;
     if(oy>=160) oy-=256;
     int dx=x-ox,dy=y-oy;
-    if(dx<0||dy<0||dx>=bw||dy>=bh) return p;
+    unsigned mosaic=reg16(m,0x4C),mh=((mosaic>>8)&15)+1,mv=((mosaic>>12)&15)+1;
+    int right=ox+bw;
+    if((a&0x1000)&&right%(int)mh)right+=(int)mh-right%(int)mh;
+    if(dx<0||dy<0||x>=right||dy>=bh) return p;
     if(a&0x1000) {
-        unsigned mosaic=reg16(m,0x4C);
-        dx-=dx%(int)(((mosaic>>8)&15)+1);
-        dy-=dy%(int)(((mosaic>>12)&15)+1);
+        dy=y-y%(int)mv-oy;
+        if(dy<0)dy=0;if(dy>=bh)dy=bh-1;
+        int start=ox<0?0:ox;
+        int sample=x-x%(int)mh;
+        if(affine&&mh>1){if(sample<start)sample=start-1;dx=sample-ox;}
+        else{dx=sample-ox;if(dx<0)dx=0;if(dx>=bw)dx=bw-1;}
     }
     if(affine) {
         unsigned matrix=((b>>9)&31)*32+6;
@@ -119,10 +126,12 @@ static Pixel object(const HNMemory *m,unsigned n,int x,int y,unsigned display,un
         if(b&0x2000) dy=h-1-dy;
     }
     unsigned tile=c&1023,bpp8=(a&0x2000)!=0;
-    if(bpp8) tile&=~1u;
+    if(bpp8&&!(display&0x40))tile&=~1u;
     if(mode>=3 && tile<512) return p;
     unsigned rowstride=(display&0x40)?(unsigned)(w/8)*(bpp8?2:1):32;
-    tile+=(unsigned)(dy/8)*rowstride+(unsigned)(dx/8)*(bpp8?2:1);
+    unsigned column=(unsigned)(dx/8)*(bpp8?2:1);
+    if(display&0x40)tile+=(unsigned)(dy/8)*rowstride+column;
+    else tile=(tile&~31u)+(unsigned)(dy/8)*32+((tile+column)&31);
     unsigned index;
     if(bpp8) index=vram(m,0x10000+tile*32+(dy&7)*8+(dx&7));
     else {
@@ -130,9 +139,9 @@ static Pixel object(const HNMemory *m,unsigned n,int x,int y,unsigned display,un
         index=(packed>>((dx&1)*4))&15;
         if(index) index+=((c>>12)&15)*16;
     }
-    if(!index) return p;
-    p.color=palette(m,256+index); p.layer=4; p.priority=(uint8_t)((c>>10)&3);
-    p.opaque=true; p.semi=((a>>10)&3)==1;
+    p.layer=4;p.priority=(uint8_t)((c>>10)&3);p.semi=((a>>10)&3)==1;
+    if(!index)return p;
+    p.color=palette(m,256+index);p.opaque=true;
     return p;
 }
 static bool above(Pixel a,Pixel b)
@@ -162,9 +171,13 @@ void hn_video_render_line(const HNMemory *m,unsigned y,uint32_t *out)
         Pixel obj=empty(); bool objwindow=false;
         if(display&0x1000) for(unsigned n=0;n<128;n++) {
             Pixel p=object(m,n,(int)x,(int)y,display,mode);
-            if(!p.opaque) continue;
-            if(((u16(m->oam+n*8)>>10)&3)==2) { objwindow=true; continue; }
-            if(!obj.opaque || p.priority<obj.priority) obj=p;
+            if(p.layer!=4)continue;
+            if(((u16(m->oam+n*8)>>10)&3)==2){if(p.opaque)objwindow=true;continue;}
+            if(!obj.opaque){if(p.opaque)obj=p;}
+            else if(p.priority<obj.priority){
+                if(p.opaque)obj=p;
+                else{obj.priority=p.priority;obj.semi=p.semi;}
+            }
         }
         unsigned mask=63;
         if(display&0xE000) {

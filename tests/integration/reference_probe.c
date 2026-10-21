@@ -1,5 +1,7 @@
 #include "gba/memory.h"
 #include "game/script.h"
+#include "game/render.h"
+#include "game/background.h"
 #include <stdlib.h>
 #include <string.h>
 /* Optional private oracle bridge. Never installed or shipped with the app. */
@@ -44,4 +46,41 @@ int hn_probe_main_frame(HNMemory *m,unsigned budget,uint32_t report[3])
     bool ok=hn_main_frame(&script,budget);
     report[0]=script.fault;report[1]=script.fault_opcode;report[2]=script.fault_address;
     return ok;
+}
+int hn_probe_animation(HNMemory *m,GameAddr slot,unsigned op,GameAddr cursor_field,uint32_t report[4])
+{
+    HNRender render;hn_render_init(&render,m,NULL,0);GameAddr cursor=hn_read32(m,cursor_field);
+    uint32_t yield=0;bool ok=hn_animation_command(&render,slot,op,&cursor,&yield);
+    hn_write32(m,cursor_field,cursor);
+    report[0]=render.fault;report[1]=render.fault_opcode;report[2]=render.fault_address;report[3]=yield;
+    return ok;
+}
+int hn_probe_render_animation(HNMemory *m,GameAddr slot,unsigned budget,uint32_t report[3])
+{
+    HNRender render;hn_render_init(&render,m,NULL,0);bool ok=hn_render_animation(&render,slot,budget);
+    report[0]=render.fault;report[1]=render.fault_opcode;report[2]=render.fault_address;return ok;
+}
+void hn_probe_background_offset(HNMemory *m,unsigned layer,int32_t x,int32_t y,GameAddr output)
+{
+    uint32_t ox,oy;hn_background_offset(m,(uint8_t)layer,x,y,&ox,&oy);
+    hn_write32(m,output,ox);hn_write32(m,output+4,oy);
+}
+int hn_probe_render(HNMemory *m,unsigned budget,unsigned update,uint32_t report[3])
+{
+    HNRender render;hn_render_init(&render,m,NULL,0);
+    bool ok=update?hn_render_update(&render,budget):hn_render_draw(&render);
+    report[0]=render.fault;report[1]=render.fault_opcode;report[2]=render.fault_address;return ok;
+}
+int hn_probe_background_command(HNMemory *m,GameAddr state,unsigned op,GameAddr cursor_field,uint32_t report[4])
+{
+    HNBackground background;hn_background_init(&background,m);GameAddr cursor=hn_read32(m,cursor_field);
+    uint32_t yield=0;bool ok=hn_background_command(&background,state,op,&cursor,&yield);
+    hn_write32(m,cursor_field,cursor);
+    report[0]=background.fault;report[1]=background.fault_opcode;report[2]=background.fault_address;report[3]=yield;
+    return ok;
+}
+int hn_probe_background(HNMemory *m,unsigned budget,uint32_t report[3])
+{
+    HNBackground background;hn_background_init(&background,m);bool ok=hn_background_update(&background,budget);
+    report[0]=background.fault;report[1]=background.fault_opcode;report[2]=background.fault_address;return ok;
 }

@@ -16,7 +16,8 @@ include(cmake/Dependencies.cmake)
 add_library(hn_core STATIC
     src/gba/memory.c src/gba/bios.c src/gba/video.c src/gba/timing.c
     src/game/input.c src/game/random.c src/game/heap.c src/game/script.c
-    src/game/video.c src/game/transfer.c src/game/world.c src/game/expression.c src/game/save.c)
+    src/game/video.c src/game/transfer.c src/game/world.c src/game/expression.c src/game/save.c
+    src/game/render.c src/game/animation.c src/game/draw.c src/game/background.c)
 target_include_directories(hn_core PUBLIC src)
 add_library(hn_storage STATIC
     src/app/storage.cpp src/app/settings.cpp src/app/rom.cpp)
@@ -47,6 +48,9 @@ if(BUILD_TESTING)
     add_executable(hn_game_tests tests/unit/game.c)
     target_link_libraries(hn_game_tests PRIVATE hn_core)
     add_test(NAME game COMMAND hn_game_tests)
+    add_executable(hn_render_tests tests/unit/render.c)
+    target_link_libraries(hn_render_tests PRIVATE hn_core)
+    add_test(NAME render COMMAND hn_render_tests)
     add_executable(hn_storage_tests tests/unit/storage.cpp)
     target_link_libraries(hn_storage_tests PRIVATE hn_storage)
     add_test(NAME storage COMMAND hn_storage_tests)
@@ -56,7 +60,7 @@ if(BUILD_TESTING)
     add_test(NAME app-smoke COMMAND hamtaro-native --smoke-test)
     set_tests_properties(app-smoke PROPERTIES TIMEOUT 30)
     if(MSVC)
-        foreach(target hn_reference_probe hn_core_tests hn_game_tests hn_storage_tests hn_input_tests)
+        foreach(target hn_reference_probe hn_core_tests hn_game_tests hn_render_tests hn_storage_tests hn_input_tests)
             target_compile_options(${target} PRIVATE /W4 /utf-8)
         endforeach()
     endif()

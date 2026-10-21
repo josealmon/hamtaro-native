@@ -6,6 +6,7 @@
 #include "game/heap.h"
 #include "game/expression.h"
 #include "game/save.h"
+#include "game/render.h"
 #include "gba/bios.h"
 #include <string.h>
 enum {
@@ -48,8 +49,14 @@ static uint32_t reset_visuals(HNMemory *m,GameAddr args)
     for(unsigned i=0;i<0x160;i++)hn_write16(m,p+i*2,0);
     hn_background_state_init(m);return 0;
 }
+static uint32_t read_key_mask(HNMemory *m,GameAddr args)
+{
+    (void)args;uint16_t keys=hn_read16(m,0x03000820)&hn_read16(m,0x03001F64);
+    hn_write16(m,0x0201DC40,keys);
+    hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));return 0;
+}
 static const HNMainCallback builtins[]={
-    {0x0801C708,set_key_mask},{0x0801D398,reset_visuals}
+    {0x0801C708,set_key_mask},{0x0801C72C,read_key_mask},{0x0801D398,reset_visuals}
 };
 bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
 {
@@ -127,6 +134,21 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         if(bank!=9&&hn_read8(m,HN_MAP_BANK)!=9)hn_core_storage_clear(m,2);
         if(!hn_map_initialize(m,bank,0))return fail(s,HN_SCRIPT_RESOURCE,op,args);
         hn_write8(m,YIELDED,1);break;
+    }
+    case 0x0F:case 0x10:case 0x11: {
+        unsigned index=hn_read8(m,args);GameAddr slot=hn_render_slot(m,index);
+        GameAddr word=args+1;
+        if(op==0x0F){
+            hn_render_slot_reset(m,index);hn_write8(m,slot+0x60,hn_read8(m,args+1));
+            hn_write8(m,slot+0x62,hn_read8(m,args+2));hn_render_flags(m,index,12,8);
+            scratch(m,args+3,0,6);
+            for(unsigned i=0;i<3;i++)hn_write32(m,slot+0x18+i*4,((uint32_t)hn_read16(m,SCRATCH+i*2)<<16)+0x8000);
+            word=args+9;
+        }else if(op==0x11){hn_write8(m,slot+0x60,hn_read8(m,args+1));word=args+2;}
+        scratch(m,word,0,4);GameAddr animation=resolve_variable(m,0);
+        if(animation)hn_render_set_animation(m,index,animation);
+        if(index==hn_read8(m,0x03001F50))hn_write8(m,0x03002170,0);
+        advance(m,op==0x0F?13:op==0x10?5:6);break;
     }
     case 0x12: {
         unsigned slot=hn_read8(m,args),mask=hn_read8(m,args+1);
@@ -257,7 +279,7 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
     case 0x33: {
         unsigned desired=hn_read8(m,args);scratch(m,args+1,2,6);GameAddr target=resolve_variable(m,4);
         unsigned flag=hn_read16(m,SCRATCH+2),value=(hn_read8(m,0x03002180+(flag>>3))>>(flag&7))&1;
-        if(value==(desired!=0)){hn_write32(m,CURSOR,target);advance(m,0);}else advance(m,7);
+        if((value!=0)==(desired!=0)){hn_write32(m,CURSOR,target);advance(m,0);}else advance(m,7);
         break;
     }
     case 0x34:case 0x35: {
@@ -283,6 +305,34 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         hn_write32(m,VARIABLES+hn_read8(m,SCRATCH+2)*4,hn_read32(m,SCRATCH+4));advance(m,3);break;
     case 0x37:
         hn_heap_free(m,hn_read32(m,VARIABLES+hn_read8(m,args)*4));advance(m,1);break;
+    case 0x39:case 0x3B:case 0x4B:case 0x4F: {
+        unsigned index=hn_read8(m,args);uint8_t value=hn_read8(m,args+1);
+        if(op==0x3B)hn_write8(m,hn_render_slot(m,index)+0x60,value);
+        else hn_render_flags(m,index,op==0x39?12:op==0x4B?3:32,(uint8_t)(value<<(op==0x39?2:op==0x4F?5:0)));
+        advance(m,2);break;
+    }
+    case 0x3A:case 0x44: {
+        GameAddr slot=hn_render_slot(m,hn_read8(m,args));scratch(m,args+1,0,6);
+        for(unsigned i=0;i<3;i++){
+            uint32_t half=hn_read16(m,SCRATCH+i*2),value;
+            if(op==0x3A)value=(half<<16)+0x8000;
+            else{value=half<<8;if(value&0x00800000u)value|=0xFF000000u;}
+            hn_write32(m,slot+(op==0x3A?0x18:0x24)+i*4,value);
+        }
+        advance(m,7);break;
+    }
+    case 0x3C: {
+        unsigned index=hn_read8(m,args);scratch(m,args+1,0,8);
+        GameAddr animation=resolve_variable(m,0),target=resolve_variable(m,4);
+        if(hn_read32(m,hn_render_slot(m,index)+4)==animation){hn_write32(m,CURSOR,target);advance(m,0);}
+        else advance(m,9);break;
+    }
+    case 0x3E: {
+        unsigned index=hn_read8(m,args),kind=hn_read8(m,args+1),shape=hn_read8(m,args+2),value=hn_read8(m,args+3);
+        unsigned packed=((kind&3)<<6)|((shape&3)<<4);GameAddr slot=hn_render_slot(m,index);
+        if(kind<=1)packed|=value&15;else hn_write8(m,slot+0x65,(uint8_t)value);
+        hn_write8(m,slot+0x62,(uint8_t)packed);advance(m,4);break;
+    }
     case 0x3F: {
         uint8_t step=hn_read8(m,args),phase=hn_read8(m,HN_BLEND+6);
         if(!hn_read8(m,INITIALIZED)){hn_write8(m,INITIALIZED,1);hn_video_forced_blank(m,0);}
@@ -319,6 +369,10 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         advance(m,op==0x47?2:3);break;
     case 0x49:
         hn_write8(m,0x03001F60,hn_read8(m,args));hn_write8(m,0x03001F90,hn_read8(m,args+1));advance(m,2);break;
+    case 0x4A:
+        if(!hn_render_reorder(m,hn_read8(m,args),hn_read8(m,args+1),hn_read8(m,args+2)))
+            return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        advance(m,3);break;
     case 0x4C: {
         uint8_t mode=hn_read8(m,args);if(mode<=5)hn_video_set_mode(m,mode);advance(m,1);break;
     }

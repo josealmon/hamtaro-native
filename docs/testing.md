@@ -8,6 +8,9 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
 - game: repeated DMA working addresses, byte register writes, transfer queue wrap,
   video shadows, synthetic ROM map changes, preserved render fields, expression
   cursor/recursion boundaries and SRAM checksum/backup recovery.
+- render: animation repeat/call/delay flow, typed callback guards, physics,
+  affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
+  PPU regressions for tile mapping, transparency, mosaic/window phase and effects.
 - storage: SHA-256 known vectors, strict ROM rejection, atomic SRAM recovery,
   independent profile locking, settings validation and Unicode paths.
 - input: injected keyboard events and a local SDL virtual gamepad. Covers hotplug,
@@ -37,12 +40,34 @@ and the test-only hn_reference_probe.dll built by BUILD_TESTING:
 
 The reference must contain build/function-symbols.json. This check writes no
 ROM or captured state, and does not alter the reference checkout. It compares
-heap RAM, PRNG, input, expressions, video state, transfer queues, map/core
-initialization and SRAM initialization/repair/read/write behavior. It also compares
-24 Main-only script iterations from the actual ROM; other per-frame systems are
-not executed. The oracle uses explicit BIOS, immediate-DMA and IO-mask models,
-not a complete GBA machine. The current checkpoint passes 26,585 comparisons.
+heap RAM, PRNG, input, expressions, video state, transfer queues, object animation
+and drawing, all 61 background command handlers, map/core initialization and SRAM
+initialization/repair/read/write behavior. It also compares 88 Main-only iterations
+and 180 coupled Main/background/object iterations from actual private ROM scripts.
+Graphics/task/actor systems, the real IRQ cadence and audio are omitted. The CPU
+oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete GBA
+machine. Without the optional PPU oracle, this checkpoint passes 43,054 comparisons.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
+
+An independent static PPU comparison uses an existing mGBA 0.10.5 source checkout
+and a compatible C compiler. It is a separate test project, not an application
+dependency. For example, with Ninja and the compiler on PATH:
+
+    cmake -S tests/integration/mgba -B "$env:HAMTARO_NATIVE_WORK/mgba-oracle" -G Ninja -DCMAKE_BUILD_TYPE=Release -DMGBA_SOURCE="$env:MGBA_SOURCE"
+    cmake --build "$env:HAMTARO_NATIVE_WORK/mgba-oracle" --target hn-video-oracle
+    python -B tools/compare_video.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-video-oracle.exe"
+
+Set HAMTARO_NATIVE_WORK explicitly for these commands. MGBA_SOURCE points to the
+caller-provided source checkout. If the compiler needs runtime DLLs outside PATH,
+pass --runtime-dir PATH_TO_COMPILER_RUNTIME to compare_video.py. The suite compares
+64 synthetic static frames (2,457,600 pixels) without a ROM or output captures.
+The RGB555/channel normalization and mosaic/window isolation are described in
+architecture.md; this is not a claim of complete hardware conformance.
+
+Add --video-oracle PATH_TO_ORACLE and, if needed,
+--oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to compare_reference.py to compare
+seven static snapshots from its private ROM schedule. This passes 43,061 checks;
+five snapshots contain multiple colors. No snapshots or ROM data are saved.
 
 Manual UI checks cover import/cancellation, persisted rebinding, keyboard menu
 navigation, constrained window sizes, fullscreen, and save import/export.

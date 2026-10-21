@@ -8,9 +8,11 @@ import argparse
 import ctypes as C
 import hashlib
 import json
+import math
 from pathlib import Path
 import random
 import struct
+from contextlib import nullcontext
 from unicorn import (Uc, UC_ARCH_ARM, UC_MODE_THUMB, UC_HOOK_INTR,
                      UC_HOOK_MEM_WRITE, UC_HOOK_CODE)
 from unicorn.arm_const import (UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2,
@@ -34,6 +36,8 @@ def main() -> None:
     parser.add_argument("--reference", required=True, type=Path,
                         help="Read-only decompilation checkout containing build/function-symbols.json")
     parser.add_argument("--library", type=Path, default=ROOT / "build/Release/hn_reference_probe.dll")
+    parser.add_argument("--video-oracle", type=Path, help="Optional separate RGB555 mGBA PPU oracle")
+    parser.add_argument("--oracle-runtime-dir", type=Path, help="Optional runtime DLL directory for the PPU oracle")
     args = parser.parse_args()
     spec = json.loads((ROOT / "config/rom.json").read_text())
     rom = args.rom.read_bytes()
@@ -56,6 +60,22 @@ def main() -> None:
         if number != 2 or instruction[1] != 0xDF:
             raise RuntimeError("Unexpected BIOS service in the selected function checks.")
         service = instruction[0]
+        if service == 0x0F:
+            source, destination, count, stride = (uc.reg_read(r) for r in
+                (UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3))
+            def f32(value):
+                return struct.unpack("<f", struct.pack("<f", value))[0]
+            for _ in range(count):
+                sx, sy, angle = struct.unpack("<hhH", bytes(uc.mem_read(source, 6)))
+                theta = f32((angle >> 8) / 128 * math.pi)
+                sine, cosine = f32(math.sin(theta)), f32(math.cos(theta))
+                values = (f32(cosine * f32(sx / 256)), f32(-sine * f32(sx / 256)),
+                          f32(sine * f32(sy / 256)), f32(cosine * f32(sy / 256)))
+                for i, value in enumerate(values):
+                    uc.mem_write(destination + i * stride, struct.pack("<H", int(f32(value * 256)) & 0xFFFF))
+                source += 8
+                destination += stride * 4
+            return
         if service in (0x11, 0x12):
             source, destination = (uc.reg_read(r) for r in (UC_ARM_REG_R0, UC_ARM_REG_R1))
             header = struct.unpack("<I", bytes(uc.mem_read(source, 4)))[0]
@@ -155,6 +175,8 @@ def main() -> None:
     def call(name: str, *arguments: int, limit=200000) -> int:
         for register, value in zip((UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3), arguments):
             cpu.reg_write(register, value)
+        if len(arguments) > 4:
+            cpu.mem_write(cpu.reg_read(UC_ARM_REG_SP), struct.pack(f"<{len(arguments)-4}I", *arguments[4:]))
         cpu.reg_write(UC_ARM_REG_LR, STOP | 1)
         cpu.emu_start(symbols[name] | 1, STOP, count=limit)
         finish_io(cpu)
@@ -302,6 +324,9 @@ def main() -> None:
             return bind(name, result, C.c_void_p, *([C.c_uint32] * arguments))
 
         resource_cases = (
+            (0x0F, "MainScriptConfigureRenderSlot", struct.pack("<BBBHHHI", 3, 1, 0x30, 64, 80, 16, 4)),
+            (0x10, "MainScriptSetRenderAnimation", struct.pack("<BI", 3, 4)),
+            (0x11, "MainScriptSetRenderField60AndAnimation", struct.pack("<BBI", 3, 1, 4)),
             (6, "MainScriptDecompressStaged", struct.pack("<II", 0x02022000, 0x06000000)),
             (6, "MainScriptDecompressStaged", struct.pack("<II", 0x02022000, 0x05000020)),
             (6, "MainScriptDecompressStaged", struct.pack("<II", 0x02022000, 0x02024000)),
@@ -323,6 +348,7 @@ def main() -> None:
             (0x18, "MainScriptFillMemory", struct.pack("<BHHI", 1, 0xABCD, 32, 0x06004000)),
             (0x18, "MainScriptFillMemory", struct.pack("<BHHI", 1, 0xABCD, 14, 0x05000020)),
             (0x1C, "MainScriptInvokeCallback", struct.pack("<IH", 0x0801C709, 0xF5A5)),
+            (0x1C, "MainScriptInvokeCallback", struct.pack("<I", 0x0801C72D)),
             (0x1D, "MainScriptJumpByHalf1FBC", struct.pack("<BIIII", 4, 0x02021000, 0x02022000, 0x02023000, 0x02024000)),
             (0x22, "MainScriptConditionalCursor084C0", struct.pack("<II", 0x02023000, 3)),
             (0x23, "MainScriptInvoke086AC", struct.pack("<II", 0x02023000, 0x02024000)),
@@ -337,14 +363,25 @@ def main() -> None:
             (0x32, "MainScriptJumpValuesBelow", struct.pack("<BHHI", 1, 3, 0x7F, 3)),
             (0x33, "MainScriptJumpGameFlag", struct.pack("<BHI", 0, 140, 3)),
             (0x33, "MainScriptJumpGameFlag", struct.pack("<BHI", 1, 141, 3)),
+            (0x39, "MainScriptSetRenderPriorityBits", bytes([3, 2])),
+            (0x3A, "MainScriptSetRenderPosition", struct.pack("<BHHH", 3, 32768, 65535, 0)),
+            (0x3B, "MainScriptSetRenderField60", bytes([3, 255])),
+            (0x3C, "MainScriptJumpRenderAnimationBase", struct.pack("<BII", 3, 4, 3)),
+            (0x3E, "MainScriptSetRenderField62", bytes([3, 1, 2, 5])),
+            (0x3E, "MainScriptSetRenderField62", bytes([3, 2, 1, 5])),
+            (0x44, "MainScriptSetRenderVector24", struct.pack("<BHHH", 3, 32768, 65535, 32767)),
             (0x46, "MainScriptSetGameFlag", struct.pack("<HB", 141, 1)),
             (0x46, "MainScriptSetGameFlag", struct.pack("<HB", 140, 0)),
             (0x47, "MainScriptConfigureSquareMosaic", b"\x1F\x0A"),
             (0x48, "MainScriptConfigureSharedMosaic", b"\x1F\x0A\x0B"),
             (0x49, "MainScriptSetSaveGroup01Bytes", b"\x12\x34"),
+            (0x4A, "MainScriptRepositionRenderOrder", bytes([3, 10, 0])),
+            (0x4A, "MainScriptRepositionRenderOrder", bytes([10, 3, 1])),
+            (0x4B, "MainScriptSetRenderModeBits", bytes([3, 255])),
             (0x4C, "MainScriptSetVideoMode", b"\x04"),
             (0x4C, "MainScriptSetVideoMode", b"\x07"),
             (0x4D, "MainScriptStoreDestinationWord21F0", struct.pack("<BI", 3, 4)),
+            (0x4F, "MainScriptSetRenderBit5", bytes([3, 255])),
             (0x52, "MainScriptSetForcedBlankAndYield", b"\x00"),
             (0x52, "MainScriptSetForcedBlankAndYield", b"\x01"),
             (0x55, "MainScriptSetBootGateAndByte1FB8", b"\x0A"),
@@ -363,11 +400,19 @@ def main() -> None:
                 both(0x03002BBC, struct.pack("<II", 0x02024000, 0x02022000))
                 both(0x03000010, bytes([opcode]))
                 both(0x03001FBC, struct.pack("<H", repeat))
+                both(0x03000820, struct.pack("<H", repeat * 0x123 & 1023))
+                both(0x03001F64, b"\xFF\x03")
                 both(0x03002C60, struct.pack("<I", 0x02020000))
                 both(0x03002E08, struct.pack("<I", 0x02018000))
                 both(0x03003070, struct.pack("<I", 0x02019000))
                 both(0x03002E40, rng.randbytes(176))
                 both(0x03002C90, rng.randbytes(0x108))
+                both(0x03002D98, struct.pack("<I", 0x02017000))
+                both(0x03002D9C, struct.pack("<I", 0x02016800))
+                both(0x03002E2C, struct.pack("<I", 0x02016000))
+                both(0x03002DC0, b"\x10")
+                both(0x03001F50, b"\x03")
+                both(0x02016800, bytes(range(16)))
                 both(0x03002180, rng.randbytes(96))
                 both(0x02004520, rng.randbytes(128))
                 both(0x0201DC40, rng.randbytes(128))
@@ -641,19 +686,21 @@ def main() -> None:
             equal(native("hn_save_load_groups", result=C.c_bool)(memory), True, f"native load triplet {case}")
             call("LoadSaveDataGroups1To3")
             compare(f"load triplet {case}", save_ranges)
-        prepare_save()
-        native("hn_video_state_init")(memory)
-        call("InitializeVideoState")
-        native("hn_mosaic_init")(memory)
-        call("InitializeMosaic")
-        native("hn_task_contexts_init")(memory)
-        call("InitializeTaskContexts")
-        equal(native("hn_core_initialize", result=C.c_bool)(memory), True, "native core initialization")
-        call("InitializeCoreState", limit=6000000)
-        compare("core initialization", save_ranges)
+        def prepare_core():
+            prepare_save()
+            native("hn_video_state_init")(memory)
+            call("InitializeVideoState")
+            native("hn_mosaic_init")(memory)
+            call("InitializeMosaic")
+            native("hn_task_contexts_init")(memory)
+            call("InitializeTaskContexts")
+            equal(native("hn_core_initialize", result=C.c_bool)(memory), True, "native core initialization")
+            call("InitializeCoreState", limit=6000000)
+            compare("core initialization", save_ranges)
+        prepare_core()
         frame = bind("hn_probe_main_frame", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
         report = (C.c_uint32 * 3)()
-        for index in range(24):
+        for index in range(88):
             equal(frame(memory, 4096, report), 1, f"ROM Main-only frame {index}")
             call("RunMainScriptFrame")
             compare(f"ROM Main-only frame {index}", save_ranges + ((0x05000000, 0x400),
@@ -666,9 +713,324 @@ def main() -> None:
             equal(command(memory, opcode, 0x02020000), 1, f"native map/save command {name}")
             call(name, 0x02020000)
             compare(f"map/save command {name}", save_ranges)
+
+        # Opcode names are metadata. Every bytecode fixture below is synthetic.
+        animation_names = (
+            "Return SetScript Jump SetOffset BranchEqualByte BranchLessByte BranchGreaterByte BeginRepeat EndRepeat Call "
+            "BranchEqualHalfword BranchLessHalfword BranchGreaterHalfword InvokeCallback BranchClassLess BranchClassGreater "
+            "Advance Reserved WriteByte WriteHalfword WriteWord IncrementByte IncrementHalfword IncrementWord "
+            "DecrementByte DecrementHalfword DecrementWord AddByte AddHalfword AddWord AddClassValue Reserved "
+            "SetFlags1 SetActive SetFlags2 SetX SetY SetZ SetRelativeX SetRelativeY SetRelativeZ AddX AddY AddZ "
+            "SetVelocityX SetVelocityY SetVelocityZ SetAccelerationX SetAccelerationY SetAccelerationZ DisableAffine "
+            "SetScaleVelocityX SetScaleVelocityY SetScaleX SetScaleY OverrideFlags2 RestoreFlags2 SetXFraction SetYFraction "
+            "SetZFraction SetRotation SetRotationVelocity SetAffineField5E SetAffineField5F SetStateField38 SetAttr52 "
+            "SetAttr54 SetOtherActive EnableBit6 DisableBit6 SetFrame SetDelay QueueDma QueueTileRows DecompressWram "
+            "DecompressTileSet QueueTileSet SetTileSetFrame Reserved Reserved StartSong StopSong"
+        ).split()
+        animation = bind("hn_probe_animation", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
+        render_animation = bind("hn_probe_render_animation", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
+        render_ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x03007010, 4))
+        slot = 0x02017000 + 10 * 0x68
+        index_patterns = ((0, 0, 0, 0), (2, 0, 0, 0), (0x8010, 3, 0, 0),
+                          (2, 3, 4, 5), (0, 0, 0, 0x8030), (0x8001, 0, 0, 0))
+        for repeat in range(6):
+            for opcode, suffix in enumerate(animation_names, 0x80):
+                if opcode == 0x8D:
+                    continue  # Unbound callback addresses must fault explicitly.
+                fresh()
+                both(0x03002D98, struct.pack("<I", 0x02017000))
+                both(0x03002DC0, b"\x20")
+                both(0x03002E08, struct.pack("<I", 0x02018000))
+                both(0x03003480, b"\xFF" * 32)
+                both(0x03002182, b"\xC0")  # Original suppression branch, not an audio stub.
+                both(0x03001F50, bytes([10 if repeat & 1 else 255]))
+                both(0x0201DC40, rng.randbytes(1024))
+                both(0x02017000, rng.randbytes(32 * 0x68))
+                both(slot + 4, struct.pack("<I", 0x02020000))
+                both(slot + 8, struct.pack("<4I", *(0x02020000 + i * 32 for i in range(4))))
+                both(slot + 0x56, struct.pack("<4H", *index_patterns[repeat]))
+                both(slot + 0x4C, struct.pack("<H", 0xFFFD if repeat == 5 else 0x40))
+                both(slot + 0x64, bytes([255 if repeat & 1 else 3]))
+                both(0x03007010, struct.pack("<I", 0x02021000))
+                both(0x02020100, bytes([repeat * 50]) + b"\x80\xFE\x7F")
+                both(0x02022000, b"\x10\x10\0\0\0ABCDEFGH\0IJKLMNOP")
+                target = 0x02030000 if repeat == 5 else 0x02020020
+                payload = struct.pack("<H", 0xFE03)
+                if opcode in (0x81, 0x82, 0x89):
+                    payload = struct.pack("<I", target)
+                elif opcode in (0x84, 0x85, 0x86):
+                    payload = struct.pack("<IBI", 0x02020100, 127, target)
+                elif opcode in (0x8A, 0x8B, 0x8C):
+                    payload = struct.pack("<IHI", 0x02020100, 0x807F, target)
+                elif opcode in (0x8E, 0x8F):
+                    payload = struct.pack("<HI", 0x807F, target)
+                elif 0x92 <= opcode <= 0x9D:
+                    payload = struct.pack("<II", 0x02020100, 0xFEDCBA98)
+                elif opcode in (0xA6, 0xA7, 0xA8):
+                    payload = struct.pack("<BH", 3, 0xFE80)
+                elif opcode in (0xAC, 0xAD, 0xAE, 0xAF, 0xB0, 0xB1):
+                    payload = struct.pack("<I", 0xFEDCBA98)
+                elif opcode in (0xC0, 0xC3):
+                    payload = bytes([3, 0x80])
+                elif opcode in (0xC8, 0xC9):
+                    payload = struct.pack("<IIH", 0x06004000, 0x02022000, 0x0210)
+                elif opcode == 0xCA:
+                    payload = struct.pack("<II", 0x02024000, 0x02022000)
+                elif opcode == 0xCB:
+                    payload = struct.pack("<I", 0x02022000)
+                elif opcode == 0xCD:
+                    payload = bytes([3, 2])
+                elif opcode == 0xC6:
+                    payload = struct.pack("<I", 0x02025000)
+                first = 5 if opcode == 0xC6 else opcode
+                both(0x02021000, bytes([first]) + payload + bytes(32))
+                report4 = (C.c_uint32 * 4)()
+                equal(animation(memory, slot, opcode, 0x03007010, report4), 1, f"animation success {opcode:02X} {repeat}")
+                equal(report4[3], call("Animation" + suffix, slot, 0x03007010), f"animation yield {opcode:02X} {repeat}")
+                compare(f"animation {opcode:02X} {repeat}", render_ranges)
+
+        fresh()
+        both(0x03002D98, struct.pack("<I", 0x02017000))
+        both(0x03002DC0, b"\x20")
+        both(0x03002D9C, struct.pack("<I", 0x02016000))
+        both(0x03002E2C, struct.pack("<I", 0x02015000))
+        for i in range(300):
+            both(0x02017000, rng.randbytes(32 * 0x68))
+            both(0x03002DB0, rng.randbytes(16))
+            both(0x03002E40, rng.randbytes(176))
+            both(slot + 0x65, bytes([i % 32]))
+            if i % 3 == 0:
+                both(slot + 0x18, struct.pack("<III", rng.randrange(512) << 16, rng.randrange(128) << 16, rng.randrange(128) << 16))
+                both(0x03002DB0, struct.pack("<II", 0x400000, 0x400000))
+            native("hn_render_physics", 1)(memory, slot)
+            call("UpdateRenderPhysics", slot)
+            compare(f"render physics {i}", ((slot, 0x68),))
+            native("hn_render_screen_position", 1)(memory, slot)
+            call("CalculateRenderScreenPosition", slot)
+            compare(f"render screen position {i}", render_ranges)
+            equal(native("hn_render_find_slot", 1, C.c_uint8)(memory, slot), call("FindRenderSlot", slot), f"find render slot {i}")
+            equal(native("hn_render_class", 1, C.c_int32)(memory, slot) & 0xFFFFFFFF,
+                  call("FindRenderClass", slot), f"find render class {i}")
+        for i in range(100):
+            order = list(range(32))
+            rng.shuffle(order)
+            both(0x02016000, bytes(order))
+            both(0x02015000, rng.randbytes(256))
+            moving, anchor, mode = rng.randrange(32), rng.randrange(32), i & 1
+            equal(native("hn_render_reorder", 3, C.c_bool)(memory, moving, anchor, mode), True, f"native render order {i}")
+            call("RepositionRenderOrder", moving, anchor, mode)
+            compare(f"render order {i}", render_ranges)
+        for i in range(100):
+            both(0x02017000, rng.randbytes(32 * 0x68))
+            both(0x03003480, rng.randbytes(32))
+            for index in range(32):
+                both(0x02017000 + index * 0x68 + 0x64, bytes([255 if index % 4 == 0 else rng.randrange(32)]))
+                if index % 5 == 0:
+                    both(0x02017000 + index * 0x68 + 0x3C, struct.pack("<HHH", 256, 256, 0))
+            native("hn_render_mark_affine")(memory)
+            call("MarkUsedAffineMatrices")
+            compare(f"mark affine {i}", render_ranges)
+            equal(native("hn_render_assign_affine", result=C.c_bool)(memory), True, f"native assign affine {i}")
+            call("AssignRenderAffineMatrices")
+            compare(f"assign affine {i}", render_ranges)
+        for i in range(300):
+            layer = i % 4
+            both(0x03002E40, rng.randbytes(176))
+            both(0x030034B0, rng.randbytes(48))
+            x, y = rng.getrandbits(32), rng.getrandbits(32)
+            native("hn_probe_background_offset", 4)(memory, layer, x, y, 0x02020200)
+            call("CalculateBackgroundOffset", layer, x, y, 0x02020200, 0x02020204)
+            compare(f"background offset {i}", render_ranges)
+
+        fresh()
+        equal(native("hn_runtime_tables_init", result=C.c_bool)(memory), True, "animation runtime table")
+        cpu.mem_write(0x02000000, rom[0x8FE018:0x900EC8])
+        both(0x03002D98, struct.pack("<I", 0x02017000))
+        both(0x03002DC0, b"\x20")
+        native("hn_render_slot_reset", 1)(memory, 10)
+        call("ResetRenderSlot", 10)
+        both(slot + 0x60, b"\x01")
+        both(slot + 0x24, struct.pack("<III", 0x10000, 0, 0))
+        both(slot + 4, struct.pack("<I", 0x02020000))
+        # Position, repeat a moving frame, call a delayed subroutine, then stop.
+        program = bytes([0xA3, 12, 0, 0x87, 3, 0xA9, 1, 0, 5]) + struct.pack("<I", 0x02025000)
+        program += b"\x88\x89" + struct.pack("<I", 0x02020100) + b"\x01" + struct.pack("<I", 0x02025000) + b"\x80"
+        both(0x02020000, program)
+        both(0x02020100, bytes([0xA4, 20, 0, 0xC7, 2, 0x80]))
+        report3 = (C.c_uint32 * 3)()
+        for i in range(40):
+            if not native_bytes(slot + 0x60, 1)[0]:
+                break
+            native("hn_render_physics", 1)(memory, slot)
+            call("UpdateRenderPhysics", slot)
+            equal(render_animation(memory, slot, 4096, report3), 1, f"native animation frame {i}")
+            call("ProcessRenderAnimation", slot)
+            compare(f"animation frame {i}", render_ranges)
+        equal(native_bytes(slot + 0x60, 1), b"\0", "animation completes after nested flow")
+
+        render = bind("hn_probe_render", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
+        for case in range(120):
+            fresh()
+            count = 16 if case else 0
+            both(0x03002D98, struct.pack("<I", 0x02017000))
+            both(0x03002E2C, struct.pack("<I", 0x02015000))
+            both(0x03002C90, rng.randbytes(0x108))
+            both(0x03002DB0, struct.pack("<II4H4B", 0x400000, 0x400000, 0x1C0, 0xC0, 105, 65,
+                                      count, case % 3, count - 1 if count else 0, 0))
+            both(0x03002E40, rng.randbytes(176))
+            both(0x030034B0, rng.randbytes(48))
+            both(0x03003080, rng.randbytes(1024))
+            order = list(range(count))
+            rng.shuffle(order)
+            for index in range(count):
+                entry = 0x02015000 + index * 8
+                both(entry, rng.randbytes(8))
+                both(entry + 5, bytes([order[index]]))
+                current = 0x02017000 + index * 0x68
+                both(current, rng.randbytes(0x68))
+                both(current, struct.pack("<I", 0x02026000 + index * 32))
+                both(current + 0x18, struct.pack("<III", rng.randrange(256) << 16, rng.randrange(160) << 16, rng.randrange(64) << 16))
+                both(current + 0x3C, struct.pack("<HHH", rng.randrange(64, 513), rng.randrange(64, 513), rng.randrange(65536)))
+                both(current + 0x60, bytes([int(index % 5 != 0), rng.randrange(256), rng.randrange(256), 0,
+                                          255 if index % 3 == 0 else 0, rng.randrange(count), 0, rng.randrange(256)]))
+                parts = bytearray([index % 5, 0])
+                for _ in range(index % 5):
+                    attr0 = rng.randrange(3) << 14 | rng.randrange(0x4000)
+                    parts += struct.pack("<HHH", attr0, rng.randrange(65536), rng.randrange(65536))
+                both(0x02026000 + index * 32, bytes(parts))
+            equal(render(memory, 4096, 0, report3), 1, f"native render draw {case}")
+            call("DrawRenderSlots", limit=1000000)
+            compare(f"render draw {case}", ((0x02000000, 0x40000), (0x03000000, 0x7000)))
+
+        background_command = bind("hn_probe_background_command", C.c_int, C.c_void_p, C.c_uint32,
+                                  C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
+        background = bind("hn_probe_background", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
+        background_handlers = (
+            "Return", "WaitMotion", "Jump", "SetField38", "SetAccelerationY", "SetAccelerationX",
+            "SetStepY", "SetStepX", "AddOffsetY", "AddOffsetX", "SetPositionY", "SetPositionX",
+            "Reserved8C", "Reserved8D", "Reserved8E", "Reserved8F", "BeginRepeat", "EndRepeat",
+            "SetDelay", "WriteByte", "WriteHalfword", "Decompress", "Reserved96", "DmaCopyRows64",
+            "Stop98", "BiosCopy", "BiosCopyOffset", "Stop9B", "QueueByteWrite", "QueueHalfwordWrite",
+            "QueueCpuCopy", "QueueCpuCopyOffset", "Call", "DmaCopyTilemapRectangle", "SetRotation",
+            "SetField3E", "SetField3F", "AddRotation", "SetScaleY", "SetScaleX", "SetField44",
+            "SetField40", "SetField46", "SetField42", "AddScaleY", "AddScaleX", "SetAnchorX",
+            "SetAnchorY", "JumpIfByteEqual", "JumpIfByteLess", "JumpIfByteGreater", "SkipWord",
+            "SkipFiveBytes", "SkipByteB5", "SkipByteB6", "SkipByteB7", "SkipHalfword", "SetField48",
+            "SetField4A", "SetField4C", "SetField4E")
+        background_ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x05000000, 0x400),
+                             (0x06000000, 0x18000), (0x04000000, 0x58))
+        state = 0x02018000
+        def prepare_background(case):
+            fresh()
+            both(0x03002C90, rng.randbytes(0x108))
+            both(0x03002CC4, bytes([case % 3, 0]))
+            both(0x03002E08, struct.pack("<I", state))
+            both(0x03002C80, b"\x02")
+            both(0x03002E40, rng.randbytes(176))
+            both(0x030034B0, rng.randbytes(48))
+            both(state, rng.randbytes(80))
+            both(state + 0x14, struct.pack("<I", 0x02021000))
+            both(state + 0x38, bytes([(1, 4, 8, 15)[case % 4]]))
+            for layer in range(4):
+                both(0x03002E40 + layer * 44 + 0x18, struct.pack("<HHH", 128 + case, 384 - case, case * 17 % 256))
+            counts = ((0, 0, 0, 0), (3, 0, 0, 0), (2, 1, 0, 0), (2, 2, 0, 0), (1, 1, 1, 0), (1, 3, 1, 0))
+            both(state + 0x39, bytes(counts[case % 6]))
+            both(state + 0x3D, bytes([case % 4]))
+            for i in range(8):
+                both(state + 0x18 + i * 4, struct.pack("<I", 0x02021800 + i * 16))
+            both(0x03007010, struct.pack("<I", 0x02021000))
+            both(0x02022000, rng.randbytes(512))
+            both(0x02024000, b"\x10\x08\0\0\0ABCDEFGH")
+        for case in range(6):
+            for opcode, suffix in enumerate(background_handlers, 0x80):
+                prepare_background(case)
+                payload = struct.pack("<I", 0x123480FF)
+                if opcode in (0x82, 0xA0):
+                    payload = struct.pack("<I", 0x02021800)
+                elif opcode == 0x90:
+                    payload = b"\x04"
+                elif opcode in (0x93, 0x94, 0x9C, 0x9D):
+                    payload = struct.pack("<IH", 0x02025000, 0xFE80)
+                elif opcode == 0x95:
+                    payload = struct.pack("<III", 0x06000000, 0x02024000, 0x4000)
+                elif opcode == 0x97:
+                    payload = struct.pack("<IIBB", 0x02022000, 0x06004000, 6, 3)
+                elif opcode in (0x99, 0x9E):
+                    payload = struct.pack("<III", 0x02022000, 0x06004000, 14 if case & 1 else 32)
+                elif opcode in (0x9A, 0x9F):
+                    payload = struct.pack("<IIII", 0x02022000, 2, 0x06004000, 14)
+                elif opcode == 0xA1:
+                    # Text copies span screen blocks; affine maps retain the original size-bit stride.
+                    payload = struct.pack("<IBBBB", 0x02022000, 28, 30, 35, 33)
+                    if case % 3:
+                        payload = struct.pack("<IBBBB", 0x02022000, 2, 3, 9, 6)
+                elif opcode in (0xB0, 0xB1, 0xB2):
+                    both(0x02025000, bytes([127 + case % 3]))
+                    payload = struct.pack("<IBI", 0x02025000, 128, 0x02021800)
+                both(0x02021000, payload)
+                equal(background_command(memory, state, opcode, 0x03007010, report4), 1,
+                      f"native background command {opcode:02X} {case}")
+                equal(report4[3], call("BackgroundCommand" + suffix, state, 0x03007010, limit=1000000),
+                      f"background yield {opcode:02X} {case}")
+                compare(f"background command {opcode:02X} {case}", background_ranges)
+        for case in range(300):
+            prepare_background(case % 6)
+            layer = case % 4
+            p = 0x03002E40 + layer * 44
+            for axis in range(4):
+                coordinate = p + (axis & 1) * 4
+                native("hn_background_clamp", 3)(memory, layer, coordinate, axis)
+                call("ClampBackgroundCoordinate", layer, coordinate, axis)
+                compare(f"background clamp {case} {axis}", background_ranges[:2])
+            equal(native("hn_background_apply", 1, C.c_bool)(memory, layer), True, f"background apply success {case}")
+            call("ApplyBackgroundLayer", layer)
+            compare(f"background apply {case}", background_ranges[:2])
+            # Keep the affine reciprocal away from zero in this CPU-only oracle.
+            for i in range(4):
+                both(state + 0x40 + i * 4, struct.pack("<HH", 0xFFF0, 0x0020))
+            equal(native("hn_background_motion", 1, C.c_bool)(memory, state), True, f"background motion success {case}")
+            call("UpdateBackgroundMotion", state)
+            compare(f"background motion {case}", background_ranges[:2])
+
+        prepare_core()
+        memory_copy = bind("hn_memory_copy", C.c_bool, C.c_void_p, C.c_uint32, C.c_uint32, C.c_size_t)
+        video_render = bind("hn_video_render", None, C.c_void_p, C.c_void_p)
+        if args.video_oracle:
+            from compare_video import VideoOracle
+            oracle_context = VideoOracle(args.video_oracle, args.oracle_runtime_dir)
+        else:
+            oracle_context = nullcontext(None)
+        video_frames, nonuniform = 0, 0
+        with oracle_context as video_oracle:
+            for index in range(180):
+                equal(frame(memory, 4096, report), 1, f"coupled Main {index}")
+                call("RunMainScriptFrame")
+                equal(background(memory, 4096, report3), 1, f"coupled native background {index}: {list(report3)}")
+                call("UpdateBackgroundStates", limit=1000000)
+                equal(render(memory, 4096, 1, report3), 1, f"coupled native render {index}")
+                call("UpdateRenderSlots", limit=1000000)
+                both(0x04000006, b"\xA0\0")
+                equal(memory_copy(memory, 0x07000000, 0x03003080, 1024), True, "OAM shadow transfer")
+                cpu.mem_write(0x07000000, bytes(cpu.mem_read(0x03003080, 1024)))
+                native("hn_video_commit")(memory)
+                call("CommitVideoRegisters")
+                native("hn_transfer_flush")(memory)
+                call("FlushDmaTransfers")
+                compare(f"coupled Main/background/render {index}", save_ranges + ((0x05000000, 0x400),
+                    (0x06000000, 0x18000), (0x07000000, 0x400), (0x04000000, 0x58)))
+                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179):
+                    pixels = (C.c_uint32 * (240 * 160))()
+                    video_render(memory, pixels)
+                    parts = [native_bytes(address, size) for address, size in
+                        ((0x04000000, 1024), (0x05000000, 1024), (0x06000000, 98304), (0x07000000, 1024))]
+                    equal(bytes(pixels), video_oracle.render(parts), f"private ROM PPU snapshot {index}")
+                    video_frames += 1
+                    nonuniform += len(set(pixels)) > 1
+        if args.video_oracle:
+            print(f"{video_frames} private ROM PPU snapshots matched; {nonuniform} contained multiple colors.")
     finally:
         destroy(memory)
-    print(f"{checks} private native/reference checks passed (heap, PRNG, input, scripts, expressions, video, transfers, maps, saves).")
+    print(f"{checks} private native/reference checks passed (heap, input, scripts, expressions, rendering, maps, saves).")
     print("Function-level evidence only; boot and gameplay remain unverified.")
 
 if __name__ == "__main__":
