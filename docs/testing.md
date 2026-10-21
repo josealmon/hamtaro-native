@@ -5,6 +5,9 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
 
 - core: synthetic guest-memory behavior, DMA, BIOS/LZ77, video, timing/IRQ,
   original button transitions/repeat, PRNG arithmetic, heap and Main script control.
+- game: repeated DMA working addresses, byte register writes, transfer queue wrap,
+  video shadows, synthetic ROM map changes, preserved render fields, expression
+  cursor/recursion boundaries and SRAM checksum/backup recovery.
 - storage: SHA-256 known vectors, strict ROM rejection, atomic SRAM recovery,
   independent profile locking, settings validation and Unicode paths.
 - input: injected keyboard events and a local SDL virtual gamepad. Covers hotplug,
@@ -34,8 +37,12 @@ and the test-only hn_reference_probe.dll built by BUILD_TESTING:
 
 The reference must contain build/function-symbols.json. This check writes no
 ROM or captured state, and does not alter the reference checkout. It compares
-heap RAM, PRNG, input and supported Main command behavior. It does not exercise
-the game as a whole and is not part of ROM-free public CI.
+heap RAM, PRNG, input, expressions, video state, transfer queues, map/core
+initialization and SRAM initialization/repair/read/write behavior. It also compares
+24 Main-only script iterations from the actual ROM; other per-frame systems are
+not executed. The oracle uses explicit BIOS, immediate-DMA and IO-mask models,
+not a complete GBA machine. The current checkpoint passes 26,585 comparisons.
+It does not exercise the game as a whole and is not part of ROM-free public CI.
 
 Manual UI checks cover import/cancellation, persisted rebinding, keyboard menu
 navigation, constrained window sizes, fullscreen, and save import/export.

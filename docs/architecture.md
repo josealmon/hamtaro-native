@@ -2,9 +2,10 @@
 
 ## Target and source boundary
 
-The reference decompilation revision is 2ff1b43, "Validate Spat, Clubhouse
-conversations and sunflower reward". Its SHA-256-matching GBA build is a source
-of behavioral evidence; it does not make the Windows port complete.
+The current read-only reference revision is 14f0aec, "Isolate build tests from
+installed toolchains". The original scenario baseline is 2ff1b43, "Validate Spat,
+Clubhouse conversations and sunflower reward". Its SHA-256-matching GBA build is
+a source of behavioral evidence; it does not make the Windows port complete.
 
 This repository has independent history and contains no resource catalogs from
 the reference. The player imports the 16 MiB European AH3P revision 0 ROM.
@@ -30,14 +31,18 @@ SDL's device conversion happens after game PCM generation.
 | Settings and bindings | Implemented | Persistence, bounds, defaults, Unicode paths |
 | Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, deadzone, remapping, disconnect; physical models not tested |
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock |
-| GBA memory and DMA | Foundation | Synthetic region/mirroring, transfer and failure tests; not a full hardware conformance claim |
+| GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77 and compiler division semantics |
 | Software video | Foundation | Synthetic text/affine/bitmap/OBJ/window/blending paths; no game-scene comparison yet |
 | Video timing and IRQ | Foundation | Scanline/VBlank/HBlank events and DMA, tested independently; CPU/timer/audio timing still pending |
 | Native game helpers | Foundation | Button transitions/repeat and integer PRNG |
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |
-| Main script control | Partial | Fetch/yield/wait, calls/returns, variables and typed callback resolution; unsupported opcodes fail explicitly |
-| Native boot/title | Pending | Full initialization, callback adapters and script/graphics interpreters |
+| Video state and transfer queues | Adapted | Original video shadows, mosaic/blend/fade updates, DMA queue wrap/fill/flush; private function comparisons |
+| Map and core initialization | Adapted | Runtime tables read from ROM, task sentinel, render slots/order, background state and all 11 map banks tested at index 0 |
+| Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
+| Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
+| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, fades and typed callbacks; unsupported opcodes fail explicitly |
+| Native boot/title | Pending | Core initialization and 24 Main-only script iterations compared; background/render/graphics/task updates and audio are not connected |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
 | Music and effects | Pending | Native sequencer/mixer and PSG; the host stream is ready |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
@@ -70,15 +75,29 @@ The optional tests/integration/reference_probe.c bridge exports the native core
 only for private differential tests. It is not installed or shipped. The private
 comparison tool reads the player's ROM and the reference function-symbol map,
 runs selected ARM/Thumb functions in Unicorn, and compares them with compiled
-native operations. Heap layouts, input transitions, PRNG and the supported Main
-script commands match across 3,876 checks. This is function-level evidence,
-not an executed native boot, title screen or playthrough.
+native operations. It models the BIOS services, immediate DMA and IO masks needed
+by these functions; it does not provide a complete machine/timing oracle.
+Heap layouts, input, PRNG, expressions, video, transfers, maps, core initialization
+and save operations are compared. Synthetic fixtures exercise resource commands
+without embedding a game resource. The first 24 Main-only iterations read real
+scripts from the private ROM and compare persistent RAM, SRAM and video memory.
+This does not run the other per-frame systems, so it is not an executed native
+boot, title screen or playthrough. The source checkout's docs/testing.md records
+the reproducible command and current check count.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
 in their original 32-bit memory views. Callback bindings accept a specific typed
 Main signature, never a cast of a ROM address to a host function pointer. Unknown
 commands/callbacks and invalid stacks return a fault with the guest address;
 a per-frame command budget also reports an explicit fault instead of hanging.
+
+SRAM adapters retain the original guest callback images by reading them from the
+ROM into guest RAM as data. Save operations call typed native functions; the copied
+ARM bytes are never executed by the Windows application. Save compatibility checks
+cover blank storage, identity repair, checksum failures, primary/backup selection
+and grouped writes. File persistence remains separate from these in-memory calls;
+in-game save timing still needs the connected game loop. Invalid group selectors
+are rejected; the unused group-0 record write/load path is not exposed.
 
 ## Remaining integration order
 

@@ -1,4 +1,12 @@
 #include "game/script.h"
+#include "game/state.h"
+#include "game/world.h"
+#include "game/video.h"
+#include "game/transfer.h"
+#include "game/heap.h"
+#include "game/expression.h"
+#include "game/save.h"
+#include "gba/bios.h"
 #include <string.h>
 enum {
     CURSOR=0x03002C60, CONSUMED=0x03000014, OPCODE=0x03000010, INITIALIZED=0x03000018,
@@ -22,6 +30,27 @@ static uint32_t resolve_variable(HNMemory *m,unsigned offset)
 }
 static void advance(HNMemory *m,unsigned bytes)
 {hn_write32(m,CONSUMED,bytes);hn_write8(m,OPCODE,0);}
+static void transfer16(HNMemory *m,GameAddr source,GameAddr destination,unsigned bytes,bool fill)
+{
+    hn_write32(m,0x040000D4,source);hn_write32(m,0x040000D8,destination);
+    hn_write32(m,0x040000DC,(fill?0x81000000u:0x80000000u)|(bytes>>1));
+}
+static bool decompress(HNMemory *m,GameAddr source,GameAddr destination)
+{return hn_bios_lz77(m,source,destination,0x40000);}
+static uint32_t set_key_mask(HNMemory *m,GameAddr args)
+{
+    uint16_t mask=hn_read16(m,args);hn_write16(m,0x03001138,mask);
+    hn_write16(m,0x03001F64,mask&0x3FF);return 2;
+}
+static uint32_t reset_visuals(HNMemory *m,GameAddr args)
+{
+    (void)args;hn_render_reset(m);GameAddr p=hn_read32(m,HN_GRAPHICS_SCRIPTS);
+    for(unsigned i=0;i<0x160;i++)hn_write16(m,p+i*2,0);
+    hn_background_state_init(m);return 0;
+}
+static const HNMainCallback builtins[]={
+    {0x0801C708,set_key_mask},{0x0801D398,reset_visuals}
+};
 bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
 {
     if(s->fault)return false;
@@ -49,16 +78,121 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         hn_write8(m,YIELDED,1);break;
     case 4:hn_write8(m,RUNNING,1);hn_write8(m,OPCODE,0);break;
     case 5:hn_write8(m,RUNNING,0);hn_write8(m,YIELDED,1);hn_write8(m,OPCODE,0);break;
+    case 6: {
+        GameAddr cursor=hn_read32(m,CURSOR),source=hn_read32(m,cursor),destination=hn_read32(m,cursor+4);
+        unsigned bytes=hn_read32(m,source)>>8;GameAddr temporary=0;
+        bool palette=destination-0x05000000u<=0x3FF;
+        if(destination>0x05FFFFFF)temporary=destination+0xFC004720u;
+        else if(palette)temporary=destination+0xFD01C720u;
+        if(temporary){
+            if(!decompress(m,source,temporary))return fail(s,HN_SCRIPT_RESOURCE,op,source);
+            if(hn_read16(m,0x04000000)&0x80){
+                if(palette)transfer16(m,temporary,destination,bytes,false);
+                else hn_transfer_copy(m,temporary,destination,bytes,false);
+            }else hn_transfer_queue(m,temporary,destination,bytes);
+        }
+        advance(m,8);break;
+    }
+    case 7: {
+        scratch(m,args,0,8);GameAddr source=hn_read32(m,SCRATCH),target=resolve_variable(m,4);
+        if(target-0x02000000u<=0x01007FFFu ||
+           (target>0x04FFFFFF && (hn_read16(m,0x04000000)&0x80))){
+            if(!decompress(m,source,target))return fail(s,HN_SCRIPT_RESOURCE,op,source);
+        }
+        advance(m,8);break;
+    }
+    case 8:case 9: {
+        scratch(m,args,0,8);GameAddr source=resolve_variable(m,0);
+        GameAddr destination=op==8?resolve_variable(m,4):hn_read32(m,SCRATCH+4);
+        unsigned bytes=hn_read16(m,args+8);
+        if(op==8)hn_transfer_copy(m,source,destination,bytes,false);
+        else{
+            hn_write16(m,SCRATCH,(uint16_t)bytes);
+            if(hn_read16(m,0x04000000)&0x80)transfer16(m,source,destination,bytes,false);
+            else hn_transfer_queue(m,source,destination,bytes);
+        }
+        advance(m,10);break;
+    }
     case 0x0C:
         scratch(m,args,0,4);hn_write32(m,CURSOR,hn_read32(m,SCRATCH));advance(m,0);break;
+    case 0x0D: {
+        uint8_t bank=hn_read8(m,HN_MAP_BANK),index=hn_read8(m,args);
+        if(!hn_map_initialize(m,bank,index))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        if((uint8_t)(bank-1)<=8&&(hn_read8(m,0x03002180)&2)&&!hn_save_write_groups(m))
+            return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        hn_render_order_init(m);hn_render_priority_init(m);break;
+    }
+    case 0x0E: {
+        uint8_t bank=hn_read8(m,args);
+        if(bank!=9&&hn_read8(m,HN_MAP_BANK)!=9)hn_core_storage_clear(m,2);
+        if(!hn_map_initialize(m,bank,0))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        hn_write8(m,YIELDED,1);break;
+    }
+    case 0x12: {
+        unsigned slot=hn_read8(m,args),mask=hn_read8(m,args+1);
+        scratch(m,args+2,0,4);
+        if(mask&128)mask&=127;else hn_background_layers_reset(m,(uint8_t)mask);
+        GameAddr state=hn_read32(m,HN_RENDER_STATES)+slot*80;
+        for(unsigned i=0;i<20;i++)hn_write32(m,state+i*4,0);
+        hn_write8(m,state+0x38,(uint8_t)mask);
+        GameAddr script=resolve_variable(m,0);if(script)hn_write32(m,state+0x14,script);
+        advance(m,6);break;
+    }
+    case 0x13: {
+        GameAddr state=hn_read32(m,HN_GRAPHICS_SCRIPTS)+hn_read8(m,args)*44;
+        scratch(m,args+2,0,4);hn_write8(m,state,hn_read8(m,args+1));
+        GameAddr script=resolve_variable(m,0);if(script)hn_write32(m,state+0x18,script);
+        advance(m,6);break;
+    }
+    case 0x14: {
+        static const uint8_t shifts[]={0,2,6,7,8,13,14},widths[]={2,2,1,1,5,1,2};
+        scratch(m,args,0,8);unsigned layer=hn_read8(m,SCRATCH);
+        if(layer>=4)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        GameAddr control=HN_VIDEO_STATE+0x38+layer*0x30;uint16_t value=hn_read16(m,control);
+        for(unsigned i=0;i<7;i++){
+            unsigned field=hn_read8(m,SCRATCH+1+i),mask=((1u<<widths[i])-1)<<shifts[i];
+            if(field!=255)value=(uint16_t)((value&~mask)|((field<<shifts[i])&mask));
+        }
+        hn_write16(m,control,value);hn_video_mark_backgrounds(m,(uint8_t)(1u<<layer));
+        advance(m,8);break;
+    }
+    case 0x15: {
+        unsigned layer=hn_read8(m,args);scratch(m,args+1,0,4);
+        if(layer>=4)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        GameAddr state=HN_VIDEO_STATE+0x38+layer*0x30;
+        hn_write16(m,state+2,hn_read16(m,SCRATCH));hn_write16(m,state+4,hn_read16(m,SCRATCH+2));
+        hn_video_mark_backgrounds(m,(uint8_t)(1u<<layer));advance(m,5);break;
+    }
+    case 0x16:case 0x17:
+        hn_video_set_layers(m,op==0x16,hn_read8(m,args));advance(m,1);break;
+    case 0x18: {
+        unsigned type=hn_read8(m,args);scratch(m,args+1,0,8);
+        GameAddr destination=hn_read32(m,SCRATCH+4);
+        if(!type){
+            destination=resolve_variable(m,4);uint8_t value=hn_read8(m,SCRATCH);
+            for(unsigned i=0;i<hn_read16(m,SCRATCH+2)&&!m->fault;i++)hn_write8(m,destination+i,value);
+        }else if(destination>0x05FFFFFF&&!(hn_read16(m,0x04000000)&0x80)){
+            uint32_t value=hn_read16(m,SCRATCH);
+            hn_transfer_queue_fill(m,value|(value<<16),destination,hn_read16(m,SCRATCH+2));
+        }else transfer16(m,SCRATCH,destination,hn_read16(m,SCRATCH+2),true);
+        advance(m,9);break;
+    }
     case 0x1C: {
         scratch(m,args,0,4);GameAddr address=hn_read32(m,SCRATCH);
         HNMainFunction function=NULL;
         for(size_t i=0;i<s->callback_count;i++)if((s->callbacks[i].address&~1u)==(address&~1u)){
             function=s->callbacks[i].function;break;
         }
+        if(!function)for(size_t i=0;i<sizeof(builtins)/sizeof(*builtins);i++)
+            if(builtins[i].address==(address&~1u)){function=builtins[i].function;break;}
         if(!function)return fail(s,HN_SCRIPT_CALLBACK,op,address);
         uint32_t consumed=function(m,args+4);advance(m,consumed+4);break;
+    }
+    case 0x1D: {
+        unsigned result=hn_read16(m,RESULT),count=hn_read8(m,args);
+        if(!result)advance(m,count*4+1);
+        else{scratch(m,args+1+(result-1)*4,0,4);hn_write32(m,CURSOR,hn_read32(m,SCRATCH));advance(m,0);}
+        break;
     }
     case 0x1E: {
         scratch(m,args,0,4);GameAddr target=resolve_variable(m,0);
@@ -73,6 +207,14 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         depth--;hn_write8(m,DEPTH,(uint8_t)depth);
         hn_write32(m,CURSOR,hn_read32(m,RETURNS+depth*4));advance(m,4);break;
     }
+    case 0x22:case 0x23: {
+        scratch(m,args,0,8);GameAddr expression=resolve_variable(m,0);
+        GameAddr target=op==0x22?resolve_variable(m,4):0;uint32_t value;
+        if(!hn_expression_evaluate(m,expression,op==0x23,&value))return fail(s,HN_SCRIPT_RESOURCE,op,expression);
+        if(op==0x22&&value){hn_write32(m,CURSOR,target);advance(m,0);}
+        else advance(m,op==0x22?8:4);
+        break;
+    }
     case 0x27:
         hn_write8(m,RUNNING,0);hn_write32(m,CURSOR,0);hn_write8(m,OPCODE,1);hn_write8(m,YIELDED,1);break;
     case 0x28:
@@ -83,12 +225,124 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         scratch(m,args,0,2);hn_write16(m,RESULT,hn_read16(m,CLASSES+hn_read16(m,SCRATCH)*2));advance(m,2);break;
     case 0x2B:
         scratch(m,args,0,2);hn_write16(m,RESULT,hn_read16(m,SCRATCH));advance(m,2);break;
+    case 0x2C: {
+        unsigned layer=hn_read8(m,args),flags=hn_read8(m,args+1);scratch(m,args+2,0,8);
+        if(layer>=4)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        GameAddr bounds=HN_BACKGROUND_BOUNDS+layer*12;
+        hn_write16(m,bounds,hn_read16(m,SCRATCH));hn_write16(m,bounds+4,hn_read16(m,SCRATCH+2));
+        hn_write16(m,bounds+2,hn_read16(m,SCRATCH+4));hn_write16(m,bounds+6,hn_read16(m,SCRATCH+6));
+        hn_write8(m,bounds+8,(uint8_t)flags);advance(m,10);break;
+    }
     case 0x2D:
         scratch(m,args,0,3);hn_write8(m,CONTROLS+hn_read16(m,SCRATCH),hn_read8(m,SCRATCH+2));advance(m,3);break;
     case 0x2E:
         scratch(m,args,0,4);hn_write16(m,CLASSES+hn_read16(m,SCRATCH)*2,hn_read16(m,SCRATCH+2));advance(m,4);break;
+    case 0x2F: {
+        unsigned width=hn_read8(m,args);scratch(m,args+1,0,6);
+        unsigned source=hn_read16(m,SCRATCH),destination=hn_read16(m,SCRATCH+2);
+        if(width)hn_bios_cpu_set(m,CLASSES+source*2,CLASSES+destination*2,hn_read16(m,SCRATCH+4));
+        else for(unsigned i=0;i<hn_read16(m,SCRATCH+4)&&!m->fault;i++)
+            hn_write8(m,CONTROLS+destination+i,hn_read8(m,CONTROLS+source+i));
+        advance(m,7);break;
+    }
+    case 0x30:case 0x31:case 0x32: {
+        unsigned width=hn_read8(m,args);scratch(m,args+1,0,8);GameAddr target=resolve_variable(m,4);
+        unsigned index=hn_read16(m,SCRATCH);
+        unsigned left=width?hn_read16(m,CLASSES+index*2):hn_read8(m,CONTROLS+index);
+        unsigned right=width?hn_read16(m,SCRATCH+2):hn_read8(m,SCRATCH+2);
+        bool take=op==0x30?left==right:op==0x31?left>=right:left<right;
+        if(take){hn_write32(m,CURSOR,target);advance(m,0);}else advance(m,9);
+        break;
+    }
+    case 0x33: {
+        unsigned desired=hn_read8(m,args);scratch(m,args+1,2,6);GameAddr target=resolve_variable(m,4);
+        unsigned flag=hn_read16(m,SCRATCH+2),value=(hn_read8(m,0x03002180+(flag>>3))>>(flag&7))&1;
+        if(value==(desired!=0)){hn_write32(m,CURSOR,target);advance(m,0);}else advance(m,7);
+        break;
+    }
+    case 0x34:case 0x35: {
+        scratch(m,args,0,8);GameAddr source=resolve_variable(m,0),destination=resolve_variable(m,4);
+        scratch(m,args+8,0,6);unsigned width=hn_read16(m,SCRATCH),rows=hn_read16(m,SCRATCH+2),stride=hn_read16(m,SCRATCH+4);
+        if((uint32_t)width*rows>0x40000u)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        bool allocated=op==0x35||(hn_read16(m,0x04000000)&0x80);
+        GameAddr temporary=allocated?hn_heap_allocate(m,hn_read32(m,source)>>8,true):
+            destination+(destination>0x05FFFFFF?0xFC004720u:0xFD01C720u);
+        if(!temporary||!decompress(m,source,temporary)){
+            if(allocated&&temporary)hn_heap_free(m,temporary);
+            return fail(s,HN_SCRIPT_RESOURCE,op,source);
+        }
+        for(unsigned i=0;i<rows&&!m->fault;i++){
+            if(op==0x35)hn_bios_cpu_set(m,temporary+i*width,destination+i*stride,(width>>1)&0xFFFFu);
+            else if(allocated)transfer16(m,temporary+i*width,destination+i*stride,width,false);
+            else hn_transfer_queue(m,temporary+i*width,destination+i*stride,width);
+        }
+        if(allocated)hn_heap_free(m,temporary);advance(m,14);break;
+    }
+    case 0x36:
+        scratch(m,args,0,3);hn_write32(m,SCRATCH+4,hn_heap_allocate(m,hn_read16(m,SCRATCH),true));
+        hn_write32(m,VARIABLES+hn_read8(m,SCRATCH+2)*4,hn_read32(m,SCRATCH+4));advance(m,3);break;
+    case 0x37:
+        hn_heap_free(m,hn_read32(m,VARIABLES+hn_read8(m,args)*4));advance(m,1);break;
+    case 0x3F: {
+        uint8_t step=hn_read8(m,args),phase=hn_read8(m,HN_BLEND+6);
+        if(!hn_read8(m,INITIALIZED)){hn_write8(m,INITIALIZED,1);hn_video_forced_blank(m,0);}
+        if(step&128)step=(uint8_t)(0u-step);
+        if(phase==128)advance(m,1);
+        else{
+            if(step==128)phase=128;
+            else if(!(phase&128)){phase=(uint8_t)(phase+step);if(phase>128)phase=128;}
+            else{phase=(uint8_t)(phase-step);if(!(phase&128))phase=128;}
+            hn_video_fade_phase(m,phase);hn_write8(m,YIELDED,1);
+        }
+        break;
+    }
+    case 0x40: {
+        uint8_t step=hn_read8(m,args),phase=hn_read8(m,HN_BLEND+6);unsigned value;
+        if(step&128){
+            step=(uint8_t)(0u-step);
+            if(phase<=step){advance(m,1);break;}value=phase-step;
+        }else{
+            value=phase+step;
+            if(value>255){hn_video_forced_blank(m,1);advance(m,1);break;}
+        }
+        hn_video_fade_phase(m,(uint8_t)value);hn_write8(m,YIELDED,1);break;
+    }
+    case 0x46: {
+        scratch(m,args,0,3);unsigned flag=hn_read16(m,SCRATCH),bit=1u<<(flag&7);
+        GameAddr byte=0x03002180+(flag>>3);unsigned value=hn_read8(m,byte);
+        hn_write8(m,byte,(uint8_t)(hn_read8(m,SCRATCH+2)?value|bit:value&~bit));advance(m,3);break;
+    }
+    case 0x47:case 0x48:
+        hn_mosaic_configure(m,hn_read8(m,args),0);
+        if(op==0x47)hn_mosaic_square(m,(uint8_t)(hn_read8(m,args+1)<<4));
+        else hn_mosaic_shared(m,(uint8_t)(hn_read8(m,args+1)<<4),(uint8_t)(hn_read8(m,args+2)<<4));
+        advance(m,op==0x47?2:3);break;
+    case 0x49:
+        hn_write8(m,0x03001F60,hn_read8(m,args));hn_write8(m,0x03001F90,hn_read8(m,args+1));advance(m,2);break;
+    case 0x4C: {
+        uint8_t mode=hn_read8(m,args);if(mode<=5)hn_video_set_mode(m,mode);advance(m,1);break;
+    }
+    case 0x4D:
+        scratch(m,args+1,0,4);hn_write32(m,0x030021F0+hn_read8(m,args)*4,resolve_variable(m,0));advance(m,5);break;
+    case 0x52:
+        hn_video_forced_blank(m,hn_read8(m,args));hn_write8(m,YIELDED,1);advance(m,1);break;
     case 0x53:
         scratch(m,args,2,6);hn_write32(m,VARIABLES+hn_read16(m,SCRATCH+2)*4,hn_read32(m,SCRATCH+4));advance(m,6);break;
+    case 0x55:
+        hn_write8(m,0x03002170,1);hn_write8(m,0x03001FB8,hn_read8(m,args));advance(m,1);break;
+    case 0x58:
+        if(!hn_save_write_record(m,hn_read8(m,args),hn_read8(m,args+1)))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        advance(m,2);break;
+    case 0x59:
+        hn_write8(m,0x03002C0C,hn_read8(m,args));hn_write8(m,0x03001F50,hn_read8(m,args+1));
+        hn_write8(m,0x03002C04,hn_read8(m,args+2));hn_write8(m,0x03002C00,hn_read8(m,args+3));advance(m,4);break;
+    case 0x5D: {
+        unsigned value=hn_read8(m,0x030021E0),mask=hn_read8(m,args);
+        hn_write8(m,0x030021E0,(uint8_t)(hn_read8(m,args+1)?value|mask:value&~mask));advance(m,2);break;
+    }
+    case 0x5F:
+        if(!hn_save_write_groups(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        advance(m,0);break;
     default:return fail(s,HN_SCRIPT_OPCODE,op,args);
     }
     if(m->fault)return fail(s,HN_SCRIPT_MEMORY,op,m->fault_address);

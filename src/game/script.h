@@ -7,7 +7,8 @@ extern "C" {
 typedef uint32_t (*HNMainFunction)(HNMemory *, GameAddr arguments);
 typedef struct { GameAddr address; HNMainFunction function; } HNMainCallback;
 typedef enum { HN_SCRIPT_OK, HN_SCRIPT_OPCODE, HN_SCRIPT_CALLBACK,
-               HN_SCRIPT_STACK, HN_SCRIPT_BUDGET, HN_SCRIPT_MEMORY } HNScriptFault;
+               HN_SCRIPT_STACK, HN_SCRIPT_BUDGET, HN_SCRIPT_MEMORY,
+               HN_SCRIPT_RESOURCE } HNScriptFault;
 typedef struct {
     HNMemory *memory;
     const HNMainCallback *callbacks;

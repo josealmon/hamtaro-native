@@ -15,6 +15,8 @@ typedef struct {
     uint8_t palette[1024], vram[98304], oam[1024], sram[HN_SRAM_SIZE];
     GameAddr fault_address;
     bool fault, sram_dirty, dma_active;
+    GameAddr dma_source[4], dma_destination[4];
+    bool dma_latched[4];
 } HNMemory;
 void hn_memory_init(HNMemory *, const uint8_t *rom, size_t size);
 uint8_t hn_read8(HNMemory *, GameAddr);

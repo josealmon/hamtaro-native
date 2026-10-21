@@ -60,8 +60,24 @@ static void store_io32(HNMemory *m, unsigned o, uint32_t v)
 {
     for (unsigned i=0;i<4;i++) m->io[o+i] = (uint8_t)(v >> (8*i));
 }
+static void dma_control_written(HNMemory *m,unsigned channel)
+{
+    unsigned offset=0xB0+12*channel;
+    m->dma_latched[channel]=(io32(m,offset+8)&0x80000000u)!=0;
+    if(m->dma_latched[channel]){
+        m->dma_source[channel]=io32(m,offset);
+        m->dma_destination[channel]=io32(m,offset+4);
+        if(!m->dma_active)hn_dma_trigger(m,0);
+    }
+}
 void hn_write8(HNMemory *m, GameAddr a, uint8_t v)
 {
+    if(a==0x04000006||a==0x04000007)return;
+    if(a==0x04000004)v=(uint8_t)((v&~7u)|(m->io[4]&7));
+    if(a==0x04000000)v&=0xF7;
+    if(a==0x04000202||a==0x04000203){
+        m->io[a-0x04000000]&=(uint8_t)~v;return;
+    }
     /* Palette/VRAM byte stores replicate to a halfword; OAM ignores byte stores. */
     if ((a>>24)==6) {
         unsigned mode=m->io[0]&7,offset=a&0x1FFFF;
@@ -73,17 +89,20 @@ void hn_write8(HNMemory *m, GameAddr a, uint8_t v)
     }
     if ((a>>24)==7) return;
     raw8(m,a,v);
+    if(a>=0x040000BB && a<=0x040000DF && (a-0x040000BB)%12==0)
+        dma_control_written(m,(a-0x040000BB)/12);
 }
 void hn_write16(HNMemory *m, GameAddr a, uint16_t v)
 {
+    if(a==0x04000000)v&=0xFFF7;
     if(a==0x04000006)return; /* VCOUNT is read-only. */
     if(a==0x04000004)v=(uint16_t)((v&~7u)|(m->io[4]&7));
     if (a == 0x04000202) { /* IF is write-one-to-clear. */
         m->io[0x202] &= (uint8_t)~v; m->io[0x203] &= (uint8_t)~(v>>8); return;
     }
     raw8(m,a,(uint8_t)v); raw8(m,a+1,(uint8_t)(v>>8));
-    if (!m->dma_active && a>=0x040000BA && a<=0x040000DE &&
-        (a-0x040000BA)%12==0 && (v&0x8000)) hn_dma_trigger(m,0);
+    if(a>=0x040000BA && a<=0x040000DE && (a-0x040000BA)%12==0)
+        dma_control_written(m,(a-0x040000BA)/12);
 }
 void hn_write32(HNMemory *m, GameAddr a, uint32_t v)
 {
@@ -107,7 +126,10 @@ void hn_dma_trigger(HNMemory *m, unsigned timing)
         unsigned o=0xB0+ch*12;
         uint32_t ctl=io32(m,o+8);
         if (!(ctl&0x80000000u) || ((ctl>>28)&3)!=timing) continue;
-        GameAddr src=io32(m,o), dst=io32(m,o+4), initial_dst=dst;
+        if(!m->dma_latched[ch]){
+            m->dma_source[ch]=io32(m,o);m->dma_destination[ch]=io32(m,o+4);m->dma_latched[ch]=true;
+        }
+        GameAddr src=m->dma_source[ch],dst=m->dma_destination[ch],initial_dst=io32(m,o+4);
         unsigned width=(ctl&(1u<<26))?4:2, count=ctl&(ch==3?0xFFFFu:0x3FFFu);
         unsigned sm=(ctl>>23)&3, dm=(ctl>>21)&3;
         if (sm==3) { m->fault=true; m->fault_address=0x040000B0+ch*12; break; }
@@ -119,13 +141,13 @@ void hn_dma_trigger(HNMemory *m, unsigned timing)
             if (sm==0) src+=width; else if(sm==1) src-=width;
             if (dm==0 || dm==3) dst+=width; else if(dm==1) dst-=width;
         }
-        store_io32(m,o,src);
-        store_io32(m,o+4,dm==3?initial_dst:dst);
+        m->dma_source[ch]=src;
+        m->dma_destination[ch]=dm==3?initial_dst:dst;
         if (ctl&(1u<<30)) {
             unsigned irq=1u<<(8+ch);
             m->io[0x202]|=(uint8_t)irq; m->io[0x203]|=(uint8_t)(irq>>8);
         }
-        if (!(ctl&(1u<<25)) || timing==0) ctl &= ~0x80000000u;
+        if (!(ctl&(1u<<25)) || timing==0){ctl&=~0x80000000u;m->dma_latched[ch]=false;}
         store_io32(m,o+8,ctl);
     }
     m->dma_active=false;
