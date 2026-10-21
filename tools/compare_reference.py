@@ -47,9 +47,10 @@ def main() -> None:
     parser.add_argument("--collisions-only", action="store_true", help="Run leader motion, collision and wait-handler comparisons")
     parser.add_argument("--scripts-only", action="store_true", help="Run Main memory commands and scene-transition comparisons")
     parser.add_argument("--book-only", action="store_true", help="Run Ham-Chat acquisition, page and decoration comparisons")
+    parser.add_argument("--indicators-only", action="store_true", help="Run destination progress, indicators, navigation and unlock comparisons")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
-    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.scripts_only,args.book_only))):
+    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.scripts_only,args.book_only,args.indicators_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -1460,6 +1461,65 @@ def main() -> None:
                 equal(report_animation[3], call(original, slot, 0x03007010), f"animation audio yield {case} {opcode}")
                 compare(f"animation audio {case} {opcode}", audio_ranges)
 
+    def indicator_checks():
+        local=random.Random(0x494E4449)
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000))
+        complete=native("hn_scene_indicator_complete",1,C.c_bool)
+        visible=native("hn_scene_indicator_visible",1,C.c_bool)
+        configure=native("hn_scene_indicator_configure",2,C.c_bool)
+        update=native("hn_scene_indicator_update",1,C.c_bool)
+        fresh()
+        for missing in (-1,*range(0x47,0x9D)):
+            flags=bytearray(b"\xFF"*96)
+            if missing>=0:flags[missing//8]&=~(1<<(missing&7))
+            both(0x03002180,bytes(flags))
+            for index in range(1,8):
+                equal(complete(memory,0xA5000000|index),bool(call("CheckSceneIndicatorComplete",index)),"destination completion flags")
+        for index in range(256):
+            equal(complete(memory,index),bool(call("CheckSceneIndicatorComplete",index)),"destination completion index")
+            for mode in (0,1,2,3,4,5,255):
+                both(0x02004536,bytes([mode]))
+                equal(visible(memory,0xA5000000|index),bool(call("CheckSceneIndicatorVisible",index)),"destination visibility")
+        def prepare():
+            fresh();both(0x02004520,local.randbytes(512));both(0x03002180,local.randbytes(96))
+            both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+            both(0x02010000,local.randbytes(40*104));both(0x03002E08,struct.pack("<I",0x02018000))
+            both(0x03002C80,b"\x09");both(0x02018000,local.randbytes(9*80))
+            both(0x0200194C,struct.pack("<40I",*(0x08000100+i*16 for i in range(40))))
+            both(0x03001F50,bytes([local.choice((0,15,26))]));both(0x03002170,b"\xA5")
+        def invoke(name):
+            both(0x02020000,struct.pack("<I",symbols[name]|1));both(0x03000010,b"\x1C"+bytes(15))
+            equal(command(memory,0x1C,0x02020000),1,f"native destination {name}")
+            call("MainScriptInvokeCallback",0x02020000);compare(f"destination {name}",ranges)
+        for index in range(8):
+            for state in (0,1,2,3,4,5,6,255):
+                prepare()
+                equal(configure(memory,index|0xA5000000,state|0xA5000000),True,"native destination indicator setup")
+                call("ConfigureSceneIndicator",index,state);compare("destination indicator setup",ranges)
+        for case in range(320):
+            prepare();language=case%5;selected=case%8
+            both(0x0200460B,bytes([language]));both(0x0200458C,bytes([selected]));both(0x02004605,bytes([(case//8)%8]))
+            both(0x02004536,bytes([(case//40)%4]));both(0x02004533,bytes([case%2]))
+            if case&1:both(0x03002180,b"\xFF"*96)
+            equal(update(memory,selected),True,"native destination indicator update")
+            call("UpdateSceneIndicator",selected);compare("destination indicator update",ranges)
+            invoke("ScriptCallbackInitializeSceneIndicators")
+            both(0x03001164,bytes([(case+3)%8,case%2]));invoke("ScriptCallbackRefreshSceneIndicators")
+        for mask in range(256):
+            prepare();both(0x030021B0,bytes([mask]));invoke("ScriptCallbackUnlockSceneIndicator")
+            both(0x02004606,bytes([mask%8]));invoke("ScriptCallbackInitializeSceneDestinationIndicator")
+        prepare();equal(native("hn_audio_driver_init",result=C.c_bool)(memory),True,"destination navigation audio init")
+        call("InitializeAudioDriver",limit=2000000)
+        for flags in range(256):
+            for mode in (0,1):
+                both(0x03002188,bytes([flags]));both(0x02004536,bytes([mode]))
+                for index in range(-2,7):both(0x02001930+index*4,struct.pack("<I",0x02022000+(index+2)*64))
+                for table in range(9):both(0x02022000+table*64,bytes(local.randrange(9) for _ in range(64)))
+                for direction in range(16):
+                    both(0x0200458C,bytes([direction%8]));both(0x03000822,struct.pack("<H",direction<<4))
+                    both(0x03001164,local.randbytes(2));invoke("ScriptCallbackMoveSceneIndicator")
+        compare("destination navigation audio",ranges+((0x03007FF0,4),(0x04000060,0x80),(0x04000100,4)))
+
     def book_checks():
         local=random.Random(0x48414D)
         def prepare(sorted_mode=0,language=0):
@@ -1532,6 +1592,34 @@ def main() -> None:
 
     def script_memory_checks():
         local=random.Random(0x414248)
+        def invoke_transition(name,payload=b""):
+            both(0x02020000,struct.pack("<I",symbols[name]|1)+payload);both(0x03000010,b"\x1C"+bytes(15))
+            equal(command(memory,0x1C,0x02020000),1,f"native transition {name}")
+            call("MainScriptInvokeCallback",0x02020000)
+            compare(f"transition {name}",((0x02000000,0x40000),(0x03000000,0x7000)))
+        for case in range(1024):
+            fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+            index=(0,1,2,39)[case%4];both(0x03002C0C,bytes([index]));both(0x02010000+index*104,local.randbytes(104))
+            both(0x02010000+index*104+0x60,bytes([case%256]));invoke_transition("ScriptCallbackReadActorDirectionAndXZ")
+        for case in range(768):
+            fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+            both(0x02010000,local.randbytes(40*104));both(0x0201DC40,local.randbytes(96))
+            both(0x02004520,local.randbytes(256));both(0x03002180,local.randbytes(96))
+            leader=case%3;follower=(case//3)%3
+            both(0x03002C0C,bytes([leader]));both(0x03001F50,bytes([follower]))
+            both(0x03002274,bytes([(0,leader,follower,39)[case%4]]));both(0x03002270,bytes([(0,follower,leader,39)[(case//4)%4]]))
+            both(0x03001F60,bytes([(case//8)%2]));both(0x03001F90,bytes([(case//16)%2]));both(0x03002170,b"\xA5")
+            both(0x020000F8,rom[0x58BF68:0x58BF68+16]);both(0x03000820,struct.pack("<H",2 if case&1 else 0))
+            both(0x02004531,bytes([(0,1,2,4,7,8,255)[case%7]]));both(0x02004580,bytes([(case//32)%2]))
+            for name,payload in (("ScriptCallbackRepositionLeaderAndSelectAnimations",bytes([case%2])),
+                                 ("ScriptCallbackRepositionFollowerAndSelectAnimations",b"")):
+                invoke_transition(name,payload)
+        for case in range(1024):
+            fresh();both(0x0201DC40,local.randbytes(96))
+            numerator=(0,1,32767,32768,65535,local.randrange(65536))[case%6]
+            denominator=(0,1,2,32767,32768,65535,local.randrange(65536))[case%7]
+            both(0x0201DC8E,struct.pack("<HHH",denominator,local.randrange(65536),numerator))
+            invoke_transition("ScriptCallbackInterpolateClassFacing",bytes([(0,1,255)[case%3]]))
         for bottom in (-32768,-1,0,1,142,143,32767):
             for z in (-32768,-1,0,1,70,71,32767):
                 fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
@@ -1630,6 +1718,10 @@ def main() -> None:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.indicators_only:
+            indicator_checks()
+            print(f"{checks} private destination-indicator comparisons passed; full gameplay remains unverified.")
+            return
         if args.book_only:
             book_checks()
             print(f"{checks} private Ham-Chat acquisition/page comparisons passed; full gameplay remains unverified.")
@@ -1671,7 +1763,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        book_checks();script_memory_checks()
+        indicator_checks();book_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

@@ -11,6 +11,58 @@ static GameAddr motion_slot(HNMemory *m,GameAddr selector)
     unsigned index=hn_read8(m,selector);
     return index<hn_read8(m,HN_RENDER_INFO+16)&&hn_read32(m,HN_RENDER_SLOTS)?hn_render_slot(m,index):0;
 }
+static bool transition_animation(HNMemory *m,unsigned index,GameAddr animation)
+{
+    if(index>=hn_read8(m,HN_RENDER_INFO+16))return false;
+    if(index==hn_read8(m,HN_RENDER_CLASS_FOLLOWER))hn_write8(m,0x03002170,0);
+    hn_render_set_animation(m,index,animation);return !m->fault;
+}
+bool hn_motion_transition(HNMemory *m,bool follower,bool keep_x)
+{
+    GameAddr leader=motion_slot(m,HN_RENDER_CLASS_LEADER);
+    GameAddr slot=follower?motion_slot(m,HN_RENDER_CLASS_FOLLOWER):leader;if(!leader||!slot)return false;
+    unsigned index=hn_read8(m,follower?HN_RENDER_CLASS_FOLLOWER:HN_RENDER_CLASS_LEADER);
+    hn_write8(m,slot+0x60,hn_read8(m,follower?leader+0x60:HN_SCENE_CONTROLS+0x11));
+    if(follower){
+        hn_write32(m,slot+0x18,hn_read32(m,leader+0x18)+((uint32_t)hn_read16(m,0x0201DC86)<<16));
+        hn_write32(m,slot+0x20,hn_read32(m,leader+0x20)+((uint32_t)hn_read16(m,0x0201DC88)<<16));
+    }else{
+        hn_write32(m,slot+0x18,((uint32_t)hn_read16(m,keep_x?0x0201DC60:0x0201DC84)<<16)|0x8000);
+        hn_write32(m,slot+0x20,((uint32_t)hn_read16(m,keep_x?0x0201DC84:0x0201DC62)<<16)|0x8000);
+    }
+    if(hn_read8(m,HN_SCENE_CONTROLS+0x60)){
+        unsigned variant=hn_input_query(m,2,0)>>1;
+        uint32_t offset=(((uint32_t)hn_read8(m,slot+0x60)-1)<<1)+variant;
+        unsigned family=hn_read8(m,0x03001F60)+(follower?1:0);
+        GameAddr animation=hn_read32(m,hn_read32(m,HN_TRANSITION_ANIMATION_FAMILIES+family*4)+offset*4);
+        if(!transition_animation(m,index,animation))return false;
+        family=hn_read8(m,0x03001F90)+(follower?1:0);
+        animation=hn_read32(m,hn_read32(m,HN_SECONDARY_ANIMATION_FAMILIES+family*4)+offset*4);
+        unsigned extra=hn_read8(m,follower?0x03002270:0x03002274);
+        if(extra){
+            if(extra>=hn_read8(m,HN_RENDER_INFO+16))return false;
+            if(hn_read32(m,hn_render_slot(m,extra)+4)!=animation&&!transition_animation(m,extra,animation))return false;
+        }
+        if(follower)hn_write16(m,0x0201DC96,hn_read16(m,0x0201DC94));
+        else if(variant){GameAddr delay=(hn_read8(m,0x030021AB)&8)?0x0201DC96:0x0201DC94;hn_write16(m,delay,hn_read16(m,delay)>>1);}
+    }
+    return !m->fault;
+}
+bool hn_motion_interpolate(HNMemory *m,uint8_t selector)
+{
+    unsigned denominator=hn_read16(m,0x0201DC8E);
+    if(denominator){
+        uint32_t numerator=(uint32_t)(int32_t)(int16_t)hn_read16(m,0x0201DC92)<<16;
+        int32_t factor=hn_runtime_divide((int32_t)numerator,(int16_t)denominator);
+        GameAddr destination=selector?0x0201DC60:0x0201DC62;
+        int32_t delta=(int32_t)hn_read16(m,destination)-(int32_t)hn_read16(m,0x0201DC8C);
+        int32_t scaled=(int32_t)((uint32_t)delta*(uint32_t)factor)>>16;
+        uint32_t angle=(uint32_t)scaled+hn_read16(m,0x0201DC90);
+        angle=(angle&7)>3?(angle&0xFFF8)+8:angle&0xFFF8;
+        hn_write16(m,destination,(uint16_t)angle);
+    }
+    return !m->fault;
+}
 void hn_motion_reset(HNMemory *m)
 {
     hn_write16(m,0x03001FBC,0);hn_write8(m,0x030021E0,hn_read8(m,0x030021E0)&0xFB);

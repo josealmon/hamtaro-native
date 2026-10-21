@@ -9,6 +9,7 @@
 #include "game/choice.h"
 #include "game/world.h"
 #include "game/book.h"
+#include "game/motion.h"
 
 static unsigned menu_kind(HNMemory *m)
 {
@@ -31,6 +32,71 @@ static bool menu_update(HNMemory *m,uint8_t selection)
 }
 static bool flag(HNMemory *m,unsigned index)
 {return ((hn_read8(m,0x03002180+(index>>3))>>(index&7))&1)!=0;}
+bool hn_scene_indicator_complete(HNMemory *m,uint32_t index_word)
+{
+    /* Flag identifiers describe progress; original resources stay in the ROM. */
+    static const uint8_t required[7][22]={
+        {0x6A,0x9B,0x91,0x9A,0x99},
+        {0x4B,0x8B,0x74,0x8A,0x82,0x54,0x89,0x73,0x4C,0x84,0x52,0x75,0x93,0x8F,0x81,0x7E,0x87,0x83,0x88,0x76,0x7F},
+        {0x55,0x6B,0x61,0x62,0x60,0x59,0x51,0x5D,0x58,0x5F,0x5A,0x69,0x5E,0x7C},
+        {0x98,0x8E,0x78,0x72,0x95,0x97,0x96,0x92,0x94,0x77,0x57,0x5B,0x5C,0x90},
+        {0x56,0x7A,0x65,0x7B,0x64,0x7D,0x68,0x67,0x8D,0x66},
+        {0x8C,0x71,0x70,0x63,0x79,0x6F,0x80,0x6C,0x6E,0x6D},{0x9C,0x86}};
+    unsigned index=(uint8_t)index_word;if(!index||index>7)return false;
+    for(unsigned i=0;i<22&&required[index-1][i];i++)if(!flag(m,required[index-1][i]))return false;
+    return !m->fault;
+}
+bool hn_scene_indicator_visible(HNMemory *m,uint32_t index_word)
+{
+    unsigned mode=hn_read8(m,HN_SCENE_CONTROLS+0x16);if(!mode)return true;
+    uint32_t shift=(uint32_t)(uint8_t)index_word-1;
+    unsigned mask=hn_read8(m,HN_SCENE_INDICATOR_MASKS+mode-1);
+    return shift<32&&((mask>>shift)&1)!=0;
+}
+bool hn_scene_indicator_configure(HNMemory *m,uint32_t index_word,uint32_t state_word)
+{
+    unsigned index=(uint8_t)index_word,state=(uint8_t)state_word;
+    if(state>5)return true;
+    unsigned slot=state==1||state==2?15:state==5?26:(uint8_t)(index+17);
+    if(slot>=hn_read8(m,HN_RENDER_INFO+16)||!hn_read32(m,HN_RENDER_SLOTS))return false;
+    if(!state){hn_write8(m,hn_render_slot(m,slot)+0x60,0);return !m->fault;}
+    static const GameAddr animations[]={0,0x088F6FAC,0x088F6FB4,0x088F6FD6,0x088F6FBC,0x088F6FE8};
+    GameAddr position=HN_SCENE_INDICATOR_POSITIONS+index*4;
+    if(!hn_render_configure(m,(uint8_t)slot,1,0x74,(int16_t)hn_read16(m,position),(int16_t)hn_read16(m,position+2),0,animations[state]))return false;
+    if(state==1||state==2||state==5)hn_render_flags(m,slot,12,4);
+    return !m->fault;
+}
+bool hn_scene_indicator_update(HNMemory *m,uint32_t index_word)
+{
+    unsigned index=(uint8_t)index_word;
+    if(flag(m,(uint8_t)(index+63))&&hn_scene_indicator_visible(m,index)){
+        if(index==hn_read8(m,HN_SCENE_CONTROLS+0x6C)){
+            unsigned language=hn_read8(m,HN_SCENE_CONTROLS+0xEB);
+            GameAddr background=hn_read32(m,HN_SCENE_INDICATOR_BACKGROUNDS+(language*8+index)*4);
+            if(!hn_background_configure(m,4,0x81,background)||
+               !hn_scene_indicator_configure(m,index,hn_read8(m,HN_SCENE_CONTROLS+0x13)?2:1))return false;
+        }
+        if(!hn_scene_indicator_configure(m,index,hn_scene_indicator_complete(m,index)?3:4))return false;
+        if(index==hn_read8(m,HN_SCENE_CONTROLS+0xE5)&&!hn_scene_indicator_configure(m,index,5))return false;
+    }
+    return !m->fault;
+}
+static bool indicator_move(HNMemory *m)
+{
+    unsigned input=hn_input_query(m,0xF0,1);if(!input)return !m->fault;
+    unsigned direction=0;while(direction<4&&!((input>>(direction+4))&1))direction++;
+    unsigned previous=hn_read8(m,HN_SCENE_CONTROLS+0x6C),count=0;
+    for(unsigned i=0;i<7;i++)if(flag(m,i+0x40))count++;
+    unsigned mode=hn_read8(m,HN_SCENE_CONTROLS+0x16);
+    GameAddr bank=mode?HN_SCENE_INDICATOR_MODE_NAVIGATION+(mode-1)*4:HN_SCENE_INDICATOR_NAVIGATION+(count-2)*4;
+    unsigned selected=hn_read8(m,hn_read32(m,bank)+previous*4+direction);
+    if(selected&&flag(m,(uint8_t)(selected+63))){
+        hn_write8(m,HN_SCENE_INDICATOR_PREVIOUS,(uint8_t)previous);
+        hn_write8(m,HN_SCENE_CONTROLS+0x6C,(uint8_t)selected);hn_write8(m,HN_SCENE_INDICATOR_CHANGED,1);
+        if(!hn_audio_song(m,0x12E,HN_SONG_START))return false;
+    }
+    return !m->fault;
+}
 static void arithmetic_flag(HNMemory *m,uint8_t mask,bool enabled)
 {
     uint8_t flags=hn_read8(m,0x03002182);
@@ -180,6 +246,41 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x0801D414:{
+        unsigned index=hn_read8(m,HN_RENDER_CLASS_LEADER);
+        if(index>=hn_read8(m,HN_RENDER_INFO+16)||!hn_read32(m,HN_RENDER_SLOTS))return HN_SCENE_RESOURCE;
+        GameAddr slot=hn_render_slot(m,index);
+        hn_write8(m,HN_SCENE_CONTROLS+0x11,hn_read8(m,slot+0x60)&15);
+        hn_write16(m,0x0201DC60,hn_read16(m,slot+0x1A));hn_write16(m,0x0201DC62,hn_read16(m,slot+0x22));break;
+    }
+    case 0x0801D454:
+        if(!hn_motion_transition(m,false,hn_read8(m,arguments)!=0))return HN_SCENE_RESOURCE;*consumed=1;break;
+    case 0x0801D5E4:if(!hn_motion_transition(m,true,false))return HN_SCENE_RESOURCE;break;
+    case 0x0801D580:
+        if(!hn_motion_interpolate(m,hn_read8(m,arguments)))return HN_SCENE_RESOURCE;*consumed=1;break;
+    case 0x080C1458:
+        for(unsigned i=1;i<=7;i++)if(!hn_scene_indicator_update(m,i))return HN_SCENE_RESOURCE;
+        hn_write8(m,HN_SCENE_INDICATOR_PREVIOUS,hn_read8(m,HN_SCENE_CONTROLS+0x6C));hn_write8(m,HN_SCENE_INDICATOR_CHANGED,0);break;
+    case 0x080C1490:
+        if(hn_read8(m,HN_SCENE_INDICATOR_CHANGED)){
+            if(!hn_scene_indicator_update(m,hn_read8(m,HN_SCENE_CONTROLS+0x6C))||
+               !hn_scene_indicator_update(m,hn_read8(m,HN_SCENE_INDICATOR_PREVIOUS)))return HN_SCENE_RESOURCE;
+            hn_write8(m,HN_SCENE_INDICATOR_CHANGED,0);
+        }break;
+    case 0x080C19FC:if(!indicator_move(m))return HN_SCENE_RESOURCE;break;
+    case 0x080C1AC4:
+        for(unsigned i=0;i<8;i++)if(flag(m,i+0x180)){
+            GameAddr position=HN_SCENE_INDICATOR_POSITIONS+4+i*4;
+            if(!hn_render_configure(m,(uint8_t)(i+18),1,0x74,(int16_t)hn_read16(m,position),(int16_t)hn_read16(m,position+2),0,0x088F6FC4))return HN_SCENE_RESOURCE;
+            GameAddr clear=0x03002180+(i+0x180)/8,set=0x03002180+(i+0x40)/8;
+            hn_write8(m,clear,(uint8_t)(hn_read8(m,clear)&~(1u<<(i&7))));hn_write8(m,set,(uint8_t)(hn_read8(m,set)|(1u<<(i&7))));break;
+        }break;
+    case 0x080C1B34:{
+        unsigned index=hn_read8(m,HN_SCENE_CONTROLS+0xE6);hn_write8(m,HN_SCENE_CONTROLS+0xE5,(uint8_t)index);
+        GameAddr position=HN_SCENE_INDICATOR_POSITIONS+index*4;
+        if(!hn_render_configure(m,26,1,0x74,(int16_t)hn_read16(m,position),(int16_t)hn_read16(m,position+2),0,0x088F6FF0))return HN_SCENE_RESOURCE;
+        hn_render_flags(m,26,12,4);break;
+    }
     case 0x0801DC9C:case 0x0801DD5C:case 0x0801E1D0:case 0x0801E288:{
         GameAddr address=callback&~1u;
         if(!hn_text_counter_change(m,address>=0x0801E1D0?2:0,address==0x0801DD5C||address==0x0801E1D0))return HN_SCENE_RESOURCE;

@@ -5,6 +5,10 @@
 extern "C" {
 #endif
 typedef enum { HN_SCENE_UNKNOWN,HN_SCENE_OK,HN_SCENE_RESOURCE } HNSceneResult;
+bool hn_scene_indicator_complete(HNMemory *,uint32_t index);
+bool hn_scene_indicator_visible(HNMemory *,uint32_t index);
+bool hn_scene_indicator_configure(HNMemory *,uint32_t index,uint32_t state);
+bool hn_scene_indicator_update(HNMemory *,uint32_t index);
 /* Typed native dispatch; guest callback words are metadata, never executed. */
 HNSceneResult hn_scene_callback(HNMemory *,GameAddr callback,GameAddr arguments,uint32_t *consumed);
 HNSceneResult hn_scene_animation_callback(HNMemory *,GameAddr callback,GameAddr slot,GameAddr arguments,

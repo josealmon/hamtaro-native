@@ -88,10 +88,12 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 16,932 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 18,736 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
-and confirms the ten-seed reward and subsequent conversation. The
+and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
+then select Sunny Peak, return the highlight to Clubhouse, select Sunny Peak again
+and confirm travel to player control in map 2:1. The
 JSON contains only button inputs and metadata checkpoints. The runner writes no
 save or capture, rejects unknown inputs and fails on any native runtime fault or
 checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
@@ -122,7 +124,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 538,420 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 581,019 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -133,7 +135,7 @@ The Main memory and scene-transition group can also run separately:
 
     python -B tools/compare_reference.py --scripts-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-This passes 7,241 comparisons: byte/halfword pointer copies, zero/max counts,
+This passes 17,993 comparisons: byte/halfword pointer copies, zero/max counts,
 variable indirection and overlap, graphics disable-except, display-layer flags,
 and 96 actor snapshot/modal-map roundtrips across six map callbacks. Cases include
 optional/absent actors, all direction variants, retained cursor and first/third
@@ -141,6 +143,19 @@ variant reuse for the fourth restored actor. Input data is synthetic; original
 animation families and map descriptors remain in the private ROM. It also covers
 unsigned screen-Y sides, signed slot-10 half-height tests and actor turn control,
 including leader/follower aliases and preserved opposite-direction state.
+Actor transition cases cover coordinate snapshots, both reposition selectors,
+primary/secondary slot aliases, animation retention, boot-gate ownership, running
+delays and signed fixed-point facing interpolation with wrapped products/rounding.
+
+The destination-map group can run separately:
+
+    python -B tools/compare_reference.py --indicators-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+It passes 31,847 comparisons: completion flags with each requirement removed,
+all byte indices, visibility masks and shift boundaries, marker states, five
+language backgrounds, refresh retention, sequential unlocks and navigation.
+Navigation covers all 256 unlock-byte values, both navigation modes, zero/combined
+directions, locked destinations, same-area selection and original menu sounds.
 
 The Ham-Chat book group can run separately:
 

@@ -48,16 +48,17 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
 | Scene actor snapshots | Adapted | Four 104-byte render snapshots, active-slot restoration and six modal map roundtrips compared; idle animation variants, optional slots and script cursor retention preserved |
-| Motion and collision | Adapted | Leader input/walk/run, action priority, map edge sampling/sliding, circle/rectangle queries/responses, event staging, circular follower routes, proximity/idle animation and movement wait protocol compared; full-game coverage remains pending |
+| Motion and collision | Adapted | Leader input/walk/run, action priority, map edge sampling/sliding, collision responses, event staging, follower routes, actor-position snapshots, transition animation/position selection and wrapped facing interpolation compared; full-game coverage remains pending |
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Word-choice dialogs | Adapted | Nine text contexts, expression-filtered options, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Ham-Chat book | Adapted | Acquisition, learned-word order, five language permutations, category/page selection, paired text contexts, counters, markers and cleanup compared; initial book display and return run natively; manual book navigation remains unverified |
+| Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; later scene callbacks remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | A 16,932-update native input scenario reaches the Clubhouse, displays the book, completes the four basic Ham-Chat lessons and receives ten seeds; function-level save comparisons and atomic host persistence verified; live-window story and in-game save/reload playthrough remain pending |
+| New game, movement, in-game save/load | Partial | An 18,736-update native input scenario completes the basic lessons/reward, opens the destination map and reaches player control in Sunny Peak; function-level save comparisons and atomic host persistence verified; live-window story and in-game save/reload playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -74,9 +75,11 @@ the initial ten-word Ham-Chat book and returns to the conversation. It then perf
 Hamha, Tack-Q, Hif-hif and Digdig, including a rejected word and successful retry,
 and receives ten sunflower seeds. It exercises native clocked updates from fresh
 SRAM with fixed input and script/position/counter checkpoints, without state injection.
-Continuing beyond the lessons reaches map 10:3 and the unsupported
-ScriptCallbackInitializeSceneIndicators (0x080C1459) after 17,627 completed updates.
-The opening remains incomplete. Book pages, word menus and rewards have been
+It then opens the destination map, checks both directions between Clubhouse and
+Sunny Peak, confirms travel and reaches control in map 2:1. Walking north toward
+the stream reaches the unsupported ScriptCallbackConfigureSceneActorMotion
+(0x0802D191) after 18,764 completed updates. The opening remains incomplete.
+Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
 
@@ -138,7 +141,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-538,420 comparisons with the independent BIOS and PPU oracles.
+581,019 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -178,6 +181,14 @@ view uses the original language permutations. Page restoration, paired text cont
 reverse cleanup, wrapped marker positions and leading-blank number rendering have
 private reference checks. Story turns preserve unsigned screen-Y comparisons,
 signed half-height tests, leader/follower aliases and retained opposite-turn state.
+Destination indicators retain the seven areas' flag conjunctions, mode-specific
+visibility and navigation banks, first-direction priority, current/destination
+overlays and one-at-a-time unlocking. Positions, labels and animation resources
+remain in the ROM; progress and selection remain in their original guest RAM views.
+Actor transition callbacks retain full direction bytes when selecting animation
+families, original boot-gate ownership, fractional positions, secondary-slot aliases
+and run-speed delay adjustments. Facing interpolation uses wrapped 32-bit fixed-point
+division/multiplication and original eight-unit rounding, including negative inputs.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
 in their original 32-bit memory views. Callback bindings accept a specific typed
@@ -392,8 +403,8 @@ are rejected; the unused group-0 record write/load path is not exposed.
 
 1. Adapt the remaining story/scene callbacks, scanline effects and timed CPU transfers
    as the connected native runtime reaches them.
-2. Extend the deterministic opening scenario through map selection and in-game
-   save/reload, and verify the same paths in the actual Windows window.
+2. Extend the deterministic opening scenario through Sunny Peak's first interactions
+   and in-game save/reload, and verify the same paths in the actual Windows window.
 3. Expand coverage through the remaining story, secondary activities and minigames;
    compare against the reference's existing reconciliation schedules.
 4. Compare canonical RGBA, state, SRAM and pre-device PCM. Keep original
