@@ -34,7 +34,7 @@ SDL's device conversion happens after game PCM generation.
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division semantics and modeled ObjAffine; hardware matrix rounding remains unverified |
 | Software video | Foundation | 64 synthetic static frames compared with an independent PPU; seven private ROM snapshots compared; raster timing still pending |
-| Video timing and IRQ | Foundation | Scanline/VBlank/HBlank events and DMA, tested independently; CPU/timer/audio timing still pending |
+| Video timing and IRQ | Foundation | Scanline/VBlank/HBlank, four timers, cascades, IRQ flags and FIFO DMA tested independently; real game IRQ cadence and DMA bus contention remain pending |
 | Native game helpers | Foundation | Button transitions/repeat and integer PRNG |
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |
 | Video state and transfer queues | Adapted | Original video shadows, mosaic/blend/fade updates, DMA queue wrap/fill/flush; private function comparisons |
@@ -47,7 +47,7 @@ SDL's device conversion happens after game PCM generation.
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Native boot/title | Pending | 88 Main-only, 180 idle and 369 input-injected script/render/audio iterations compared; scene-menu callbacks, task/actor updates, real IRQ cadence and hardware audio output remain incomplete |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
-| Music and effects | Partial | Sequencer, original PCM mixer, PSG register service and script sound controls compared; timer/FIFO cadence, PSG synthesis, final output mixing and host delivery remain pending |
+| Music and effects | Partial | Sequencer, original PCM mixer, PSG register service, script sound controls and Direct Sound/PWM tested; PSG synthesis, complete stereo mix and game-loop/host delivery remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
 | Public release | Pending | Native gameplay, complete coverage and source-provenance review |
@@ -139,9 +139,33 @@ eight-bit DMA planes, before hardware FIFO/DAC mixing. Synthetic cases cover
 interpolation, loop/end boundaries, packed byte addition, reverb and PSG envelopes.
 Main and animation sound controls call this native driver through typed adapters.
 The frequency setter's VCOUNT wait is represented by an explicit boundary model
-in the CPU oracle. Real timer/FIFO cadence, PSG waveform synthesis, final stereo
-mixing and delivery to the host stream remain pending. These checks do not replace
-pre-device output validation or listening evidence.
+in the CPU oracle. Connecting that phase to the real game loop remains pending.
+
+The native clock also drives four 16-bit timers, prescalers, overflow reloads,
+cascades and IRQ flags. A separate Direct Sound model receives timer 0/1 edges,
+maintains each FIFO's seven-word queue plus four-byte shifter, requests four-word
+DMA1/2 refills, and applies stereo routing, volume, bias clipping and PWM resolution.
+Host output averages the held PWM levels into 32768 Hz signed stereo samples;
+neither a ROM nor a CPU interpreter is needed for this hardware model. Native
+device links are host-only fields, never guest addresses or serialized state.
+
+An optional, hardware-only mGBA 0.10.5 oracle compares 5,696 synthetic snapshots
+(256,640 field checks): timer reload/count/control, cascade/IRQ state, FIFO words,
+shifter and sample state, settled DMA sources and quantized DAC levels. It loads
+no ROM and executes no CPU instructions. Timer reads use the hardware API without
+mGBA's two-cycle CPU bus-read adjustment. The oracle's desktop gain/resampler is
+excluded; PWM quantization is applied explicitly to its raw ten-bit levels.
+DMA comparisons occur after bursts settle: the native bus still performs each
+burst atomically and does not model instruction stalls or arbitration. FIFO
+byte/halfword lane writes, host averaging and unusual bias clipping have separate
+analytic unit checks. mGBA 0.10.5 retains held PCM while master power is off;
+DAC parity excludes that transition, while native tests require the documented
+mute. This does not establish full hardware conformance.
+
+PSG waveform synthesis, its final mix with Direct Sound, game-loop/host delivery,
+pre-device game output comparisons and listening evidence remain pending. In
+particular, the hardware-only checks and game-driver comparisons are separate;
+they do not prove that the game currently produces correct final sound.
 
 The optional mGBA 0.10.5 software PPU oracle is a separate test build; its code and
 runtime never enter the application or package. Static synthetic comparisons
@@ -152,6 +176,14 @@ isolate mosaic and windows because that reference version has carry-pixel artifa
 when clipping mosaic blocks. Analytic regressions cover the combined global
 mosaic/window phase and mode-5 out-of-bounds backdrop selection. Raster changes,
 timing and general gameplay image parity remain unverified.
+
+Build the optional hardware oracles outside this checkout with the CMake project
+in tests/integration/mgba and a caller-provided MGBA_SOURCE checkout. Run
+tools/compare_audio.py with --oracle and, if needed, --oracle-runtime-dir. This
+ROM-free check uses build/Release/hn_reference_probe.dll by default; --native
+selects another test build. No oracle executable or library enters the package.
+The sound contracts follow [GBATEK](https://mgba-emu.github.io/gbatek/#gbasoundcontroller)
+and the [FIFO hardware measurements](https://github.com/mgba-emu/mgba/issues/1847).
 
 The ObjAffine helper follows a single-precision HLE model, independently implemented
 from the documented scale/angle contract. Comparison with a CPU oracle using the

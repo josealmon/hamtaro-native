@@ -1,4 +1,5 @@
 #include "gba/timing.h"
+#include "gba/audio.h"
 #include <string.h>
 static uint16_t reg(const HNMemory *m,unsigned o)
 { return (uint16_t)(m->io[o]|m->io[o+1]<<8); }
@@ -13,6 +14,7 @@ void hn_clock_init(HNClock *clock,HNMemory *m,uint32_t *rgba,HNInterrupt callbac
 {
     memset(clock,0,sizeof(*clock));clock->interrupt=callback;clock->context=context;
     clock->framebuffer=rgba;
+    hn_timers_init(&clock->timers,m);
     uint16_t status=(uint16_t)(reg(m,4)&~7u);
     if((status>>8)==0)status|=4;
     set(m,4,status);set(m,6,0);
@@ -23,8 +25,14 @@ void hn_clock_advance(HNClock *clock,HNMemory *m,uint32_t cycles)
         unsigned next=clock->line_cycle<HN_HDRAW_CYCLES?HN_HDRAW_CYCLES:HN_CYCLES_PER_LINE;
         unsigned step=next-clock->line_cycle;
         if(step>cycles)step=cycles;
+        uint32_t timer_next=hn_timers_next(&clock->timers);
+        if(step>timer_next)step=timer_next;
+        if(m->apu&&step>hn_apu_next(m->apu))step=hn_apu_next(m->apu);
         clock->line_cycle+=step;clock->cycles+=step;cycles-=step;
-        if(clock->line_cycle!=next)continue;
+        /* A DAC edge latches the preceding FIFO value at a coincident timer edge. */
+        if(m->apu)hn_apu_advance(m->apu,step);
+        hn_timers_advance(&clock->timers,step);
+        if(clock->line_cycle!=next){notify(clock,m);continue;}
         uint16_t status=reg(m,4),irq=0;
         if(next==HN_HDRAW_CYCLES) {
             status|=2;set(m,4,status);

@@ -1,4 +1,6 @@
 #include "gba/memory.h"
+#include "gba/timing.h"
+#include "gba/audio.h"
 #include "game/script.h"
 #include "game/render.h"
 #include "game/background.h"
@@ -121,4 +123,38 @@ int hn_probe_audio_psg(HNMemory *m,uint32_t report[3])
 {
     HNAudio audio;hn_audio_init(&audio,m);bool ok=hn_audio_psg_update(&audio);
     report[0]=audio.fault;report[1]=audio.fault_opcode;report[2]=audio.fault_address;return ok;
+}
+typedef struct { HNMemory memory;HNClock clock;HNApu apu; } HNHardwareProbe;
+HNHardwareProbe *hn_probe_hardware_create(void)
+{
+    HNHardwareProbe *p=calloc(1,sizeof(*p));if(!p)return NULL;
+    hn_memory_init(&p->memory,NULL,0);hn_clock_init(&p->clock,&p->memory,NULL,NULL,NULL);
+    hn_apu_init(&p->apu,&p->memory,NULL,NULL);return p;
+}
+void hn_probe_hardware_destroy(HNHardwareProbe *p){free(p);}
+int hn_probe_hardware_write(HNHardwareProbe *p,unsigned width,GameAddr address,uint32_t value)
+{
+    if(width==1)hn_write8(&p->memory,address,(uint8_t)value);
+    else if(width==2)hn_write16(&p->memory,address,(uint16_t)value);
+    else if(width==4)hn_write32(&p->memory,address,value);else return 0;
+    return !p->memory.fault;
+}
+int hn_probe_hardware_advance(HNHardwareProbe *p,uint32_t cycles)
+{hn_clock_advance(&p->clock,&p->memory,cycles);return !p->memory.fault;}
+void hn_probe_hardware_state(HNHardwareProbe *p,uint32_t state[47])
+{
+    HNMemory *m=&p->memory;HNApu *a=&p->apu;state[0]=(uint32_t)p->clock.cycles;
+    for(unsigned i=0;i<4;i++){
+        state[1+i]=hn_read16(m,0x04000100+i*4);state[5+i]=p->clock.timers.channel[i].reload;
+        state[9+i]=hn_read16(m,0x04000102+i*4);
+    }
+    state[13]=hn_read16(m,0x04000202);state[14]=hn_read16(m,0x04000082);
+    state[15]=hn_read16(m,0x04000084);state[16]=hn_read16(m,0x04000088);
+    for(unsigned i=0;i<2;i++){
+        HNAudioFifo *f=&a->fifo[i];unsigned o=17+i*4;
+        state[o]=f->read;state[o+1]=f->write;state[o+2]=f->remaining;state[o+3]=f->shifter;
+        for(unsigned j=0;j<8;j++)state[25+i*8+j]=f->words[j];
+        state[41+i]=m->dma_source[i+1];state[43+i]=(uint32_t)(int32_t)f->sample;
+        state[45+i]=(uint32_t)(int32_t)(a->dac[i]/64);
+    }
 }

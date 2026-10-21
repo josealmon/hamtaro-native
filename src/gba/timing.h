@@ -1,6 +1,7 @@
 #ifndef HN_TIMING_H
 #define HN_TIMING_H
 #include "gba/video.h"
+#include "gba/timer.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,6 +14,7 @@ typedef struct {
     HNInterrupt interrupt;
     void *context;
     uint32_t *framebuffer;
+    HNTimers timers;
 } HNClock;
 void hn_clock_init(HNClock *, HNMemory *, uint32_t *rgba, HNInterrupt, void *context);
 /* Advances native compatibility events, without interpreting CPU instructions. */

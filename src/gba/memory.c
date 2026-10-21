@@ -1,4 +1,6 @@
 #include "gba/memory.h"
+#include "gba/timer.h"
+#include "gba/audio.h"
 #include <string.h>
 
 static uint8_t *resolve(HNMemory *m, GameAddr address, bool writing)
@@ -35,6 +37,8 @@ void hn_memory_init(HNMemory *m, const uint8_t *rom, size_t size)
 }
 uint8_t hn_read8(HNMemory *m, GameAddr a)
 {
+    if(m->timers&&a>=0x04000100&&a<0x04000110)return hn_timers_read(m->timers,a-0x04000000);
+    if(m->apu&&(a>>24)==4&&hn_apu_register(a&0xFFFFFF))return hn_apu_read(m->apu,a&0xFFFFFF);
     const uint8_t *p = resolve(m, a, false);
     return p ? *p : 0;
 }
@@ -72,6 +76,8 @@ static void dma_control_written(HNMemory *m,unsigned channel)
 }
 void hn_write8(HNMemory *m, GameAddr a, uint8_t v)
 {
+    if(m->timers&&a>=0x04000100&&a<0x04000110){hn_timers_write(m->timers,a-0x04000000,v,1);return;}
+    if(m->apu&&(a>>24)==4&&hn_apu_register(a&0xFFFFFF)){hn_apu_write(m->apu,a&0xFFFFFF,v,1);return;}
     if(a==0x04000006||a==0x04000007)return;
     if(a==0x04000004)v=(uint8_t)((v&~7u)|(m->io[4]&7));
     if(a==0x04000000)v&=0xF7;
@@ -94,6 +100,8 @@ void hn_write8(HNMemory *m, GameAddr a, uint8_t v)
 }
 void hn_write16(HNMemory *m, GameAddr a, uint16_t v)
 {
+    if(m->timers&&a>=0x04000100&&a<0x04000110){hn_timers_write(m->timers,a-0x04000000,v,2);return;}
+    if(m->apu&&(a>>24)==4&&hn_apu_register(a&0xFFFFFF)){hn_apu_write(m->apu,a&0xFFFFFF,v,2);return;}
     if(a==0x04000000)v&=0xFFF7;
     if(a==0x04000006)return; /* VCOUNT is read-only. */
     if(a==0x04000004)v=(uint16_t)((v&~7u)|(m->io[4]&7));
@@ -106,6 +114,7 @@ void hn_write16(HNMemory *m, GameAddr a, uint16_t v)
 }
 void hn_write32(HNMemory *m, GameAddr a, uint32_t v)
 {
+    if(m->apu&&(a>>24)==4&&hn_apu_register(a&0xFFFFFF)){hn_apu_write(m->apu,a&0xFFFFFF,v,4);return;}
     hn_write16(m,a,(uint16_t)v);
     hn_write16(m,a+2,(uint16_t)(v>>16));
 }
@@ -118,37 +127,54 @@ bool hn_memory_copy(HNMemory *m, GameAddr dst, GameAddr src, size_t n)
     }
     return !m->fault;
 }
+static void dma_transfer(HNMemory *m,unsigned ch,unsigned timing,bool sound)
+{
+    unsigned o=0xB0+ch*12;
+    uint32_t ctl=io32(m,o+8);
+    if(!m->dma_latched[ch]){
+        m->dma_source[ch]=io32(m,o);m->dma_destination[ch]=io32(m,o+4);m->dma_latched[ch]=true;
+    }
+    GameAddr src=m->dma_source[ch],dst=m->dma_destination[ch],initial_dst=io32(m,o+4);
+    unsigned width=(ctl&(1u<<26))?4:2, count=ctl&(ch==3?0xFFFFu:0x3FFFu);
+    unsigned sm=(ctl>>23)&3, dm=(ctl>>21)&3;
+    if(sound){width=4;count=4;dm=2;}
+    if (sm==3) { m->fault=true; m->fault_address=0x040000B0+ch*12; return; }
+    if (!count) count=ch==3?65536:16384;
+    src &= ~(width-1); dst &= ~(width-1);
+    for (unsigned i=0;i<count && !m->fault;i++) {
+        if (width==4) { uint32_t v=hn_read32(m,src); hn_write32(m,dst,v); }
+        else { uint16_t v=hn_read16(m,src); hn_write16(m,dst,v); }
+        if (sm==0) src+=width; else if(sm==1) src-=width;
+        if (dm==0 || dm==3) dst+=width; else if(dm==1) dst-=width;
+    }
+    m->dma_source[ch]=src;
+    m->dma_destination[ch]=dm==3?initial_dst:dst;
+    if (ctl&(1u<<30)) {
+        unsigned irq=1u<<(8+ch);
+        m->io[0x202]|=(uint8_t)irq; m->io[0x203]|=(uint8_t)(irq>>8);
+    }
+    if (!(ctl&(1u<<25)) || timing==0){ctl&=~0x80000000u;m->dma_latched[ch]=false;}
+    store_io32(m,o+8,ctl);
+}
 void hn_dma_trigger(HNMemory *m, unsigned timing)
 {
     if (m->dma_active || timing>2) return;
     m->dma_active=true;
-    for (unsigned ch=0;ch<4;ch++) {
-        unsigned o=0xB0+ch*12;
-        uint32_t ctl=io32(m,o+8);
-        if (!(ctl&0x80000000u) || ((ctl>>28)&3)!=timing) continue;
-        if(!m->dma_latched[ch]){
-            m->dma_source[ch]=io32(m,o);m->dma_destination[ch]=io32(m,o+4);m->dma_latched[ch]=true;
-        }
-        GameAddr src=m->dma_source[ch],dst=m->dma_destination[ch],initial_dst=io32(m,o+4);
-        unsigned width=(ctl&(1u<<26))?4:2, count=ctl&(ch==3?0xFFFFu:0x3FFFu);
-        unsigned sm=(ctl>>23)&3, dm=(ctl>>21)&3;
-        if (sm==3) { m->fault=true; m->fault_address=0x040000B0+ch*12; break; }
-        if (!count) count=ch==3?65536:16384;
-        src &= ~(width-1); dst &= ~(width-1);
-        for (unsigned i=0;i<count && !m->fault;i++) {
-            if (width==4) { uint32_t v=hn_read32(m,src); hn_write32(m,dst,v); }
-            else { uint16_t v=hn_read16(m,src); hn_write16(m,dst,v); }
-            if (sm==0) src+=width; else if(sm==1) src-=width;
-            if (dm==0 || dm==3) dst+=width; else if(dm==1) dst-=width;
-        }
-        m->dma_source[ch]=src;
-        m->dma_destination[ch]=dm==3?initial_dst:dst;
-        if (ctl&(1u<<30)) {
-            unsigned irq=1u<<(8+ch);
-            m->io[0x202]|=(uint8_t)irq; m->io[0x203]|=(uint8_t)(irq>>8);
-        }
-        if (!(ctl&(1u<<25)) || timing==0){ctl&=~0x80000000u;m->dma_latched[ch]=false;}
-        store_io32(m,o+8,ctl);
+    for (unsigned ch=0;ch<4&&!m->fault;ch++) {
+        uint32_t ctl=io32(m,0xB8+ch*12);
+        if((ctl&0x80000000u)&&((ctl>>28)&3)==timing)dma_transfer(m,ch,timing,false);
+    }
+    m->dma_active=false;
+}
+void hn_dma_sound(HNMemory *m,unsigned fifo)
+{
+    if(m->dma_active||fifo>1)return;
+    m->dma_active=true;
+    for(unsigned ch=1;ch<=2&&!m->fault;ch++){
+        unsigned o=0xB0+ch*12;uint32_t ctl=io32(m,o+8);
+        GameAddr destination=m->dma_latched[ch]?m->dma_destination[ch]:io32(m,o+4);
+        if((ctl&0xB0000000u)==0xB0000000u&&(destination&~3u)==0x040000A0+fifo*4)
+            dma_transfer(m,ch,3,true);
     }
     m->dma_active=false;
 }
