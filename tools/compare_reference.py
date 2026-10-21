@@ -46,9 +46,10 @@ def main() -> None:
     parser.add_argument("--motion-only", action="store_true", help="Run motion setup, routes and live follower comparisons")
     parser.add_argument("--collisions-only", action="store_true", help="Run leader motion, collision and wait-handler comparisons")
     parser.add_argument("--scripts-only", action="store_true", help="Run Main memory commands and scene-transition comparisons")
+    parser.add_argument("--book-only", action="store_true", help="Run Ham-Chat acquisition, page and decoration comparisons")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
-    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.scripts_only))):
+    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.scripts_only,args.book_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -506,6 +507,35 @@ def main() -> None:
             equal(animation(memory,0x02010000,0x8D,0x03007010,report),1,"native counter animation")
             equal(report[3],call("AnimationInvokeCallback",0x02010000,0x03007010),"counter animation yield")
             compare("counter animation",ranges+((0x03007010,4),))
+        local=random.Random(0x434F554E)
+        for name,index in (("ScriptCallbackAddGameCounter",9),("ScriptCallbackSubtractGameCounter",9),
+                           ("ScriptCallbackAddGameCounterBank2",10),("ScriptCallbackSubtractGameCounterBank2",10)):
+            for value in (0,1,31,32,49,50,51,998,999,1000,32768,65535):
+                for amount in (0,1,2,10,30,31,32,33,49,50,999,65535):
+                    fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+                    both(0x02010000,local.randbytes(40*104));both(0x0201DC40,local.randbytes(32))
+                    both(0x0201DC40+index*2,struct.pack("<H",value));both(0x0201DC4C,struct.pack("<H",amount))
+                    both(0x03001F50,bytes([local.choice((0,2))]))
+                    both(0x02020000,struct.pack("<I",symbols[name]|1));both(0x03000010,b"\x1C"+bytes(15))
+                    equal(command(memory,0x1C,0x02020000),1,f"native counter change {name}")
+                    call("MainScriptInvokeCallback",0x02020000);compare(f"counter change {name}",ranges)
+        fresh();equal(native("hn_audio_driver_init",result=C.c_bool)(memory),True,"counter audio init")
+        call("InitializeAudioDriver",limit=2000000)
+        both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+        animated_ranges=ranges+((0x03007FF0,4),(0x04000060,0x80),(0x04000100,4),(0x03007010,4))
+        for case in range(120):
+            countdown=(0,1,0xFFFFFFFF,0x80000000,0x7FFFFFFF)[case%5]
+            delta=(-0x80000000,-99,-1,0,1,99,0x7FFFFFFF)[case%7]
+            steps=(0,1,2,31,32,0xFFFFFFFF)[case%6]
+            both(0x03001130,struct.pack("<I",countdown));both(0x03001128,struct.pack("<i",delta))
+            both(0x030037EC,struct.pack("<I",steps));both(0x0300112C,struct.pack("<I",case%4))
+            both(0x0201DC4E,struct.pack("<H",local.randrange(65536)));both(0x03003798,struct.pack("<I",case%3))
+            for tick in range(8):
+                both(0x02020000,b"\x8D"+struct.pack("<I",symbols["AnimationCallbackUpdateGameCounter"]|1))
+                both(0x03007010,struct.pack("<I",0x02020000))
+                equal(animation(memory,0x02010000,0x8D,0x03007010,report),1,"native counter ticking")
+                equal(report[3],call("AnimationInvokeCallback",0x02010000,0x03007010),"counter ticking yield")
+                compare(f"counter ticking {case} {tick}",animated_ranges)
 
     def actor_checks():
         ranges=((0x02000000,0x40000),(0x03000000,0x7000))
@@ -1430,8 +1460,111 @@ def main() -> None:
                 equal(report_animation[3], call(original, slot, 0x03007010), f"animation audio yield {case} {opcode}")
                 compare(f"animation audio {case} {opcode}", audio_ranges)
 
+    def book_checks():
+        local=random.Random(0x48414D)
+        def prepare(sorted_mode=0,language=0):
+            fresh();both(0x02004520,local.randbytes(512));both(0x03002180,local.randbytes(96))
+            both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+            both(0x02010000,local.randbytes(40*104));both(0x03003070,struct.pack("<I",0x02018000))
+            both(0x03002E10,b"\x08");both(0x02018000,local.randbytes(8*44))
+            both(0x03001F50,bytes([local.choice((10,13,25,29,32))]));both(0x03002170,b"\x73")
+            both(0x0200460B,bytes([language]));both(0x0300219F,bytes([sorted_mode]))
+            orders=[]
+            for _ in range(5):
+                order=list(range(86));local.shuffle(order);orders.extend(order)
+            both(0x020019EC,bytes(orders));both(0x030036F0,local.randbytes(768))
+            both(0x02002AB4,local.randbytes(2640))
+            words=list(range(1,87));local.shuffle(words);both(0x030037F0,bytes(words))
+            both(0x03003E30,b"\x56")
+        def invoke(name,payload=b""):
+            both(0x02020000,struct.pack("<I",symbols[name]|1)+payload)
+            both(0x03000010,b"\x1C"+bytes(15))
+            equal(command(memory,0x1C,0x02020000),1,f"native book {name}")
+            call("MainScriptInvokeCallback",0x02020000,limit=1000000)
+            compare(f"book {name}",((0x02000000,0x40000),(0x03000000,0x7000),(0x06000000,0x18000)))
+        for mode in range(2):
+            for selected in range(256):
+                prepare(mode,selected%5);both(0x02004596,bytes([selected]))
+                both(0x03003E30,bytes([(0,1,10,86,250)[selected%5]]))
+                invoke("ScriptCallbackRecordTaskTextAcquisition")
+                invoke("ScriptCallbackSelectTaskTextAcquiredPage")
+            for selected in range(87):
+                prepare(mode,selected%5);both(0x02004542,bytes([selected]));both(0x02004592,bytes([selected%5]))
+                invoke("ScriptCallbackRestoreTaskTextSelectionPage")
+            for case in range(160):
+                prepare(mode,case%5);both(0x02004591,bytes([case%65]));both(0x02004592,bytes([case%7]))
+                both(0x03003E30,bytes([case%87]));invoke("ScriptCallbackResolveTaskTextSelection")
+                invoke("ScriptCallbackShowTaskTextSelectionMarkers")
+        for case in range(256):
+            prepare();both(0x02004580,bytes([case]));invoke("ScriptCallbackRenderTaskTextByteNumber",bytes([case%39,case,255-case]))
+            invoke("ScriptCallbackRenderPairListControlNumber",bytes([case%38,case,255-case]))
+            both(0x02004590,bytes([case]));invoke("ScriptCallbackConfigureTaskTextPageSlots")
+            invoke("ScriptCallbackPositionTaskTextPairRenderSlot24")
+            both(0x02004592,bytes([case]));invoke("ScriptCallbackConfigureTaskTextSelectionMarkers")
+            invoke("ScriptCallbackPositionRenderSlot24FromRaster72")
+            invoke("ScriptCallbackConfigureTaskTextPageDecorations")
+            for mode in range(2):
+                both(0x0300219F,bytes([mode]));both(0x03003E30,bytes([case]));both(0x0200460B,bytes([case%7]))
+                invoke("ScriptCallbackStoreTaskTextPageCount")
+        for language in range(5):
+            for category in range(10):
+                prepare(1,language);both(0x02004590,bytes([category]));invoke("ScriptCallbackSelectTaskTextCategoryPage")
+                for offset in (0,1,2,255):invoke("ScriptCallbackTestTaskTextCategoryPage",bytes([offset]))
+        for mode in range(2):
+            for language in range(5):
+                for case in range(36):
+                    prepare(mode,language);heap_init(memory);call("InitializeHeap",0)
+                    native("hn_task_contexts_init")(memory);call("InitializeTaskContexts")
+                    both(0x03003E30,bytes([(0,1,4,10,85,86)[case%6]]))
+                    both(0x02004591,bytes([(0,1,20,21,22,63)[case//6]]))
+                    for name in ("ScriptCallbackConfigureTaskTextPairHeader","ScriptCallbackRemoveTaskTextPairHeader",
+                                 "ScriptCallbackFillTaskTextPairFirst","ScriptCallbackFillTaskTextPairSecond",
+                                 "ScriptCallbackRemoveTaskTextPairContexts"):
+                        invoke(name)
+        number=native("hn_render_number",4,C.c_bool)
+        prepare()
+        for case in range(384):
+            value=(0,1,9,10,99,100,101,999,1000,65535)[case%10]|(local.randrange(65536)<<16)
+            x=local.getrandbits(32);y=local.getrandbits(32);index=case%38
+            equal(number(memory,index,value,x,y),True,f"native three-digit number {case}")
+            call("RenderPairListNumber",index,value,x,y)
+            compare(f"three-digit number {case}",((0x02000000,0x40000),(0x03000000,0x7000)))
+
     def script_memory_checks():
         local=random.Random(0x414248)
+        for bottom in (-32768,-1,0,1,142,143,32767):
+            for z in (-32768,-1,0,1,70,71,32767):
+                fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+                both(0x02004520,local.randbytes(512));both(0x02010000+10*104+0x22,struct.pack("<h",z))
+                both(0x030034B6,struct.pack("<h",bottom))
+                both(0x02020000,struct.pack("<IBB",symbols["ScriptCallbackStoreSlot10ZHalfSide"]|1,local.randrange(256),local.randrange(256)))
+                both(0x03000010,b"\x1C"+bytes(15));equal(command(memory,0x1C,0x02020000),1,"native slot10 half side")
+                call("MainScriptInvokeCallback",0x02020000);compare("slot10 half side",((0x02000000,0x40000),(0x03000000,0x7000)))
+        for direction in range(256):
+            for actor in (1,0x80,0x81):
+                fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+                both(0x02004520,local.randbytes(512));both(0x03002C0C,b"\x01");secondary=2 if direction&1 else 0
+                both(0x03001F50,bytes([secondary]));index=secondary if actor==0x81 else 1
+                both(0x02010000+index*104+0x60,bytes([direction&7]));offset=(direction+actor)&255
+                both(0x02004520+offset,bytes([direction,local.randrange(256),0xA5,0xE7]))
+                both(0x02020000,struct.pack("<IBB",symbols["ScriptCallbackUpdateActorTurnControl"]|1,offset,actor))
+                both(0x03000010,b"\x1C"+bytes(15));equal(command(memory,0x1C,0x02020000),1,"native actor turn")
+                call("MainScriptInvokeCallback",0x02020000);compare("actor turn",((0x02000000,0x40000),(0x03000000,0x7000)))
+        for primary_y in (0,63,64,65,70,71,72,79,32768,65535):
+            for index in (0,7,8,39):
+                for secondary in (0,2):
+                    for selected_y in (0,71,72,65535):
+                        fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+                        both(0x02010000,local.randbytes(40*104));both(0x03002C0C,b"\x01");both(0x03001F50,bytes([secondary]))
+                        both(0x02010000+104+0x50,struct.pack("<H",primary_y))
+                        both(0x02010000+2*104+0x50,struct.pack("<H",local.choice((0,71,100,65535))))
+                        both(0x02010000+index*104+0x50,struct.pack("<H",selected_y));both(0x02004532,bytes([index]))
+                        for name in ("ScriptCallbackReadClassScreenYSide","ScriptCallbackStoreClassScreenYSide"):
+                            both(0x02004580,b"\xA5");both(0x03001FBC,b"\xAB\xCD")
+                            both(0x02020000,struct.pack("<I",symbols[name]|1));both(0x03000010,b"\x1C"+bytes(15))
+                            equal(command(memory,0x1C,0x02020000),1,f"native screen side {name}")
+                            call("MainScriptInvokeCallback",0x02020000)
+                            compare(f"screen side {name}",((0x02000000,0x40000),(0x03000000,0x7000)))
         for opcode,name,width,base in ((0x41,"MainScriptCopyPointerBytes",1,0x02004520),
                                        (0x42,"MainScriptCopyPointerHalfwords",2,0x0201DC40)):
             equal(struct.unpack_from("<I",rom,0x58E5D4+opcode*4)[0]&~1,symbols[name],f"Main dispatch {opcode:02X}")
@@ -1497,6 +1630,10 @@ def main() -> None:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.book_only:
+            book_checks()
+            print(f"{checks} private Ham-Chat acquisition/page comparisons passed; full gameplay remains unverified.")
+            return
         if args.scripts_only:
             script_memory_checks()
             print(f"{checks} private Main memory/scene-transition comparisons passed; full gameplay remains unverified.")
@@ -1534,7 +1671,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        script_memory_checks()
+        book_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

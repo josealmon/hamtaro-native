@@ -38,6 +38,20 @@ void hn_render_flags(HNMemory *m,uint32_t index,uint8_t mask,uint8_t value)
     GameAddr p=hn_render_slot(m,index)+0x61;
     hn_write8(m,p,(uint8_t)((hn_read8(m,p)&~mask)|value));
 }
+bool hn_render_number(HNMemory *m,uint8_t index,uint32_t value,uint32_t x_word,uint32_t y_word)
+{
+    value&=65535;uint16_t x=(uint16_t)x_word,y=(uint16_t)y_word;bool displayed=false;
+    for(unsigned place=100;place;place/=10){
+        unsigned digit=value/place;value%=place;
+        if(digit||displayed||place==1){
+            GameAddr animation=hn_read32(m,HN_NUMBER_ANIMATIONS+digit*4);
+            if(!hn_render_configure(m,index,1,0x71,(int16_t)x,(int16_t)y,0,animation))return false;
+            hn_render_flags(m,index,12,4);index++;displayed=true;
+        }
+        x=(uint16_t)(x+8);
+    }
+    return !m->fault;
+}
 bool hn_render_configure(HNMemory *m,uint8_t index,uint8_t field60,uint8_t field62,
                          int32_t x,int32_t y,int32_t z,GameAddr animation)
 {

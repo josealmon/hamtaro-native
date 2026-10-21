@@ -88,13 +88,16 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 8,105 clocked native updates from an erased SRAM image, confirms bedroom
-control, walks to the exit and checks the Clubhouse entrance script/position. The
+It runs 16,932 clocked native updates from erased SRAM, confirms bedroom control,
+walks to the Clubhouse, displays the initial ten-word book and returns to the room.
+It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
+and confirms the ten-seed reward and subsequent conversation. The
 JSON contains only button inputs and metadata checkpoints. The runner writes no
 save or capture, rejects unknown inputs and fails on any native runtime fault or
 checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
 This is native runtime scenario evidence, not a desktop playthrough or an independent
-full-machine comparison. Ham-Chat acquisition and later story steps remain pending.
+full-machine comparison. Manual book navigation, later scenes and the complete
+desktop story playthrough remain pending.
 
 For private function comparisons, use a Python environment with Unicorn 2.1.4
 and the test-only hn_reference_probe.dll built by BUILD_TESTING:
@@ -119,7 +122,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 497,184 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 538,420 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -130,12 +133,24 @@ The Main memory and scene-transition group can also run separately:
 
     python -B tools/compare_reference.py --scripts-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-This passes 2,870 comparisons: byte/halfword pointer copies, zero/max counts,
+This passes 7,241 comparisons: byte/halfword pointer copies, zero/max counts,
 variable indirection and overlap, graphics disable-except, display-layer flags,
 and 96 actor snapshot/modal-map roundtrips across six map callbacks. Cases include
 optional/absent actors, all direction variants, retained cursor and first/third
 variant reuse for the fourth restored actor. Input data is synthetic; original
-animation families and map descriptors remain in the private ROM.
+animation families and map descriptors remain in the private ROM. It also covers
+unsigned screen-Y sides, signed slot-10 half-height tests and actor turn control,
+including leader/follower aliases and preserved opposite-direction state.
+
+The Ham-Chat book group can run separately:
+
+    python -B tools/compare_reference.py --book-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+It passes 25,920 comparisons: all acquisition byte values, five language orders,
+learned/sorted pages, absent and duplicate selections, category boundaries, page
+counts, markers and decorations. Paired header/column tasks include allocation,
+scripts and reverse cleanup; number cases cover leading blanks, coordinate wrap,
+high-word truncation and retained unused slots. Resources stay in the private ROM.
 
 The audio part can be run independently with the same private ROM and reference:
 
@@ -177,12 +192,14 @@ Scene/input and supporting Main commands can be checked separately:
 
     python -B tools/compare_reference.py --scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-This passes 116,106 private comparisons, including guest key-cache initialization,
+This passes 127,051 private comparisons, including guest key-cache initialization,
 repeat/direction/query behavior, masked key ordinals, PRNG ranges, render-slot setup,
 menu movement, language snapshots, name editing/confirmation, 168 glyph-blit boundary
 cases, keyboard grid navigation, panel entry/exit/depth, raster commands/profiles,
 24 circular HBlank scenarios, record selection, random script values, core reset and
 choice-option flags, three counter banks and indirect arithmetic/alias behavior.
+Counter cases cover zero/capped amounts, oversized subtraction, signed limit tests,
+wrapped countdowns, small/large step delays and repeated increment/decrement sounds.
 Resources are read from the caller's ROM; no captures or extracted tables are written.
 
 Actor scripts and motion setup can also be checked separately:

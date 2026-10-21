@@ -5,6 +5,7 @@
 #include "game/render.h"
 #include "game/graphics.h"
 #include "game/transfer.h"
+#include "game/audio.h"
 
 enum { MODE=HN_SCENE_CONTROLS+0x1A2,INDEX=HN_SCENE_CONTROLS+0x1A3,
        POSITION=HN_SCENE_CONTROLS+0x1A4,BANK=HN_SCENE_CONTROLS+0x1A5,RESULT=0x03001FBC };
@@ -24,6 +25,42 @@ bool hn_text_counter(HNMemory *m,int32_t number,uint8_t bank)
     hn_write16(m,0x0201DC4E,hn_read16(m,0x0201DC40+indexes[bank]*2));
     for(unsigned i=0;i<3;i++)hn_write16(m,0x0500020A+i*2,hn_read16(m,HN_COUNTER_PALETTES+bank*6+i*2));
     return hn_text_counter_digits(m,number);
+}
+bool hn_text_counter_change(HNMemory *m,uint8_t bank,bool subtract)
+{
+    if(bank!=0&&bank!=2)return false;
+    GameAddr value_address=0x0201DC40+(bank==0?9:10)*2;
+    uint16_t amount=hn_read16(m,0x0201DC4C),value=hn_read16(m,value_address);
+    if(!hn_text_counter(m,value,bank))return false;
+    if(subtract){if(amount>value)amount=0;}
+    else{int available=(bank==0?999:50)-(int)value;if(amount>available)amount=(uint16_t)available;}
+    hn_write32(m,HN_COUNTER_COUNTDOWN,0);
+    uint32_t steps,delay;int32_t delta;
+    if((uint16_t)(amount-1)<=30){delta=1;steps=amount;delay=32/amount;}
+    else{delta=amount/32;steps=32;delay=1;}
+    if(subtract)delta=-delta;else if(bank==2)delay--;
+    hn_write32(m,HN_COUNTER_DELTA,(uint32_t)delta);hn_write32(m,HN_COUNTER_STEPS,steps);hn_write32(m,HN_COUNTER_DELAY,delay);
+    value=(uint16_t)(subtract?value-amount:value+amount);
+    hn_write16(m,value_address,value);hn_write16(m,0x0201DC4C,amount);hn_write16(m,0x0201DC4E,value);
+    if(!hn_render_configure(m,2,1,0,176,-16,0,HN_COUNTER_ANIMATION))return false;
+    hn_render_flags(m,2,12,0);return !m->fault;
+}
+bool hn_text_counter_update(HNMemory *m,uint32_t *yield)
+{
+    uint32_t countdown=hn_read32(m,HN_COUNTER_COUNTDOWN)-1,steps=hn_read32(m,HN_COUNTER_STEPS);
+    hn_write32(m,HN_COUNTER_COUNTDOWN,countdown);
+    uint32_t number;
+    if(countdown==UINT32_MAX){
+        if(steps){
+            steps--;hn_write32(m,HN_COUNTER_STEPS,steps);
+            number=hn_read16(m,0x0201DC4E)-steps*hn_read32(m,HN_COUNTER_DELTA);
+            hn_write32(m,HN_COUNTER_COUNTDOWN,hn_read32(m,HN_COUNTER_DELAY));
+            if((int32_t)hn_read32(m,HN_COUNTER_DELTA)<0&&!hn_audio_song(m,333,HN_SONG_START))return false;
+            if((int32_t)hn_read32(m,HN_COUNTER_DELTA)>0&&!hn_audio_song(m,332,HN_SONG_START))return false;
+        }else{number=hn_read16(m,0x0201DC4E);hn_write32(m,HN_COUNTER_COUNTDOWN,0);}
+    }else number=hn_read16(m,0x0201DC4E)-hn_read32(m,HN_COUNTER_DELTA)*steps;
+    if(!hn_text_counter_digits(m,(int32_t)number))return false;
+    *yield=(*yield&0xFFFFFF00u)|1;return !m->fault;
 }
 
 bool hn_text_blit_glyph(HNMemory *m,GameAddr glyph,GameAddr shadow,uint32_t tile_width,

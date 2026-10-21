@@ -8,6 +8,7 @@
 #include "game/text.h"
 #include "game/choice.h"
 #include "game/world.h"
+#include "game/book.h"
 
 static unsigned menu_kind(HNMemory *m)
 {
@@ -151,10 +152,59 @@ static bool restore_actor_slots(HNMemory *m,bool idle)
     }
     return !m->fault;
 }
+static bool class_screen_side(HNMemory *m,bool store_result)
+{
+    unsigned index=hn_read8(m,HN_SCENE_CONTROLS+0x12),count=hn_read8(m,HN_RENDER_INFO+16);
+    if(store_result){
+        if(index>=count)return false;
+        if(index<=7&&!class_screen_side(m,false))return false;
+        int difference=(int)hn_read16(m,hn_render_slot(m,index)+0x50)-0x47;
+        if(!difference){
+            if(!class_screen_side(m,false))return false;
+            hn_write16(m,0x03001FBC,hn_read8(m,HN_SCENE_CONTROLS+0x60));
+        }else hn_write16(m,0x03001FBC,(uint16_t)(difference>0?1:2));
+    }else{
+        unsigned primary=hn_read8(m,HN_RENDER_CLASS_LEADER),secondary=hn_read8(m,HN_RENDER_CLASS_FOLLOWER);
+        if(primary>=count)return false;
+        int difference=(int)hn_read16(m,hn_render_slot(m,primary)+0x50)-0x47;
+        if(index<=7){
+            if(secondary){if(secondary>=count)return false;difference+=(int)hn_read16(m,hn_render_slot(m,secondary)+0x50)-0x47;}
+        }else if(difference>-8&&difference<0){
+            if(index>=count)return false;difference=(int)hn_read16(m,hn_render_slot(m,index)+0x50)-0x47;
+        }
+        hn_write8(m,HN_SCENE_CONTROLS+0x60,(uint8_t)(difference>0?1:2));
+    }
+    return !m->fault;
+}
 HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments,uint32_t *consumed)
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x0801DC9C:case 0x0801DD5C:case 0x0801E1D0:case 0x0801E288:{
+        GameAddr address=callback&~1u;
+        if(!hn_text_counter_change(m,address>=0x0801E1D0?2:0,address==0x0801DD5C||address==0x0801E1D0))return HN_SCENE_RESOURCE;
+        break;
+    }
+    case 0x0801C974:{
+        if(hn_read8(m,HN_RENDER_INFO+16)<=10||!hn_read32(m,HN_RENDER_SLOTS))return HN_SCENE_RESOURCE;
+        GameAddr destination=HN_SCENE_CONTROLS+hn_read8(m,arguments+1);
+        int z=(int16_t)hn_read16(m,hn_render_slot(m,10)+0x22),half=(int16_t)hn_read16(m,HN_BACKGROUND_BOUNDS+6)>>1;
+        hn_write8(m,destination,(uint8_t)(z<half?2:1));*consumed=2;break;
+    }
+    case 0x0801C9B4:{
+        GameAddr control=HN_SCENE_CONTROLS+hn_read8(m,arguments);unsigned actor=hn_read8(m,arguments+1);
+        if(actor==0x81&&!hn_read8(m,HN_RENDER_CLASS_FOLLOWER)){hn_write8(m,control+2,0);*consumed=2;break;}
+        if(actor==0x80)actor=hn_read8(m,HN_RENDER_CLASS_LEADER);
+        else if(actor==0x81)actor=hn_read8(m,HN_RENDER_CLASS_FOLLOWER);
+        if(actor>=hn_read8(m,HN_RENDER_INFO+16)||!hn_read32(m,HN_RENDER_SLOTS))return HN_SCENE_RESOURCE;
+        int direction=(int)hn_read8(m,control)-1;hn_write8(m,control,(uint8_t)direction);
+        int offset=(int)(hn_read8(m,hn_render_slot(m,actor)+0x60)&7)-1;
+        hn_write8(m,control+1,hn_read8(m,HN_TURN_DIRECTIONS+(uint32_t)offset));
+        unsigned difference=((uint32_t)direction-hn_read8(m,control+1))&7;
+        if(difference<=3)hn_write8(m,control+2,1);else if(difference>4)hn_write8(m,control+2,2);
+        hn_write8(m,control+3,0);*consumed=2;break;
+    }
+    case 0x0801CDA4:case 0x0801CE28:if(!class_screen_side(m,(callback&~1u)==0x0801CE28))return HN_SCENE_RESOURCE;break;
     case 0x080C1C40:if(!save_actor_slots(m))return HN_SCENE_RESOURCE;break;
     case 0x080C1CBC:if(!restore_actor_slots(m,false))return HN_SCENE_RESOURCE;break;
     case 0x080C2A04:case 0x080C3A88:case 0x080CB3E4:case 0x080CB99C:case 0x080CC644:case 0x080CEE10:{
@@ -320,7 +370,10 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         uint16_t keys=hn_input_query(m,mask&0xF0,0)|hn_input_query(m,mask&0x30F,1);
         hn_write16(m,0x0201DC40,keys);hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));break;
     }
-    default:return hn_scene_text_callback(m,callback,arguments,consumed);
+    default:{
+        HNSceneResult result=hn_scene_text_callback(m,callback,arguments,consumed);
+        return result==HN_SCENE_UNKNOWN?hn_book_callback(m,callback,arguments,consumed):result;
+    }
     }
     return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
 }
@@ -328,6 +381,10 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
                                          uint32_t *consumed,uint32_t *yield)
 {
     (void)slot;(void)arguments;
+    if((callback&~1u)==0x0801E348){
+        if(!hn_text_counter_update(m,yield))return HN_SCENE_RESOURCE;
+        *consumed=0;return HN_SCENE_OK;
+    }
     if((callback&~1u)==0x0801E3E8){
         if(!hn_text_counter(m,hn_read16(m,0x0201DC52),0))return HN_SCENE_RESOURCE;
         *consumed=0;*yield=(*yield&0xFFFFFF00u)|1;return HN_SCENE_OK;
