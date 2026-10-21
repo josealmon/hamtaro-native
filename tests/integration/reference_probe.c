@@ -158,3 +158,18 @@ void hn_probe_hardware_state(HNHardwareProbe *p,uint32_t state[47])
         state[45+i]=(uint32_t)(int32_t)(a->dac[i]/64);
     }
 }
+void hn_probe_hardware_psg_state(HNHardwareProbe *p,uint32_t state[96])
+{
+    HNPsg *s=&p->apu.psg;state[0]=(uint32_t)p->clock.cycles;state[1]=hn_psg_status(s);
+    state[2]=hn_read16(&p->memory,0x04000080);state[3]=s->frame_step;
+    for(unsigned i=0;i<4;i++){
+        state[4+i]=s->channel[i].length;state[8+i]=i==3?s->registers[0x1C]:s->channel[i].frequency;
+        state[12+i]=i==2?s->registers[0x13]>>5:s->channel[i].volume;
+        state[16+i]=hn_psg_sample(s,i);state[20+i]=s->channel[i].active;
+    }
+    state[24]=s->channel[0].phase;state[25]=s->channel[1].phase;
+    state[26]=s->sweep_shadow;state[27]=s->sweep_clock;
+    for(unsigned i=0;i<32;i++)state[28+i]=s->wave[i];
+    for(unsigned i=0;i<34;i++)state[60+i]=hn_psg_read(s,0x60+i);
+    int level[2];hn_psg_levels(s,level);state[94]=(uint32_t)level[0];state[95]=(uint32_t)level[1];
+}

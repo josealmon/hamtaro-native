@@ -18,6 +18,10 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   release, typed sequence dispatch, note allocation, complete synthetic track
   progression, PCM interpolation/end/reverb behavior, PSG wave-register writes,
   script sound/wait controls and independent command/channel-cycle budgets.
+- apu: four timers and cascade/IRQ timing, FIFO word lanes/shifters, sound DMA,
+  stereo routing/PWM/averaging, PSG duty/length/envelope/sweep behavior, wave RAM
+  banks/attenuation, maximal noise cycles and deferred frequency reloads.
+  Whole-frame versus irregular advances produce identical mixed PCM/PSG output.
 - storage: SHA-256 known vectors, strict ROM rejection, atomic SRAM recovery,
   independent profile locking, settings validation and Unicode paths.
 - input: injected keyboard events and a local SDL virtual gamepad. Covers hotplug,
@@ -97,6 +101,23 @@ Add --video-oracle PATH_TO_ORACLE and, if needed,
 --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to compare_reference.py to compare
 seven static snapshots from its private ROM schedule. This passes 117,564 checks;
 five snapshots contain multiple colors. No snapshots or ROM data are saved.
+
+The same separate project can build the ROM-free hardware audio oracle:
+
+    cmake --build "$env:HAMTARO_NATIVE_WORK/mgba-oracle" --target hn-audio-oracle
+    python -B tools/compare_audio.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-audio-oracle.exe"
+
+Use --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME if required. It uses the native
+test DLL from build/Release by default, or --native PATH_TO_TEST_DLL. The oracle
+loads no ROM and executes no CPU instructions. It compares 10,432 synthetic
+snapshots (698,616 fields) across timers, Direct Sound, pulse/noise envelopes,
+wave banks/attenuation, sweep/control state and PSG routing/volume components.
+The native apu suite has 786 checks, including documented startup, physical DAC
+polarity and complete mixed-output partition invariance. architecture.md records
+the controlled noise seed, steady wave alignment, inactive-counter exclusions
+and digital DAC input normalization in this component oracle. Its final stock
+PSG waveform is not the reference for these checks; trigger quirks, analog
+filtering, listening evidence and actual game-output parity remain unverified.
 
 Manual UI checks cover import/cancellation, persisted rebinding, keyboard menu
 navigation, constrained window sizes, fullscreen, and save import/export.

@@ -1,6 +1,7 @@
 #ifndef HN_GBA_AUDIO_H
 #define HN_GBA_AUDIO_H
 #include "gba/memory.h"
+#include "gba/psg.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,6 +15,7 @@ typedef struct {
 typedef struct HNApu {
     HNMemory *memory;
     HNAudioFifo fifo[2];
+    HNPsg psg;
     uint16_t control,bias;
     bool enabled;
     unsigned dac_remaining,host_remaining;
@@ -23,7 +25,7 @@ typedef struct HNApu {
     HNApuSample output;
     void *context;
 } HNApu;
-/* Direct Sound/PWM foundation. PSG waveform generation is still pending. */
+/* Native PSG, Direct Sound and PWM hardware, independent of game-driver state. */
 void hn_apu_init(HNApu *,HNMemory *,HNApuSample,void *context);
 bool hn_apu_register(unsigned offset);
 uint8_t hn_apu_read(const HNApu *,unsigned offset);

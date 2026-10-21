@@ -6,14 +6,16 @@ void hn_apu_init(HNApu *a,HNMemory *m,HNApuSample callback,void *context)
 {
     memset(a,0,sizeof(*a));a->memory=m;a->output=callback;a->context=context;
     a->bias=0x200;a->dac_remaining=512;a->host_remaining=512;m->apu=a;
+    hn_psg_init(&a->psg);memset(m->io+0x60,0,0x22);
     m->io[0x82]=m->io[0x83]=m->io[0x84]=0;m->io[0x88]=0;m->io[0x89]=2;
 }
 bool hn_apu_register(unsigned o)
-{return (o>=0x82&&o<=0x85)||(o>=0x88&&o<=0x89)||(o>=0xA0&&o<=0xA7);}
+{return (o>=0x60&&o<=0x85)||(o>=0x88&&o<=0x89)||(o>=0x90&&o<=0xA7);}
 uint8_t hn_apu_read(const HNApu *a,unsigned o)
 {
     if(o>=0xA0)return 0; /* FIFO is write-only; native callers do not use open bus. */
-    if(o==0x84)return (uint8_t)((a->enabled?0x80:0)|(a->memory->io[0x84]&15));
+    if(o<0x82||o>=0x90)return hn_psg_read(&a->psg,o);
+    if(o==0x84)return (uint8_t)((a->enabled?0x80:0)|hn_psg_status(&a->psg));
     if(o==0x85)return 0;
     uint16_t value=o<0x88?a->control:a->bias;
     return (uint8_t)(value>>((o&1)*8));
@@ -30,6 +32,12 @@ void hn_apu_write(HNApu *a,unsigned o,uint32_t value,unsigned width)
     }
     /* A word store can address two distinct halfword registers. */
     if(width==4){hn_apu_write(a,o,value&0xFFFF,2);if(hn_apu_register(o+2))hn_apu_write(a,o+2,value>>16,2);return;}
+    if(o<0x82||o>=0x90){
+        hn_psg_write(&a->psg,o,(uint8_t)value);
+        if(width==2)hn_psg_write(&a->psg,o+1,(uint8_t)(value>>8));
+        for(unsigned i=0x60;i<=0x81;i++)m->io[i]=hn_psg_read(&a->psg,i);
+        m->io[0x84]=(uint8_t)((a->enabled?0x80:0)|hn_psg_status(&a->psg));return;
+    }
     unsigned base=o&~1u;
     uint16_t v=(uint16_t)value;
     if(width==1){uint16_t old=base==0x82?a->control:base==0x88?a->bias:a->enabled?0x80:0;
@@ -39,6 +47,7 @@ void hn_apu_write(HNApu *a,unsigned o,uint32_t value,unsigned width)
         for(unsigned i=0;i<2;i++)if(v&(0x0800u<<(i*4)))a->fifo[i].read=a->fifo[i].write=0;
     }else if(base==0x84){
         a->enabled=(v&0x80)!=0;
+        hn_psg_power(&a->psg,a->enabled);
         if(!a->enabled){memset(m->io+0x60,0,0x22);a->control&=0xFF00;}
     }else if(base==0x88){
         unsigned old_period=period(a);a->bias=v&0xC3FE;
@@ -48,7 +57,7 @@ void hn_apu_write(HNApu *a,unsigned o,uint32_t value,unsigned width)
         }
     }
     m->io[0x82]=(uint8_t)a->control;m->io[0x83]=(uint8_t)(a->control>>8);
-    m->io[0x84]=(uint8_t)((a->enabled?0x80:0)|(m->io[0x84]&15));
+    m->io[0x84]=(uint8_t)((a->enabled?0x80:0)|hn_psg_status(&a->psg));
     m->io[0x88]=(uint8_t)a->bias;m->io[0x89]=(uint8_t)(a->bias>>8);
 }
 void hn_apu_timer(HNApu *a,unsigned timer)
@@ -56,7 +65,7 @@ void hn_apu_timer(HNApu *a,unsigned timer)
     if(!a->enabled)return;
     for(unsigned i=0;i<2;i++){
         unsigned shift=i*4;
-        if(!((a->control>>(8+shift))&3)||((a->control>>(10+shift))&1)!=timer)continue;
+        if(!((a->control>>(8+shift))&3)||((a->control>>(10+shift))&1u)!=timer)continue;
         HNAudioFifo *f=&a->fifo[i];unsigned queued=(f->write-f->read)&7;
         /* The request precedes moving the next word into the four-byte shifter. */
         bool refill=queued<=3;
@@ -70,6 +79,7 @@ void hn_apu_timer(HNApu *a,unsigned timer)
 void hn_apu_levels(const HNApu *a,int16_t out[2])
 {
     int level[2]={0,0};unsigned bias=a->bias&0x3FE;
+    if(a->enabled){hn_psg_levels(&a->psg,level);unsigned shift=4-(a->control&3);level[0]>>=shift;level[1]>>=shift;}
     if(a->enabled)for(unsigned i=0;i<2;i++){
         int sample=a->fifo[i].sample*((a->control&(4u<<i))?4:2);
         if(a->control&(0x200u<<(i*4)))level[0]+=sample;
@@ -80,12 +90,17 @@ void hn_apu_levels(const HNApu *a,int16_t out[2])
     }
 }
 uint32_t hn_apu_next(const HNApu *a)
-{return a->dac_remaining<a->host_remaining?a->dac_remaining:a->host_remaining;}
+{
+    uint32_t next=a->dac_remaining<a->host_remaining?a->dac_remaining:a->host_remaining;
+    uint32_t psg=hn_psg_next(&a->psg);return psg<next?psg:next;
+}
 void hn_apu_advance(HNApu *a,uint32_t cycles)
 {
     while(cycles){
         unsigned next=hn_apu_next(a),step=next<cycles?next:cycles;
         for(unsigned i=0;i<2;i++)a->integral[i]+=a->dac[i]*(int)step;
+        hn_psg_advance(&a->psg,step);
+        a->memory->io[0x84]=(uint8_t)((a->enabled?0x80:0)|hn_psg_status(&a->psg));
         a->cycles+=step;a->dac_remaining-=step;a->host_remaining-=step;cycles-=step;
         if(!a->host_remaining){
             /* Time-average the held PWM levels into fixed 32768 Hz stereo. */

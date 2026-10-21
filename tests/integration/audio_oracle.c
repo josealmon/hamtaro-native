@@ -68,6 +68,39 @@ static void snapshot(struct GBA *g,uint32_t state[47])
         state[45+i]=(uint32_t)v;
     }
 }
+static void psg_snapshot(struct GBA *g,uint32_t state[96])
+{
+    struct GBAudio *s=&g->audio.psg;
+    /* Flush DAC edges before inspecting oscillators at a later arbitrary cycle. */
+    GBAAudioSample(&g->audio,mTimingCurrentTime(&g->timing));
+    GBAudioRun(s,mTimingCurrentTime(&g->timing),15);
+    state[0]=(uint32_t)mTimingCurrentTime(&g->timing);state[1]=GBAIORead(g,REG_SOUNDCNT_X)&15;
+    state[2]=GBAIORead(g,REG_SOUNDCNT_LO);state[3]=(s->frame+1)&7;
+    state[4]=s->ch1.control.length;state[5]=s->ch2.control.length;state[6]=s->ch3.length;state[7]=s->ch4.length;
+    state[8]=s->ch1.control.frequency;state[9]=s->ch2.control.frequency;state[10]=s->ch3.rate;
+    state[11]=GBAIORead(g,REG_SOUND4CNT_HI)&255;
+    state[12]=s->ch1.envelope.currentVolume;state[13]=s->ch2.envelope.currentVolume;
+    state[14]=s->ch3.volume;state[15]=s->ch4.envelope.currentVolume;
+    state[16]=s->playingCh1?s->ch1.sample:0;state[17]=s->playingCh2?s->ch2.sample:0;
+    state[18]=s->playingCh3?s->ch3.sample:0;state[19]=s->playingCh4?s->ch4.sample:0;
+    state[20]=s->playingCh1;state[21]=s->playingCh2;state[22]=s->playingCh3;state[23]=s->playingCh4;
+    state[24]=s->ch1.index;state[25]=s->ch2.index;state[26]=s->ch1.sweep.realFrequency;state[27]=s->ch1.sweep.step;
+    for(unsigned i=0;i<32;i++)state[28+i]=((const uint8_t *)s->ch3.wavedata32)[i];
+    for(unsigned i=0;i<34;i++){
+        unsigned o=(0x60+i)&~1u;
+        bool valid=o==0x60||o==0x62||o==0x64||o==0x68||o==0x6C||o==0x70||o==0x72||o==0x74||o==0x78||o==0x7C||o==0x80;
+        state[60+i]=valid?(GBAIORead(g,o)>>((i&1)*8))&255:0;
+    }
+    /* Component test of mGBA's routing/volume mixer with documented GBA DAC
+       inputs: centered generators, inactive digital zero, opposite wave polarity.
+       This is not a comparison of stock mGBA's final DAC waveform. */
+    int8_t saved[4]={s->ch1.sample,s->ch2.sample,s->ch3.sample,s->ch4.sample};
+    s->ch1.sample=(int8_t)((int)state[16]*2-15);s->ch2.sample=(int8_t)((int)state[17]*2-15);
+    s->ch3.sample=(int8_t)(15-(int)state[18]*2);s->ch4.sample=(int8_t)((int)state[19]*2-15);
+    int16_t left,right;GBAudioSamplePSG(s,&left,&right);
+    state[94]=(uint32_t)(int32_t)(left/2);state[95]=(uint32_t)(int32_t)(right/2);
+    s->ch1.sample=saved[0];s->ch2.sample=saved[1];s->ch3.sample=saved[2];s->ch4.sample=saved[3];
+}
 int main(void)
 {
     struct mLogger logger={log_message,NULL};mLogSetDefaultLogger(&logger);
@@ -88,6 +121,10 @@ int main(void)
         else if(op==8){if(address>=0x40000||(address&3))return 4;memcpy((uint8_t *)g->memory.wram+address,&value,4);}
         else if(op==16)advance(g,value);
         else if(op==32){uint32_t state[47];snapshot(g,state);if(fwrite(state,sizeof(state),1,stdout)!=1||fflush(stdout))return 5;}
+        else if(op==64){uint32_t state[96];psg_snapshot(g,state);if(fwrite(state,sizeof(state),1,stdout)!=1||fflush(stdout))return 5;}
+        /* Controlled synthetic initial state: GBATEK's documented Galois seed.
+           Stock 0.10.5 triggers with all ones; this isolates polynomial timing. */
+        else if(op==128){g->audio.psg.ch4.lfsr=value;g->audio.psg.ch4.sample=0;}
         else return 6;
     }
     destroy(g);free(cpu);free(g);return 0;

@@ -147,5 +147,100 @@ static void partition_contract(void)
     CHECK(memcmp(fifo,apu.fifo,sizeof(fifo))==0&&read_timer(0)==timer_count);
     CHECK(clock_state.cycles==HN_CYCLES_PER_FRAME&&apu.cycles==HN_CYCLES_PER_FRAME);
 }
+static void pulse(unsigned channel,unsigned duty,unsigned volume,unsigned frequency)
+{
+    unsigned base=channel?0x68:0x62;
+    hn_write16(&memory,0x04000000+base,(uint16_t)((volume<<12)|(duty<<6)));
+    hn_write16(&memory,channel?0x0400006C:0x04000064,(uint16_t)(0x8000|frequency));
+}
+static void psg_pattern(void)
+{
+    pattern();pulse(0,1,12,1911);pulse(1,3,9,1875);
+    hn_write16(&memory,0x04000078,0xA100);hn_write16(&memory,0x0400007C,0x8035);
+    hn_write8(&memory,0x04000070,0xC0);
+    for(unsigned i=0;i<16;i++)hn_write8(&memory,0x04000090+i,(uint8_t)(i*29+7));
+    hn_write8(&memory,0x04000070,0xA0);hn_write8(&memory,0x04000073,0x20);
+    hn_write16(&memory,0x04000074,0x8705);hn_write16(&memory,0x04000080,0xFF77);
+}
+static void psg_contract(void)
+{
+    reset();hn_write16(&memory,0x04000062,0xFFFF);CHECK(hn_read16(&memory,0x04000062)==0);
+    hn_write16(&memory,0x04000084,0x80);hn_write16(&memory,0x04000080,0x1177);hn_write16(&memory,0x04000082,2);
+    pulse(0,0,15,2047);CHECK(hn_psg_status(&apu.psg)==1&&hn_psg_sample(&apu.psg,0)==0);
+    advance(16*6);CHECK(hn_psg_sample(&apu.psg,0)==0);advance(16);CHECK(hn_psg_sample(&apu.psg,0)==15);
+    int16_t level[2];hn_apu_levels(&apu,level);CHECK(level[0]==120&&level[1]==120);
+    apu.fifo[0].sample=-32;hn_write16(&memory,0x04000082,0x0106);
+    hn_apu_levels(&apu,level);CHECK(level[0]==120&&level[1]==-8);hn_write16(&memory,0x04000082,2);
+    hn_write16(&memory,0x04000064,0x87FF);CHECK(apu.psg.channel[0].phase==7);
+    advance(15);CHECK(apu.psg.channel[0].phase==7);advance(1);CHECK(apu.psg.channel[0].phase==0);
+    pulse(1,2,10,2047);CHECK(hn_psg_sample(&apu.psg,1)==0);advance(16*5);
+    CHECK(hn_psg_sample(&apu.psg,1)==10);hn_write16(&memory,0x04000080,0x2177);
+    hn_apu_levels(&apu,level);CHECK(level[0]==40&&level[1]==-120);
+    hn_write8(&memory,0x04000063,0);CHECK(!(hn_psg_status(&apu.psg)&1));
+    CHECK(hn_read16(&memory,0x04000064)==0&&hn_read16(&memory,0x04000068)==0xA080);
+    /* Frequency writes reload after the current divider period, not retroactively. */
+    reset();hn_write16(&memory,0x04000084,0x80);pulse(0,2,15,2000);advance(250);
+    hn_write16(&memory,0x04000064,2047);advance(517);CHECK(apu.psg.channel[0].phase==0);
+    advance(1);CHECK(apu.psg.channel[0].phase==1);advance(16);CHECK(apu.psg.channel[0].phase==2);
+    /* Length clocks and enable-edge decrement use the shared sequencer phase. */
+    reset();hn_write16(&memory,0x04000084,0x80);hn_write16(&memory,0x04000062,0xF03F);
+    hn_write16(&memory,0x04000064,0xC400);advance(32767);CHECK(hn_psg_status(&apu.psg)==1);
+    advance(1);CHECK(hn_psg_status(&apu.psg)==0);hn_write16(&memory,0x04000064,0x0400);
+    hn_write16(&memory,0x04000062,0xF03F);hn_write16(&memory,0x04000064,0xC400);
+    CHECK(apu.psg.channel[0].length==63&&hn_psg_status(&apu.psg)==1);
+    /* Envelope clocks preserve active status when the volume reaches zero. */
+    reset();hn_write16(&memory,0x04000084,0x80);hn_write16(&memory,0x04000062,0x5180);
+    hn_write16(&memory,0x04000064,0x8400);advance(262143);CHECK(apu.psg.channel[0].volume==5);
+    advance(1);CHECK(apu.psg.channel[0].volume==4);advance(4*262144);
+    CHECK(apu.psg.channel[0].volume==0&&hn_psg_status(&apu.psg)==1);
+    hn_write8(&memory,0x04000063,0);CHECK(hn_psg_status(&apu.psg)==0);
+    /* Sweep performs both the immediate and post-update overflow checks. */
+    reset();hn_write16(&memory,0x04000084,0x80);hn_write8(&memory,0x04000060,0x11);
+    pulse(0,2,15,1024);CHECK(hn_psg_status(&apu.psg)==1);advance(3*32768);
+    CHECK(apu.psg.channel[0].frequency==1536&&hn_psg_status(&apu.psg)==0);
+    hn_write8(&memory,0x04000060,0x19);pulse(0,2,15,1000);advance(4*32768);
+    CHECK(apu.psg.channel[0].frequency==500&&hn_psg_status(&apu.psg)==1);
+    hn_write8(&memory,0x04000060,0x11);CHECK(hn_psg_status(&apu.psg)==0);
+    /* Wave data survives power changes and the CPU always sees the other bank. */
+    reset();hn_write8(&memory,0x04000090,0xFE);hn_write16(&memory,0x04000084,0x80);
+    CHECK(hn_read8(&memory,0x04000090)==0xFE);hn_write8(&memory,0x04000070,0xC0);
+    for(unsigned i=0;i<16;i++)hn_write8(&memory,0x04000090+i,(uint8_t)(((2*i&15)<<4)|((2*i+1)&15)));
+    CHECK(hn_read8(&memory,0x04000090)==1);hn_write8(&memory,0x04000070,0x80);
+    CHECK(hn_read8(&memory,0x04000090)==0xFE);hn_write8(&memory,0x04000073,0x20);
+    hn_write16(&memory,0x04000074,0x87FF);advance(16);CHECK(hn_psg_sample(&apu.psg,2)==1);
+    advance(8*10);CHECK(hn_psg_sample(&apu.psg,2)==11);hn_write8(&memory,0x04000073,0x80);
+    hn_write16(&memory,0x04000080,0x4477);hn_write16(&memory,0x04000082,2);
+    hn_apu_levels(&apu,level);CHECK(level[0]==-8&&level[1]==-8);
+    CHECK(hn_psg_sample(&apu.psg,2)==8);hn_write8(&memory,0x04000073,0x40);
+    CHECK(hn_psg_sample(&apu.psg,2)==5);hn_write8(&memory,0x04000073,0x60);
+    CHECK(hn_psg_sample(&apu.psg,2)==2);hn_write8(&memory,0x04000070,0);
+    uint8_t wave[32];memcpy(wave,apu.psg.wave,32);advance(4096);CHECK(memcmp(wave,apu.psg.wave,32)==0);
+    hn_write8(&memory,0x04000070,0xA0);hn_write16(&memory,0x04000074,0x87FF);
+    advance(64*8);CHECK(memcmp(wave,apu.psg.wave,32)==0);
+    hn_write8(&memory,0x04000070,0xE0);hn_write8(&memory,0x04000073,0x20);
+    hn_write16(&memory,0x04000074,0x87FF);advance(16);CHECK(hn_psg_sample(&apu.psg,2)==14);
+    CHECK(hn_read8(&memory,0x04000090)==wave[1]);
+    hn_write8(&memory,0x04000070,0);memcpy(wave,apu.psg.wave,32);
+    hn_apu_levels(&apu,level);CHECK(level[0]==120&&level[1]==120);
+    hn_write16(&memory,0x04000084,0);CHECK(hn_read16(&memory,0x04000080)==0&&hn_psg_status(&apu.psg)==0);
+    CHECK(hn_read8(&memory,0x04000090)==wave[16]);
+    /* Both noise polynomials complete their documented maximal-length cycle. */
+    for(unsigned short_mode=0;short_mode<2;short_mode++){
+        reset();hn_write16(&memory,0x04000084,0x80);hn_write16(&memory,0x04000078,0xF000);
+        hn_write16(&memory,0x0400007C,(uint16_t)(0x8000|(short_mode?8:0)));
+        unsigned seed=short_mode?0x40:0x4000,count=short_mode?127:32767,width=short_mode?7:15;
+        advance(32*(width-1));CHECK(hn_psg_sample(&apu.psg,3)==0);
+        advance(32);CHECK(hn_psg_sample(&apu.psg,3)==15);
+        advance(32*(count-width-1));CHECK(apu.psg.lfsr!=seed);advance(32);CHECK(apu.psg.lfsr==seed);
+        hn_write8(&memory,0x0400007C,0xE0);advance(99999);CHECK(apu.psg.lfsr==seed);
+    }
+    /* Include all four oscillators in the clock partition invariant. */
+    psg_pattern();advance(HN_CYCLES_PER_FRAME);
+    int16_t expected[548][2];memcpy(expected,output,sizeof(expected));HNPsg expected_psg=apu.psg;
+    psg_pattern();unsigned left=HN_CYCLES_PER_FRAME;
+    while(left){unsigned step=left<997?left:997;advance(step);left-=step;}
+    CHECK(output_count==548&&memcmp(expected,output,sizeof(expected))==0);
+    CHECK(memcmp(&expected_psg,&apu.psg,sizeof(expected_psg))==0);
+}
 int main(void)
-{timers();fifo();dma();output_contract();partition_contract();printf("%u native timer/FIFO/PWM checks passed.\n",checks);return 0;}
+{timers();fifo();dma();output_contract();partition_contract();psg_contract();printf("%u native timer/PSG/FIFO/PWM checks passed.\n",checks);return 0;}

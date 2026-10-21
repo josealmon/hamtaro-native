@@ -19,8 +19,9 @@ native dispatch, with explicit handling of unusual ARM calling contracts.
 There is no ARM interpreter, JIT or mGBA runtime dependency in this application.
 
 The frontend uses C++20, SDL3 and Dear ImGui. Its menus support keyboard and
-gamepad navigation. Audio is delivered through an SDL stereo PCM stream.
-SDL's device conversion happens after game PCM generation.
+gamepad navigation. The platform layer accepts 32768 Hz stereo PCM through SDL;
+connecting it to the native game loop remains pending. SDL converts submitted
+PCM to the output device's format.
 
 ## Current coverage
 
@@ -47,7 +48,7 @@ SDL's device conversion happens after game PCM generation.
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Native boot/title | Pending | 88 Main-only, 180 idle and 369 input-injected script/render/audio iterations compared; scene-menu callbacks, task/actor updates, real IRQ cadence and hardware audio output remain incomplete |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
-| Music and effects | Partial | Sequencer, original PCM mixer, PSG register service, script sound controls and Direct Sound/PWM tested; PSG synthesis, complete stereo mix and game-loop/host delivery remain pending |
+| Music and effects | Partial | Sequencer, original PCM mixer, PSG register service, four native PSG generators, script controls and Direct Sound/PWM tested as components; final game output, filtering, trigger quirks and host delivery remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
 | Public release | Pending | Native gameplay, complete coverage and source-provenance review |
@@ -162,10 +163,41 @@ analytic unit checks. mGBA 0.10.5 retains held PCM while master power is off;
 DAC parity excludes that transition, while native tests require the documented
 mute. This does not establish full hardware conformance.
 
-PSG waveform synthesis, its final mix with Direct Sound, game-loop/host delivery,
-pre-device game output comparisons and listening evidence remain pending. In
-particular, the hardware-only checks and game-driver comparisons are separate;
-they do not prove that the game currently produces correct final sound.
+Four native PSG generators now share the hardware clock: two eight-step pulse
+channels, frequency sweep, length/envelope sequencing, a rotating one/two-bank
+wave buffer and the seven/fifteen-bit noise polynomials. Frequency writes reload
+after an in-flight period ends. Pulse retriggers retain duty phase and divider
+low bits. Register reads expose their hardware masks and active-channel status;
+wave RAM accesses select the opposite bank. The mixed PSG levels are centered
+before adding FIFO PCM, with the wave channel's opposite polarity. This follows
+the documented digital DAC contract rather than adding unipolar signals to the
+FIFO range. Final clipping/quantization stays in the shared PWM path.
+
+The hardware harness now covers 10,432 synthetic snapshots, totaling 698,616
+field checks including the Direct Sound cases above. PSG checks cover steady
+pulse/noise periods and envelopes, wave order/attenuation/bank rotation,
+sweep/length/control state and routing/master volume. Native analytic tests
+also cover first-step suppression, retriggers, deferred period reload, both
+two-bank starting selections, complete polynomial cycles, physical mix polarity
+and partition-invariant stereo output with all four generators plus PCM.
+
+These are component comparisons with explicit oracle limits. Noise tests inject
+GBATEK's initial polynomial seed into the test oracle; stock mGBA 0.10.5 uses
+all ones instead. Silent pulse phases and stopped sweep countdowns are excluded
+because that oracle stops advancing them. Sweep tests compare control state,
+not the phase of an in-flight divider after a frequency change. Wave comparisons
+inspect matching steady edges after the oracle's unexplained 24-cycle trigger
+delay, and use bank 0 when comparing two-bank mode. The native bank-1 start is
+covered analytically. The oracle routing API receives centered digital samples,
+inactive digital zero and inverted wave polarity for the mix component test;
+stock mGBA's final PSG DAC waveform is not asserted equal. No source/library
+from that oracle is linked into the native hardware model.
+
+Game-loop/host delivery, analog filtering, real trigger/retrigger timing,
+pre-device game-output comparisons and listening evidence remain pending. The
+hardware checks and game-driver comparisons are separate; they do not prove
+that the game currently produces correct final sound. Hardware captures are
+still needed to resolve the startup and model-specific uncertainties.
 
 The optional mGBA 0.10.5 software PPU oracle is a separate test build; its code and
 runtime never enter the application or package. Static synthetic comparisons
@@ -184,6 +216,10 @@ ROM-free check uses build/Release/hn_reference_probe.dll by default; --native
 selects another test build. No oracle executable or library enters the package.
 The sound contracts follow [GBATEK](https://mgba-emu.github.io/gbatek/#gbasoundcontroller)
 and the [FIFO hardware measurements](https://github.com/mgba-emu/mgba/issues/1847).
+The PSG divider/envelope and GBA digital DAC contracts are described in
+[Pan Docs audio details](https://gbdev.io/pandocs/Audio_details.html) and
+[audio registers](https://gbdev.io/pandocs/Audio_Registers.html); native GBA wave
+RAM banking follows GBATEK, not Game Boy compatibility-mode access rules.
 
 The ObjAffine helper follows a single-precision HLE model, independently implemented
 from the documented scale/angle contract. Comparison with a CPU oracle using the

@@ -1,4 +1,4 @@
-"""ROM-free timer/Direct Sound checks against a separate mGBA hardware oracle."""
+"""ROM-free timer/PSG/Direct Sound component checks with a separate mGBA oracle."""
 import argparse
 import ctypes as ct
 import os
@@ -14,6 +14,11 @@ NAMES = (["cycles"] + [f"timer{i}.count" for i in range(4)]
          + [f"fifo{i}.{field}" for i in range(2) for field in ("read", "write", "remaining", "shifter")]
          + [f"fifo{i}.word{j}" for i in range(2) for j in range(8)]
          + ["dma1.source", "dma2.source", "fifo0.sample", "fifo1.sample", "dac.left", "dac.right"])
+PSG_NAMES = (["cycles", "PSG status", "PSG volume/routing", "frame next"]
+             + [f"psg{i}.{field}" for field in ("length", "frequency", "volume", "sample", "active") for i in range(4)]
+             + ["pulse0.phase", "pulse1.phase", "sweep.shadow", "sweep.clock"]
+             + [f"wave.byte{i}" for i in range(32)] + [f"register {0x60+i:#x}" for i in range(34)]
+             + ["PSG left", "PSG right"])
 
 class Comparison:
     def __init__(self, native, oracle, runtime):
@@ -23,6 +28,7 @@ class Comparison:
         self.dll.hn_probe_hardware_write.argtypes = [ct.c_void_p, ct.c_uint, ct.c_uint32, ct.c_uint32]
         self.dll.hn_probe_hardware_advance.argtypes = [ct.c_void_p, ct.c_uint32]
         self.dll.hn_probe_hardware_state.argtypes = [ct.c_void_p, ct.POINTER(ct.c_uint32)]
+        self.dll.hn_probe_hardware_psg_state.argtypes = [ct.c_void_p, ct.POINTER(ct.c_uint32)]
         env = os.environ.copy()
         if runtime:
             env["PATH"] = str(runtime) + os.pathsep + env.get("PATH", "")
@@ -77,6 +83,31 @@ class Comparison:
             if native[i] != reference[i]:
                 raise AssertionError(f"{label}, {name}: native {native[i]:#x}, reference {reference[i]:#x}")
         self.state = list(native)
+        self.snapshots += 1
+
+    def compare_psg(self, label, fields=None):
+        native = (ct.c_uint32 * 96)()
+        self.dll.hn_probe_hardware_psg_state(self.native, native)
+        self.command(64)
+        self.process.stdin.flush()
+        data = bytearray()
+        while len(data) < 96 * 4:
+            block = self.process.stdout.read(96 * 4 - len(data))
+            if not block:
+                raise RuntimeError(f"PSG oracle terminated ({self.process.poll()}).")
+            data += block
+        reference = struct.unpack("<96I", data)
+        self.psg_native, self.psg_reference = list(native), list(reference)
+        for i in range(96) if fields is None else fields:
+            # The oracle stops advancing silent pulse phases; native dividers
+            # keep running after their first trigger. Compare audible phases.
+            if i in (24, 25) and (not native[20+i-24] or not native[12+i-24]):
+                continue
+            if i == 27 and not native[20]:
+                continue  # The oracle stops its sweep countdown on overflow.
+            self.checks += 1
+            if native[i] != reference[i]:
+                raise AssertionError(f"{label}, {PSG_NAMES[i]}: native {native[i]:#x}, reference {reference[i]:#x}")
         self.snapshots += 1
 
     def close(self):
@@ -167,6 +198,67 @@ def dma(c, rng):
             if step % 8 == 0:
                 c.compare(f"DMA case {case} step {step}", dma=True)
 
+def psg(c, rng):
+    for case in range(32):
+        c.reset()
+        c.write(2, 0x84, 0x80)
+        c.write(2, 0x80, 0xBB77)
+        c.write(2, 0x82, 2)
+        # Initial trigger at clock zero, then steady periods. First-step and
+        # retrigger divider behavior have independent analytic native tests.
+        for i in range(2):
+            duty = rng.randrange(4)
+            envelope = rng.randrange(1, 16) << 4 | rng.randrange(8) | (8 if case & 1 else 0)
+            c.write(2, 0x62 if i == 0 else 0x68, envelope << 8 | duty << 6 | rng.randrange(64))
+            c.write(2, 0x64 if i == 0 else 0x6C, 0x8000 | rng.randrange(0x400, 0x7F0) | (0x4000 if case & 2 else 0))
+        c.write(2, 0x78, (rng.randrange(1, 16) << 12) | (rng.randrange(1, 8) << 8) | rng.randrange(64))
+        noise = rng.randrange(0xD0)
+        c.write(2, 0x7C, 0x8000 | noise | (0x4000 if case & 4 else 0))
+        # Align the controlled polynomial seed, not the stock oracle's startup.
+        c.command(128, value=0x40 if noise & 8 else 0x4000)
+        for step in range(64):
+            c.advance(rng.randrange(32, 128) * 512)
+            c.compare_psg(f"PSG case {case} step {step}")
+
+def waves(c, rng):
+    for case in range(24):
+        c.reset()
+        c.write(2, 0x84, 0x80)
+        c.write(2, 0x80, 0x4477)
+        # Independent synthetic content in both banks; no extracted wave data.
+        for bank in range(2):
+            c.write(1, 0x70, bank << 6)
+            for i in range(4):
+                c.write(4, 0x90+i*4, rng.getrandbits(32))
+        two_banks = bool(case & 2)
+        bank = 0 if two_banks else case & 1
+        c.write(1, 0x70, 0x80 | (0x20 if two_banks else 0) | bank << 6)
+        c.write(2, 0x72, (case % 8) << 13 | rng.randrange(128))
+        frequency = rng.randrange(0x600, 0x7FC)
+        period = 8 * (2048-frequency)
+        c.write(2, 0x74, 0x8000 | frequency)
+        # Stock mGBA inserts an unexplained 24-cycle startup delay. Inspect
+        # after both models have crossed the same oscillator edge, before the
+        # next one; this verifies steady wave ordering, not trigger latency.
+        c.advance(28)
+        for step in range(48):
+            c.advance(period * rng.randrange(1, 4))
+            c.compare_psg(f"wave case {case} step {step}")
+
+def sweeps(c, rng):
+    # mGBA changes an in-flight period differently from a reload divider.
+    # Compare sweep/length/register state; native phase reload has analytic tests.
+    fields = [i for i in range(96) if i not in (16, 24, 94, 95)]
+    for case in range(32):
+        c.reset()
+        c.write(2, 0x84, 0x80)
+        c.write(1, 0x60, rng.randrange(1, 8) << 4 | (8 if case & 1 else 0) | rng.randrange(1, 8))
+        c.write(2, 0x62, 0xA080 | rng.randrange(64))
+        c.write(2, 0x64, 0x8000 | rng.randrange(256, 1792))
+        for step in range(48):
+            c.advance(32768)
+            c.compare_psg(f"sweep case {case} step {step}", fields)
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--native", type=Path, default=Path("build/Release/hn_reference_probe.dll"))
@@ -179,8 +271,11 @@ def main():
         timers(c, rng)
         fifos(c, rng)
         dma(c, rng)
-        print(f"{c.checks} timer/FIFO/DMA/PWM checks matched across {c.snapshots} synthetic snapshots.")
-        print("Direct Sound hardware evidence only; PSG synthesis and game audio output remain incomplete.")
+        psg(c, rng)
+        waves(c, rng)
+        sweeps(c, rng)
+        print(f"{c.checks} timer/PSG/FIFO/DMA/PWM checks matched across {c.snapshots} synthetic snapshots.")
+        print("Component-level hardware evidence; game output, analog filtering and startup quirks remain unverified.")
     finally:
         c.close()
 
