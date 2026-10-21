@@ -9,7 +9,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN = {".gba", ".sav", ".sram", ".state", ".rgba", ".pcm", ".wav", ".zip",
              ".7z", ".exe", ".dll", ".pdb", ".obj", ".o", ".elf", ".bin", ".log", ".env"}
-PACKAGE_FILES = {"hamtaro-native.exe", "README.md", "NOTICE.md", "docs/architecture.md", "licenses/SDL.txt", "licenses/Dear-ImGui.txt"}
+PACKAGE_FILES = {"hamtaro-native.exe", "README.md", "NOTICE.md", "docs/architecture.md", "licenses/SDL.txt", "licenses/Dear-ImGui.txt", "licenses/mGBA-MPL-2.0.txt"}
 
 def git(*args: str) -> bytes:
     return subprocess.check_output(["git", "-C", str(ROOT), *args])

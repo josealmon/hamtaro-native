@@ -134,6 +134,18 @@ static void video_contract(void)
     hn_write16(&memory,0x06000000,1);hn_video_render(&memory,frame);
     CHECK(frame[0]==0xFF00FF00u&&frame[1]==0xFF0000FFu);
 }
+static void angular_contract(void)
+{
+    CHECK(hn_bios_arctan2(0,0)==0);CHECK(hn_bios_arctan2(1,0)==0);CHECK(hn_bios_arctan2(-1,0)==0x8000);
+    CHECK(hn_bios_arctan2(0,1)==0x4000);CHECK(hn_bios_arctan2(0,-1)==0xC000);
+    CHECK(hn_bios_arctan2(1,1)==0x2000);CHECK(hn_bios_arctan2(-1,1)==0x6000);
+    CHECK(hn_bios_arctan2(-1,-1)==0xA000);CHECK(hn_bios_arctan2(1,-1)==0xE000);
+    int previous=-1;
+    for(int value=0;value<=16384;value+=256){
+        int positive=hn_bios_arctan(value),negative=hn_bios_arctan(-value);
+        CHECK(positive>=previous&&positive<=8192);CHECK(positive+negative>=-1&&positive+negative<=0);previous=positive;
+    }
+}
 static void game_contract(void)
 {
     HNKeys keys;hn_keys_init(&keys);
@@ -230,6 +242,6 @@ static void script_contract(void)
 }
 int main(void)
 {
-    memory_contract();dma_and_bios();video_contract();game_contract();timing_contract();heap_contract();script_contract();
+    memory_contract();dma_and_bios();angular_contract();video_contract();game_contract();timing_contract();heap_contract();script_contract();
     printf("%d native-core checks passed.\n",checks);return 0;
 }

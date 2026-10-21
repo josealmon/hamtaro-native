@@ -278,6 +278,13 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         if(!(flags&128)&&!hn_motion_rebuild_route(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
         advance(m,17);break;
     }
+    case 0x21:{
+        if(!hn_read8(m,INITIALIZED)){hn_motion_reset(m);hn_write8(m,INITIALIZED,1);}
+        if(!hn_motion_advance(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        unsigned status=hn_read8(m,0x03001FA8);
+        if(status==16||(status&3)==2){advance(m,0);hn_write8(m,CONTROLS+18,0);}
+        else hn_write8(m,YIELDED,1);break;
+    }
     case 0x24:case 0x45:
         if(!hn_choice_main_command(m,op,args))return fail(s,HN_SCRIPT_RESOURCE,op,args);break;
     case 0x22:case 0x23: {

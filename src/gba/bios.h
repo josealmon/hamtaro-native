@@ -11,6 +11,8 @@ bool hn_bios_cpu_fast_set(HNMemory *, GameAddr source, GameAddr destination, uin
 bool hn_bios_lz77(HNMemory *, GameAddr source, GameAddr destination, size_t capacity);
 int32_t hn_runtime_divide(int32_t numerator, int32_t denominator);
 int32_t hn_runtime_remainder(int32_t numerator, int32_t denominator);
+int16_t hn_bios_arctan(int32_t value);
+uint16_t hn_bios_arctan2(int32_t x,int32_t y);
 #ifdef __cplusplus
 }
 #endif

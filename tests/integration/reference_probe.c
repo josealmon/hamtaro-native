@@ -69,6 +69,11 @@ int hn_probe_motion_steps(HNMemory *m,GameAddr x,GameAddr z,uint32_t *mode)
     uint16_t sx,sz;if(!hn_motion_steps(m,&sx,&sz,mode))return 0;
     hn_write16(m,x,sx);hn_write16(m,z,sz);return !m->fault;
 }
+int hn_probe_motion_leader(HNMemory *m,GameAddr direction,GameAddr variant,uint32_t *mode)
+{
+    uint8_t d=hn_read8(m,direction),v=hn_read8(m,variant);
+    if(!hn_motion_leader(m,&d,&v,mode))return 0;hn_write8(m,direction,d);hn_write8(m,variant,v);return !m->fault;
+}
 int hn_probe_task_command(HNMemory *m,GameAddr task,unsigned opcode,uint32_t report[4])
 {
     HNTasks tasks;hn_tasks_init(&tasks,m);uint32_t keep_going=0;bool ok=hn_task_command(&tasks,task,opcode,&keep_going);

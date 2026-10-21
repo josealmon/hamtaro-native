@@ -44,7 +44,12 @@ def main() -> None:
     parser.add_argument("--tasks-only", action="store_true", help="Run text-task lifecycle, graphics and script comparisons")
     parser.add_argument("--choices-only", action="store_true", help="Run word-choice dialogs and supporting script comparisons")
     parser.add_argument("--motion-only", action="store_true", help="Run motion setup, routes and live follower comparisons")
+    parser.add_argument("--collisions-only", action="store_true", help="Run leader motion, collision and wait-handler comparisons")
+    parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
+    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only))):
+        parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
+    bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
     rom = args.rom.read_bytes()
     if len(rom) != spec["size"] or hashlib.sha256(rom).hexdigest() != spec["sha256"]:
@@ -66,6 +71,11 @@ def main() -> None:
         if number != 2 or instruction[1] != 0xDF:
             raise RuntimeError("Unexpected BIOS service in the selected function checks.")
         service = instruction[0]
+        if service==0x0A:
+            if bios_oracle is None:raise RuntimeError("ArcTan2 comparison requires --bios-oracle.")
+            result=bios_oracle.call(10,uc.reg_read(UC_ARM_REG_R0),uc.reg_read(UC_ARM_REG_R1))
+            for register,value in zip((UC_ARM_REG_R0,UC_ARM_REG_R1,UC_ARM_REG_R3),(result[0],result[1],result[3])):uc.reg_write(register,value)
+            return
         if service == 0x0F:
             source, destination, count, stride = (uc.reg_read(r) for r in
                 (UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3))
@@ -655,6 +665,96 @@ def main() -> None:
             both(0x03002170,bytes([case%2]));both(0x03002183,bytes([case//2%2]))
             equal(native("hn_motion_update_following",result=C.c_bool)(memory),True,"native gated following")
             call("UpdateRenderXZMotion");compare("gated follower integration",ranges)
+
+    def collision_checks():
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000))
+        output=C.c_uint32();record=0x02023000;leader=0x02017000+10*104;obstacle=0x02017000+11*104
+        contains=bind("hn_collision_contains",C.c_bool,C.c_void_p,C.c_uint32,C.c_int32,C.c_int32,C.POINTER(C.c_uint32))
+        query=bind("hn_collision_query",C.c_bool,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        has=bind("hn_collision_has_record",C.c_bool,C.c_void_p,C.c_int32,C.c_int32,C.POINTER(C.c_uint32))
+        moving=bind("hn_probe_motion_leader",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        def fixture(case,shape=0):
+            fresh()
+            both(0x03002D98,struct.pack("<I",0x02017000));both(0x03002DC0,b"\x20");both(0x02017000,rng.randbytes(33*104))
+            both(0x03002C0C,b"\x0A");both(0x03001F50,bytes([13 if case%3 else 0]))
+            both(0x03001F60,bytes([case%2]));both(0x03001F90,bytes([case//2%2]));both(0x03002270,b"\x0E");both(0x03002274,b"\x0F")
+            both(leader+0x60,bytes([case%4+1]));both(0x02017000+13*104+0x60,bytes([case%4+1]))
+            both(0x02000138,struct.pack("<HH",64,64));both(0x03002BFC,struct.pack("<I",0x02010000))
+            both(0x02010000,struct.pack("<4096H",*[rng.randrange(65536) for _ in range(4096)]))
+            both(0x030021F0,bytes(128));both(0x03002170,bytes([case%2]));both(0x03000784,bytes([case%4]))
+            both(0x03000785,bytes([8 if case%2 else 0]));both(0x03002C50,bytes([case%4]))
+            both(0x03001FA8,bytes([case&15]));both(0x03001F8C,bytes([case%5]));both(0x03002174,bytes([case]))
+            both(0x03002A90,bytes(256));both(0x03001F54,b"\0");both(0x03002BF8,b"\0")
+            both(0x03000780,struct.pack("<i",case%4));both(0x030007A8,bytes([case%9]))
+            for index,slot in enumerate((leader,obstacle,0x02017000+13*104)):
+                both(slot+0x18,struct.pack("<I",(100+index*30)*65536+case*137%65536))
+                both(slot+0x20,struct.pack("<I",(100+index*20)*65536+case*251%65536))
+                both(slot+0x24,struct.pack("<I",((case%5-2)*65536)&0xFFFFFFFF))
+                both(slot+0x2C,struct.pack("<I",((case%3-1)*65536)&0xFFFFFFFF))
+            both(record,struct.pack("<8H",11,case*173&65535,shape,case%4,case%33,case%27,(0,1,24,64,255,65535)[case%6],(1,24,64,65535)[case%4]))
+        fresh()
+        for direction in range(4):
+            for mask in range(256):
+                equal(bind("hn_collision_response_direction",C.c_uint32,C.c_uint32,C.c_uint32)(mask,direction),call("ClassifyRenderCollisionMask",mask,direction),"collision-mask response")
+        for case in range(128):
+            fixture(case)
+            x,z=rng.randrange(-16,512),rng.randrange(-16,512)
+            for direction in range(4):
+                for sample in (0,1,2,3,4,5,255):
+                    values=(0x02010000,x&0xFFFFFFFF,z&0xFFFFFFFF,direction,sample)
+                    equal(native("hn_collision_sample",5,C.c_uint32)(memory,*values),call("GetRenderCollisionSample",*values),"collision sample pointer")
+                values=(0x02010000,x&0xFFFFFFFF,z&0xFFFFFFFF,direction)
+                equal(native("hn_collision_ahead",4,C.c_uint32)(memory,*values),call("GetRenderDirectionalCollisionSample",*values),"directional collision sample")
+            equal(native("hn_collision_mask",3,C.c_uint32)(memory,0x02010000,x&0xFFFFFFFF,z&0xFFFFFFFF),call("GetRenderXZCollisionMask",0x02010000,x&0xFFFFFFFF,z&0xFFFFFFFF),"collision edge mask")
+            compare("collision sampling effects",ranges)
+        response_hits=[0,0]
+        for shape in (0,1):
+            for case in range(192):
+                fixture(case,shape)
+                x,z=rng.randrange(-32768,65536),rng.randrange(-32768,65536)
+                equal(contains(memory,record,x,z,C.byref(output)),True,"native record containment")
+                equal(output.value,call("IsRenderXZWithinRecordRectangle" if shape else "IsRenderXZWithinRecordCircle",record,x&0xFFFFFFFF,z&0xFFFFFFFF),"record containment")
+                equal(query(memory,10,record,C.byref(output)),True,"native record interaction")
+                equal(output.value,call("QueryRenderXZRectangleRecord" if shape else "QueryRenderXZCircleRecord",10,record),"record interaction")
+                if case%4<2:
+                    both(leader+0x18,struct.pack("<I",(130-16+case%8)*65536+32768));both(leader+0x20,struct.pack("<I",(120-24+case%7)*65536+32768))
+                    both(leader+0x24,bytes(4));both(leader+0x2C,bytes(4))
+                both(0x03001FA8,b"\0")
+                equal(native("hn_collision_response",2,C.c_bool)(memory,10,record),True,"native record response")
+                call("ResolveRenderXZRecordRectangle" if shape else "ResolveRenderXZRecordCircle",10,record);compare("record response",ranges)
+                response_hits[shape]+=bool(native_bytes(0x03001FA8,1)[0]&8)
+                both(0x030021F0,struct.pack("<2I",record,0));both(record+6,b"\x02\0")
+                equal(has(memory,x,z,C.byref(output)),True,"native record collision lookup")
+                equal(output.value,call("HasRenderXZRecordCollision",x&0xFFFFFFFF,z&0xFFFFFFFF),"record collision lookup")
+                for resolve,name in ((True,"UpdateRenderXZRecordCollision"),(False,"ProcessCoreRenderCollisionRecords")):
+                    both(record+6,struct.pack("<H",2 if resolve else case%2))
+                    equal(native("hn_collision_records",3,C.c_bool)(memory,case,10,resolve),True,"native collision records")
+                    call(name,case,10);compare("collision record list",ranges)
+        equal(response_hits[0]>0,True,"circle response exercised");equal(response_hits[1]>0,True,"rectangle response exercised")
+        for case in range(192):
+            fixture(case,case%2)
+            if case%3:both(0x030021F0,struct.pack("<2I",record,0))
+            for fn,name in (("hn_collision_flags","UpdateRenderXZCollisionFlags"),("hn_collision_scripts","UpdateRenderXZCollisionScript")):
+                equal(native(fn,2,C.c_bool)(memory,case,10),True,f"native {name}")
+                call(name,case,10);compare(name,ranges)
+        for case in range(256):
+            fixture(case)
+            both(0x03000822,struct.pack("<H",case*37&1023));both(0x030021E0,bytes([case&15]))
+            native("hn_motion_control")(memory);call("UpdateCoreMotionControl");compare("motion action controls",ranges)
+            native("hn_motion_reset")(memory);call("ResetCoreMotionFlags");compare("motion reset",ranges)
+        for case in range(192):
+            fixture(case,case%2)
+            both(0x030021E0,bytes([case&15]));both(0x03000820,struct.pack("<H",case*13&255));both(0x03000822,struct.pack("<H",case*37&1023))
+            both(0x02024000,bytes([case&128,case%2]))
+            if case%4==0:both(0x030021F0,struct.pack("<2I",record,0))
+            equal(moving(memory,0x02024000,0x02024001,C.byref(output)),1,"native leader motion")
+            equal(output.value,call("UpdateLeaderRenderXZMotion",0x02024000,0x02024001),"leader motion mode")
+            compare(f"leader motion {case}",ranges)
+            equal(native("hn_motion_advance",result=C.c_bool)(memory),True,"native complete movement update")
+            call("AdvanceCoreRenderMotion");compare(f"core motion {case}",ranges)
+            both(0x03000018,bytes([case%2]));both(0x03000010,b"\x21")
+            equal(command(memory,0x21,0x02025000),1,"native Main movement wait")
+            call("MainScriptWaitForByte1FA8",0x02025000);compare(f"Main movement wait {case}",ranges)
 
     def task_checks():
         ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x06000000,0x18000),(0x040000D8,8))
@@ -1329,7 +1429,15 @@ def main() -> None:
                 equal(report_animation[3], call(original, slot, 0x03007010), f"animation audio yield {case} {opcode}")
                 compare(f"animation audio {case} {opcode}", audio_ranges)
 
+    if args.bios_oracle:
+        from compare_bios import BiosOracle
+        bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.collisions_only:
+            collision_checks()
+            print(f"{checks} private leader/collision comparisons passed; full gameplay remains unverified.")
+            print(f"{bios_oracle.calls} independent BIOS angular responses used.")
+            return
         if args.motion_only:
             motion_checks();motion_live_checks()
             print(f"{checks} private motion comparisons passed; leader movement and full gameplay remain unverified.")
@@ -2238,7 +2346,8 @@ def main() -> None:
         else:
             oracle_context = nullcontext(None)
         video_frames, nonuniform, active_graphics_iterations, hblank_calls = 0, 0, 0, 0
-        input_iterations=7296
+        input_iterations=9000
+        movement_positions=set()
         with oracle_context as video_oracle:
             for index in range(180+input_iterations):
                 if index == 180:
@@ -2254,6 +2363,9 @@ def main() -> None:
                     elif relative in (1120,1360,1800):keys=8
                     elif (relative in (1140,1380,1600,1820,2100) or relative<1000 and relative%120==100
                           or relative>2200 and relative%90==0):keys=1
+                    if relative>=7310:
+                        phase=(relative-7310)%1200
+                        keys=16 if phase<160 else 128 if phase<320 else 32 if phase<480 else 64 if phase<640 else 1 if relative%30==0 else 0
                 both(0x04000130, struct.pack("<H", (~keys)&1023))
                 equal(native("hn_input_update", 1, C.c_bool)(memory, keys), True, f"coupled input {index}")
                 call("ReadKeys")
@@ -2301,11 +2413,14 @@ def main() -> None:
                 compare(f"coupled Main/background/render/graphics {index}", save_ranges + ((0x05000000, 0x400),
                     (0x06000000, 0x18000), (0x07000000, 0x400), (0x04000000, 0x58),
                     (0x03007FF0, 4), (0x04000060, 0x74), (0x04000100, 4)))
+                if relative>=7310:
+                    base=struct.unpack("<I",native_bytes(0x03002D98,4))[0]+native_bytes(0x03002C0C,1)[0]*104
+                    movement_positions.add((native_bytes(base+0x18,4),native_bytes(base+0x20,4)))
                 if index>=180 and relative in (1240,1900,2020):
                     expected_mode,expected_choice={1240:(1,0),1900:(0,1),2020:(0,2)}[relative]
                     equal(native_bytes(0x020046C2,1)[0],expected_mode,f"name scenario mode {relative}")
                     equal(native_bytes(0x020046C1,1)[0],expected_choice,f"name scenario selection {relative}")
-                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179, 580, 780, 980, 1420, 1880, 2200, 2600, 3000, 3166, 3500, 4300, 5096, 5800, 6180, 6780, 7475):
+                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179, 580, 780, 980, 1420, 1880, 2200, 2600, 3000, 3166, 3500, 4300, 5096, 5800, 6180, 6780, 7475, 7490, 7520, 7650, 7810, 7970, 8180, 9179):
                     pixels = (C.c_uint32 * (240 * 160))()
                     video_render(memory, pixels)
                     parts = [native_bytes(address, size) for address, size in
@@ -2316,6 +2431,8 @@ def main() -> None:
         if args.video_oracle:
             print(f"{video_frames} private ROM PPU snapshots matched; {nonuniform} contained multiple colors.")
         print(f"{input_iterations} input-driven script/render/audio iterations matched; graphics scripts active in {active_graphics_iterations}.")
+        equal(len(movement_positions)>=32,True,"coupled leader visibly changes world position")
+        print(f"{len(movement_positions)} distinct leader positions matched during directional input.")
         print(f"{hblank_calls} sampled HBlank callbacks matched; scanline DMA/PPU timing remains unverified.")
         audio_checks()
         scene_checks()
@@ -2324,11 +2441,13 @@ def main() -> None:
         actor_checks()
         motion_checks()
         motion_live_checks()
+        collision_checks()
         task_checks()
         choice_checks()
         raster_checks()
     finally:
         destroy(memory)
+        if bios_oracle:bios_oracle.close()
     print(f"{checks} private native/reference checks passed (heap, input, scripts, expressions, rendering, maps, saves, audio).")
     print("Function-level evidence only; boot and gameplay remain unverified.")
 

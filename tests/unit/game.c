@@ -15,6 +15,7 @@
 #include "game/motion.h"
 #include "game/task.h"
 #include "game/choice.h"
+#include "game/collision.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -752,9 +753,57 @@ static void following_contract(void)
     hn_write8(&memory,HN_RENDER_INFO+16,0);CHECK(!hn_motion_follower(&memory));CHECK(!hn_motion_extend_route(&memory));
     CHECK(!memory.fault);free(rom);reset();
 }
+static void collision_contract(void)
+{
+    uint8_t *rom=calloc(1,0x900000);CHECK(rom!=NULL);hn_memory_init(&memory,rom,0x900000);
+    const GameAddr slots=0x02003000,other=slots+104,record=0x02004000,map=0x02010000;
+    hn_write32(&memory,HN_RENDER_SLOTS,slots);hn_write8(&memory,HN_RENDER_INFO+16,2);hn_write8(&memory,HN_RENDER_CLASS_LEADER,0);
+    hn_write16(&memory,HN_COLLISION_DIMENSIONS,4);hn_write16(&memory,HN_COLLISION_DIMENSIONS+2,4);hn_write32(&memory,HN_COLLISION_MAP,map);
+    /* Synthetic offset/mask tables exercise signed wrapping and a single edge. */
+    rom[0x58ED50]=255;rom[0x58ED51]=255;rom[0x58ED38]=255;rom[0x58ED39]=255;rom[0x58ED48]=1;
+    for(unsigned i=0;i<4;i++)rom[0x58ED31+i*2]=(uint8_t)(0x10u<<i);
+    CHECK(hn_collision_sample(&memory,map,0,0,0,255)==map+6);
+    CHECK(hn_collision_sample(&memory,map,-9,0,0,0)==map+4);CHECK(hn_collision_ahead(&memory,map,0,0,0)==map+4);
+    CHECK(hn_collision_response_direction(1,0)==4&&hn_collision_response_direction(56,2)==1&&hn_collision_response_direction(63,0)==0);
+    hn_write16(&memory,map,0x1000);CHECK(hn_collision_mask(&memory,map,0,0)==0x1000);
+    hn_write8(&memory,slots+0x60,1);CHECK(hn_collision_flags(&memory,3,0));
+    CHECK(hn_read8(&memory,0x03001FA8)==4&&hn_read8(&memory,0x03001F8C)==0);
+    hn_write8(&memory,0x03000794,99);hn_collision_stage(&memory,12);
+    CHECK(hn_read16(&memory,0x03001FBC)==12&&hn_read8(&memory,0x03001FA8)==6&&!hn_read8(&memory,0x03000794));
+    hn_write16(&memory,map+6,0x0407);CHECK(hn_collision_scripts(&memory,0,0));CHECK(hn_read16(&memory,0x03001FBC)==7);
+    hn_write16(&memory,record,1);hn_write16(&memory,record+2,42);hn_write16(&memory,record+4,1);hn_write16(&memory,record+6,2);
+    hn_write16(&memory,record+12,24);hn_write16(&memory,record+14,24);hn_write8(&memory,other+0x60,1);
+    hn_write32(&memory,other+0x18,100u*65536+32768);hn_write32(&memory,other+0x20,100u*65536+32768);
+    uint32_t result;CHECK(hn_collision_contains(&memory,record,124,132,&result)&&result==1);
+    hn_write32(&memory,slots+0x18,124u*65536);hn_write32(&memory,slots+0x20,132u*65536);
+    CHECK(hn_collision_query(&memory,0,record,&result)&&result==0);
+    hn_write32(&memory,slots+0x18,100u*65536+32768);hn_write32(&memory,slots+0x20,100u*65536+32768);
+    CHECK(hn_collision_query(&memory,0,record,&result)&&result==42);CHECK(hn_collision_response(&memory,0,record));
+    CHECK(hn_read32(&memory,slots+0x24)==24u*65536&&hn_read8(&memory,0x03001F8C)==4&&hn_read8(&memory,0x03002174)==1);
+    hn_write32(&memory,slots+0x24,0);hn_write32(&memory,slots+0x2C,0);
+    /* A generated cosine sample makes the circle's axial response exact. */
+    rom[HN_RENDER_SINE_TABLE-HN_ROM_BASE+64*2+1]=1;hn_write16(&memory,record+4,0);hn_write16(&memory,record+12,10);
+    hn_write32(&memory,slots+0x18,84u*65536+32768);hn_write32(&memory,slots+0x20,76u*65536+32768);
+    CHECK(hn_collision_contains(&memory,record,110,100,&result)&&result==1);
+    CHECK(hn_collision_query(&memory,0,record,&result)&&result==42);CHECK(hn_collision_response(&memory,0,record));
+    CHECK(hn_read32(&memory,slots+0x24)==10u*65536&&!hn_read32(&memory,slots+0x2C)&&hn_read8(&memory,0x03001F8C)==3);
+    hn_write32(&memory,0x030021F0,record);CHECK(hn_collision_has_record(&memory,100,100,&result)&&result==1);
+    hn_write8(&memory,other+0x60,0);CHECK(hn_collision_has_record(&memory,100,100,&result)&&result==0);
+    hn_write16(&memory,HN_KEY_STATE+2,2);hn_write8(&memory,0x030021E0,2);hn_motion_control(&memory);
+    CHECK(hn_read8(&memory,0x03000785)==8&&hn_read8(&memory,0x03002C50)==1);
+    hn_write16(&memory,HN_KEY_STATE+2,1);hn_write8(&memory,0x030021E0,8);hn_write8(&memory,0x03002C50,7);hn_motion_control(&memory);
+    CHECK(!hn_read8(&memory,0x03000785)&&hn_read8(&memory,0x03002C50)==7);
+    hn_write8(&memory,0x030021E0,4);hn_write32(&memory,HN_CHOICE_PENDING,0x12345678);
+    hn_write8(&memory,0x03000018,1);hn_write8(&memory,0x03000010,0x21);hn_write8(&memory,HN_SCENE_CONTROLS+18,9);
+    HNScript script;hn_script_init(&script,&memory,NULL,0);CHECK(hn_main_command(&script,0x21,0));
+    CHECK(hn_read8(&memory,0x03001FA8)==16&&hn_read16(&memory,0x03001FBC)==0x5678&&!hn_read32(&memory,HN_CHOICE_PENDING));
+    CHECK(!hn_read8(&memory,0x03000010)&&!hn_read32(&memory,0x03000014)&&!hn_read8(&memory,HN_SCENE_CONTROLS+18));
+    CHECK(hn_read8(&memory,0x03000018)==1&&!(hn_read8(&memory,0x030021E0)&4));
+    CHECK(!memory.fault);free(rom);reset();
+}
 int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
-    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();
+    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();
     printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

@@ -14,8 +14,8 @@ endif()
 include(CTest)
 include(cmake/Dependencies.cmake)
 add_library(hn_core STATIC
-    src/gba/memory.c src/gba/bios.c src/gba/video.c src/gba/timing.c src/gba/timer.c src/gba/audio.c src/gba/psg.c
-    src/game/input.c src/game/random.c src/game/heap.c src/game/script.c src/game/scene.c src/game/text.c src/game/actor.c src/game/motion.c
+    src/gba/memory.c src/gba/bios.c src/gba/bios_math.c src/gba/video.c src/gba/timing.c src/gba/timer.c src/gba/audio.c src/gba/psg.c
+    src/game/input.c src/game/random.c src/game/heap.c src/game/script.c src/game/scene.c src/game/text.c src/game/actor.c src/game/motion.c src/game/collision.c
     src/game/video.c src/game/transfer.c src/game/world.c src/game/expression.c src/game/save.c src/game/task.c src/game/task_text.c src/game/choice.c
     src/game/render.c src/game/animation.c src/game/draw.c src/game/background.c src/game/graphics.c src/game/raster.c
     src/game/audio.c src/game/audio_sequence.c src/game/audio_note.c src/game/audio_player.c
@@ -81,6 +81,7 @@ install(FILES README.md NOTICE.md DESTINATION .)
 install(FILES docs/architecture.md DESTINATION docs)
 install(FILES "${sdl3_SOURCE_DIR}/LICENSE.txt" DESTINATION licenses RENAME SDL.txt)
 install(FILES "${imgui_SOURCE_DIR}/LICENSE.txt" DESTINATION licenses RENAME Dear-ImGui.txt)
+install(FILES licenses/mGBA-MPL-2.0.txt DESTINATION licenses)
 set(CPACK_GENERATOR ZIP)
 set(CPACK_PACKAGE_FILE_NAME "hamtaro-native-${PROJECT_VERSION}-windows-x64")
 include(CPack)

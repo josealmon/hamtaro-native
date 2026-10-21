@@ -1,6 +1,8 @@
 #include "game/motion.h"
 #include "game/state.h"
 #include "game/render.h"
+#include "game/collision.h"
+#include "game/input.h"
 #include "gba/bios.h"
 
 static int32_t magnitude(int32_t value){return value<0?(int32_t)(0u-(uint32_t)value):value;}
@@ -8,6 +10,81 @@ static GameAddr motion_slot(HNMemory *m,GameAddr selector)
 {
     unsigned index=hn_read8(m,selector);
     return index<hn_read8(m,HN_RENDER_INFO+16)&&hn_read32(m,HN_RENDER_SLOTS)?hn_render_slot(m,index):0;
+}
+void hn_motion_reset(HNMemory *m)
+{
+    hn_write16(m,0x03001FBC,0);hn_write8(m,0x030021E0,hn_read8(m,0x030021E0)&0xFB);
+    const GameAddr bytes[]={0x03001FA8,0x03001F8C,0x03002C50,0x03002174,0x03000785};
+    for(unsigned i=0;i<5;i++)hn_write8(m,bytes[i],0);
+}
+void hn_motion_control(HNMemory *m)
+{
+    unsigned keys=hn_input_query(m,0x30F,1),flags=hn_read8(m,0x030021E0);hn_write8(m,0x03000785,0);
+    if(!(flags&8)&&(keys&1))hn_write8(m,0x03000785,8);
+    else if(flags&2){if(keys&2){hn_write8(m,0x03000785,8);hn_write8(m,0x03002C50,1);}}
+    else if(!(flags&1)){
+        unsigned action=keys&8?3:(keys&4||keys&0x200)?2:keys&0x100?3:0;
+        if(action){hn_write8(m,0x03000785,8);hn_write8(m,0x03002C50,(uint8_t)action);}
+    }
+}
+bool hn_motion_leader(HNMemory *m,uint8_t *direction_control,uint8_t *variant,uint32_t *mode_out)
+{
+    GameAddr slot=motion_slot(m,HN_RENDER_CLASS_LEADER);if(!slot)return false;unsigned index=hn_read8(m,HN_RENDER_CLASS_LEADER);
+    for(unsigned axis=0;axis<3;axis++)hn_write32(m,slot+0x24+axis*4,0);
+    unsigned mode=1;hn_write8(m,HN_MOTION_MODE,1);
+    if(!(hn_read8(m,0x030021E0)&2)&&hn_input_query(m,2,0)){
+        *variant=1;*direction_control=0x80;mode=2;hn_write8(m,0x03002183,hn_read8(m,0x03002183)|1);hn_write8(m,HN_MOTION_MODE,2);
+    }
+    unsigned keys=hn_input_query(m,0xF0,0);
+    if(!keys){hn_write32(m,0x03000778,0);if(!hn_motion_idle_render(m,false))return false;hn_write8(m,HN_MOTION_MODE,0);}
+    else{
+        hn_write32(m,0x03000778,8/mode);unsigned direction=keys&0x40?1:keys&0x80?2:keys&0x20?3:4;
+        GameAddr pair=0x0858EC90+((mode-1)*8+(direction-1)*2)*4;
+        hn_write32(m,slot+0x24,hn_read32(m,pair));hn_write32(m,slot+0x28,0);hn_write32(m,slot+0x2C,hn_read32(m,pair+4));
+        unsigned animation_index=direction*2+*variant-2;GameAddr family=hn_read32(m,0x0858BF68+hn_read8(m,0x03001F60)*8);
+        GameAddr animation=hn_read32(m,family+animation_index*4);*direction_control=(uint8_t)(*direction_control+direction);
+        if(hn_read32(m,slot+4)!=animation){hn_render_set_animation(m,index,animation);hn_write8(m,slot+0x60,(uint8_t)direction);}
+        family=hn_read32(m,0x0858BFB8+hn_read8(m,0x03001F90)*8);animation=hn_read32(m,family+animation_index*4);
+        unsigned extra=hn_read8(m,0x03002274);
+        if(extra){if(extra>=hn_read8(m,HN_RENDER_INFO+16))return false;if(hn_read32(m,hn_render_slot(m,extra)+4)!=animation)hn_render_set_animation(m,extra,animation);}
+    }
+    if(hn_read8(m,0x03000785)==8&&hn_read8(m,0x03002C50)!=1)for(unsigned axis=0;axis<3;axis++)hn_write32(m,slot+0x24+axis*4,0);
+    if(!hn_collision_records(m,hn_read8(m,0x03000785),index,true)||!hn_collision_flags(m,hn_read8(m,0x03000784),index))return false;
+    unsigned status=hn_read8(m,0x03001FA8);
+    if(status&4){
+        unsigned direction=hn_motion_direction(m,slot)&255;
+        if(direction>=1&&direction<=4){
+            unsigned axis=direction<=2?2:0;uint32_t coordinate=hn_read32(m,slot+0x18+axis*4),velocity=hn_read32(m,slot+0x24+axis*4);
+            hn_write32(m,slot+0x24+axis*4,((coordinate+velocity+((direction==1||direction==3)?0x40000u:0))&0xFFF80000u)-coordinate);
+        }
+        if((status&13)==5){
+            unsigned response=hn_read8(m,0x03001F8C);
+            if(response>=1&&response<=4)hn_write32(m,slot+0x24+(response<=2?2:0)*4,(response==1||response==3)?0xFFFF0000u:0x10000u);
+        }else if(hn_read8(m,HN_RENDER_CLASS_FOLLOWER))hn_write8(m,HN_MOTION_MODE,0);
+    }
+    *mode_out=mode;return !m->fault;
+}
+bool hn_motion_advance(HNMemory *m)
+{
+    unsigned flags=hn_read8(m,0x030021E0);
+    if(flags&4){
+        hn_write8(m,0x03001FA8,16);hn_write8(m,0x03001F8C,0);hn_write8(m,0x03002C50,0);hn_write8(m,0x03002174,0);
+        hn_write16(m,0x03001FBC,(uint16_t)hn_read32(m,HN_CHOICE_PENDING));hn_write32(m,HN_CHOICE_PENDING,0);hn_write8(m,0x030021E0,(uint8_t)(flags&0xFB));return !m->fault;
+    }
+    const GameAddr bytes[]={0x03001FA8,0x03001F8C,0x03002C50,0x03002174,0x03000785};
+    for(unsigned i=0;i<5;i++)hn_write8(m,bytes[i],0);
+    hn_write8(m,0x03002183,hn_read8(m,0x03002183)&0xFE);hn_write8(m,HN_MOTION_MODE,0);hn_motion_control(m);
+    uint8_t direction=0,variant=0;uint32_t mode;if(!hn_motion_leader(m,&direction,&variant,&mode))return false;
+    unsigned index=hn_read8(m,HN_RENDER_CLASS_LEADER);if(!hn_collision_scripts(m,hn_read8(m,0x03000785),index)||!hn_collision_records(m,hn_read8(m,0x03000785),index,false))return false;
+    GameAddr slot=motion_slot(m,HN_RENDER_CLASS_LEADER);if(!slot)return false;hn_write8(m,HN_MOTION_MODE,(uint8_t)hn_motion_classify(m,slot));
+    for(unsigned axis=0;axis<=2;axis+=2){hn_write32(m,slot+0x18+axis*4,hn_read32(m,slot+0x18+axis*4)+hn_read32(m,slot+0x24+axis*4));hn_write32(m,slot+0x24+axis*4,0);}
+    if(hn_read8(m,HN_RENDER_CLASS_FOLLOWER)){
+        if(!hn_motion_extend_route(m)||!hn_motion_follower(m))return false;slot=motion_slot(m,HN_RENDER_CLASS_FOLLOWER);if(!slot)return false;
+        for(unsigned axis=0;axis<=2;axis+=2){hn_write32(m,slot+0x18+axis*4,hn_read32(m,slot+0x18+axis*4)+hn_read32(m,slot+0x24+axis*4));hn_write32(m,slot+0x24+axis*4,0);}
+    }
+    GameAddr counter=HN_SCENE_CONTROLS+12;if(hn_input_query(m,0x3FF,0))hn_write8(m,counter,0);
+    else if((int8_t)hn_read8(m,counter)>=0)hn_write8(m,counter,(uint8_t)(hn_read8(m,counter)+1));
+    return !m->fault;
 }
 uint32_t hn_motion_direction(HNMemory *m,GameAddr slot)
 {

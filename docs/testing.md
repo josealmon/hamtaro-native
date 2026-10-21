@@ -4,7 +4,8 @@ Build and run CTest as described in the README. Tests stay active in Release
 builds and use explicit checks rather than assertions removed by NDEBUG.
 
 - core: synthetic guest-memory behavior, DMA, BIOS/LZ77, video, timing/IRQ,
-  original button transitions/repeat, PRNG arithmetic, heap and Main script control.
+  angular axes/quadrants/monotonicity, original button transitions/repeat, PRNG
+  arithmetic, heap and Main script control.
 - game: repeated DMA working addresses, byte register writes, transfer queue wrap,
   video shadows, synthetic ROM map changes, preserved render fields, expression
   cursor/recursion boundaries, SRAM checksum/backup recovery, guest input caching
@@ -16,6 +17,9 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   Motion checks cover route edges/obstacle order, collision setup and resource branches.
   Following checks cover walk/run speeds, boot-gated position updates, near-leader
   stopping, delayed idle animation, asymmetric quantization and circular route bends.
+  Collision checks cover signed map wrapping, edge masks, event staging, inclusive
+  containment/exclusive interactions, circle/rectangle responses, inactive records,
+  action gating and movement-wait completion/pending-result handling.
   Task checks cover list removal/relinking, synthetic glyphs, independent contexts,
   delay/fast advance, name returns, tile-row scrolling, numeric text, unsupported
   callbacks, cyclic lists, memory faults and command budgets.
@@ -64,7 +68,7 @@ match. No profile import is performed by this command.
 For private function comparisons, use a Python environment with Unicorn 2.1.4
 and the test-only hn_reference_probe.dll built by BUILD_TESTING:
 
-    python -B tools/compare_reference.py --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+    python -B tools/compare_reference.py --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
 
 The reference must contain build/function-symbols.json. This check writes no
 ROM or captured state, and does not alter the reference checkout. It compares
@@ -73,20 +77,21 @@ and drawing, all 61 background handlers, all 48 graphics handlers, palette trans
 map/core initialization and SRAM initialization/repair/read/write behavior. It also
 compares Main save-load commands with successful and failed records. The ROM
 schedules cover 88 Main-only iterations, 180 coupled idle iterations and a separate
-7,296 iterations using the guest input adapter and matching ReadKeys calls. The latter schedules call
+9,000 iterations using the guest input adapter and matching ReadKeys calls. The latter schedules call
 gated follower motion, actor scripts, text tasks, background/object/graphics/mosaic updates, video transfers and audio service with
 driver initialization and VBlank-counter synchronization. Graphics slots are active
 in 262 input-schedule iterations; synthetic per-command/update tests provide the
 remaining graphics evidence. It compares 3,581 sampled HBlank callbacks during
-the circular transition; deferred DMA0/PPU timing is not modeled. Leader movement, word-choice dialogs, CPU-transfer flushing, real IRQ
+the circular transition; deferred DMA0/PPU timing is not modeled. The full word-choice game path, CPU-transfer flushing, real IRQ
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with the optional PPU oracle passes 443,145 comparisons.
+GBA machine. The complete run with BIOS and PPU oracles passes 494,299 comparisons,
+including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
-The coupled schedule stops before MainScriptWaitForByte1FA8 (0x21); leader movement
-and collision resolution are not implemented. Word-choice handlers use opcodes
-0x24 (await) and 0x45 (configure).
+The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
+directional movement. Word-choice handlers use opcodes 0x24 (await) and 0x45
+(configure). The connected desktop game loop and complete playthrough remain pending.
 
 The audio part can be run independently with the same private ROM and reference:
 
@@ -120,7 +125,7 @@ architecture.md; this is not a claim of complete hardware conformance.
 
 Add --video-oracle PATH_TO_ORACLE and, if needed,
 --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to compare_reference.py to compare
-23 static snapshots from its private ROM schedule; twenty contain multiple colors.
+30 static snapshots from its private ROM schedule; twenty-seven contain multiple colors.
 No snapshots or ROM data are saved.
 
 Scene/input and supporting Main commands can be checked separately:
@@ -144,8 +149,8 @@ the NULL sentinel, indirect callback storage, nested script calls, waits, Main-s
 restoration and same-frame activation. Motion fixtures cover 400 tile-route queries,
 120 route builds, 80 scene/resource configurations and 64 supporting Main command
 cases. The compressed branch uses a synthetic stream with a nonzero low header
-nibble; no collision map or game script is embedded. Leader movement and the full
-game loop remain unverified.
+nibble; no collision map or game script is embedded. This subset does not cover
+leader movement; the complete game loop remains unverified.
 
 Motion and live follower comparisons can be run separately:
 
@@ -157,6 +162,26 @@ extensions, 1,280 follower updates and 320 gated-following updates. Cases cover
 fractional/negative coordinates, route consumption and wrap, proximity resets,
 walk/run modes, animation delay and the original INT_MIN direction quirk. Full
 EWRAM/IWRAM state is compared. Leader input/collisions remain outside this suite.
+
+Leader/collision comparisons use the independent BIOS arithmetic oracle:
+
+    cmake --build "$env:HAMTARO_NATIVE_WORK/mgba-oracle" --target hn-bios-oracle
+    python -B tools/compare_bios.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-bios-oracle.exe"
+    python -B tools/compare_reference.py --collisions-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-bios-oracle.exe"
+
+Pass --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to either tool if needed.
+The ROM-free math suite compares all 32,769 ArcTan inputs in -16384..16384 and
+4,240 signed-half ArcTan2 vectors: 37,009 comparisons. The separate oracle compiles
+mGBA 0.10.5's arithmetic helpers directly; no ROM, BIOS image or CPU execution is used.
+The native adaptation is isolated in src/gba/bios_math.c with its MPL 2.0 notice.
+Hardware BIOS arithmetic and instruction latency remain unverified.
+
+The collision subset passes 15,362 private comparisons, including 216 independent
+angular responses. It covers mask classification, sample pointers, shape containment,
+interaction queries, solid-record responses, record lists, map flags/scripts,
+action/reset controls, leader movement, combined updates and Main's movement wait.
+Positive-response assertions require both circle and rectangle contacts. The full
+comparison requires --bios-oracle; other focused suites can run without it.
 
 Text-task checks can be run separately:
 
