@@ -7,6 +7,7 @@
 #include "game/random.h"
 #include "game/text.h"
 #include "game/choice.h"
+#include "game/world.h"
 
 static unsigned menu_kind(HNMemory *m)
 {
@@ -116,10 +117,71 @@ static bool record_menu(HNMemory *m)
     if(!hn_render_configure(m,27,1,0x70,88,56+(int)selected*16,0,HN_SCENE_RECORD_CURSOR))return false;
     hn_render_flags(m,27,12,0);return !m->fault;
 }
+static const GameAddr actor_classes[]={HN_RENDER_CLASS_LEADER,0x03002274,HN_RENDER_CLASS_FOLLOWER,0x03002270};
+static bool save_actor_slots(HNMemory *m)
+{
+    for(unsigned i=0;i<4;i++){
+        unsigned index=hn_read8(m,actor_classes[i]);if(index>=hn_read8(m,HN_RENDER_INFO+16))return false;
+        if(!hn_memory_copy(m,HN_ACTOR_RENDER_SNAPSHOT+i*104,hn_render_slot(m,index),104))return false;
+    }
+    return true;
+}
+static bool restore_actor_slots(HNMemory *m,bool idle)
+{
+    unsigned variant=0;
+    for(unsigned i=0;i<4;i++){
+        GameAddr saved=HN_ACTOR_RENDER_SNAPSHOT+i*104;unsigned index=hn_read8(m,actor_classes[i]);
+        if(i&&(!hn_read8(m,saved+96)||(idle&&!index)))continue;
+        if(index>=hn_read8(m,HN_RENDER_INFO+16))return false;
+        GameAddr animation=0;
+        if(idle){
+            unsigned primary=hn_read8(m,0x03001F60),secondary=hn_read8(m,0x03001F90),family;
+            if(i==0||i==2)variant=(uint8_t)((hn_read8(m,saved+96)&15)-1);
+            if(variant>=4)return false;
+            if(!(i&1)){
+                family=(i==2?(primary^1):primary)*2+1;
+                animation=hn_read32(m,hn_read32(m,HN_PRIMARY_ANIMATION_FAMILIES+family*4)+variant*4);
+            }else{
+                family=secondary*2+(i==3);
+                animation=hn_read32(m,hn_read32(m,HN_SECONDARY_ANIMATION_FAMILIES+family*4)+variant*8);
+            }
+        }else hn_write8(m,saved+99,0);
+        if(!hn_memory_copy(m,hn_render_slot(m,index),saved,104))return false;
+        if(idle)hn_render_set_animation(m,index,animation);
+    }
+    return !m->fault;
+}
 HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments,uint32_t *consumed)
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x080C1C40:if(!save_actor_slots(m))return HN_SCENE_RESOURCE;break;
+    case 0x080C1CBC:if(!restore_actor_slots(m,false))return HN_SCENE_RESOURCE;break;
+    case 0x080C2A04:case 0x080C3A88:case 0x080CB3E4:case 0x080CB99C:case 0x080CC644:case 0x080CEE10:{
+        unsigned map=(callback&~1u)==0x080C2A04?4:(callback&~1u)==0x080C3A88?5:(callback&~1u)==0x080CB3E4?10:
+                     (callback&~1u)==0x080CB99C?11:(callback&~1u)==0x080CC644?12:17;
+        if(!save_actor_slots(m))return HN_SCENE_RESOURCE;
+        hn_write8(m,HN_SCENE_CONTROLS+0x27,hn_read8(m,HN_SCENE_CONTROLS+0x0D));
+        hn_write8(m,HN_SCENE_CONTROLS+0x28,hn_read8(m,HN_SCENE_CONTROLS+0x0E));
+        if(!hn_map_initialize(m,10,(uint8_t)map))return HN_SCENE_RESOURCE;*consumed=UINT32_MAX-3;break;
+    }
+    case 0x080C2A9C:case 0x080C3B20:case 0x080CB47C:case 0x080CBA34:case 0x080CC6DC:case 0x080CEEA8:{
+        GameAddr cursor=hn_read32(m,0x03002C60);
+        if(!hn_map_initialize(m,hn_read8(m,HN_SCENE_CONTROLS+0x27),hn_read8(m,HN_SCENE_CONTROLS+0x28))||!restore_actor_slots(m,true))return HN_SCENE_RESOURCE;
+        hn_write32(m,0x03002C60,cursor);break;
+    }
+    case 0x08011AAC:{
+        unsigned layer=hn_read8(m,arguments),enabled=hn_read8(m,HN_DISPLAY_SHADOW+1)&31;
+        uint8_t flags=hn_read8(m,0x03002182);
+        hn_write8(m,0x03002182,(uint8_t)((layer<5&&((enabled>>layer)&1))?flags|8:flags&~8));
+        *consumed=1;break;
+    }
+    case 0x0801D708:{
+        unsigned kept=hn_read8(m,arguments);GameAddr state=hn_read32(m,HN_GRAPHICS_SCRIPTS);
+        for(unsigned i=0;i<hn_read8(m,HN_GRAPHICS_COUNT)&&!m->fault;i++,state+=44)
+            if(i!=kept)hn_write8(m,state,0);
+        *consumed=1;break;
+    }
     case 0x08009318:if(!hn_choice_reset(m))return HN_SCENE_RESOURCE;break;
     case 0x0801C2D4:case 0x0801C344:case 0x0801C3B4:case 0x0801C410:
         if(!indirect_arithmetic(m,callback&~1u,arguments,consumed))return HN_SCENE_RESOURCE;break;

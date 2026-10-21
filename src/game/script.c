@@ -425,6 +425,16 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         }
         hn_video_fade_phase(m,(uint8_t)value);hn_write8(m,YIELDED,1);break;
     }
+    case 0x41:case 0x42: {
+        scratch(m,args,1,7);GameAddr source=resolve_variable(m,4);
+        unsigned width=op==0x41?1:2;GameAddr destination=(width==1?CONTROLS:CLASSES)+hn_read16(m,SCRATCH+2)*width;
+        /* Original forward-copy semantics include overlap and the u8 count. */
+        for(unsigned i=0;i<hn_read8(m,SCRATCH+1)&&!m->fault;i++){
+            if(width==1)hn_write8(m,destination+i,hn_read8(m,source+i));
+            else hn_write16(m,destination+i*2,hn_read16(m,source+i*2));
+        }
+        advance(m,7);break;
+    }
     case 0x43:case 0x60: {
         unsigned group=op==0x43?hn_read8(m,args):1;
         bool ok=op==0x43?hn_save_load_group(m,group):hn_save_load_groups(m);

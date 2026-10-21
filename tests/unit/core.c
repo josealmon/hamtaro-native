@@ -214,6 +214,40 @@ static void heap_contract(void)
 }
 static uint32_t test_callback(HNMemory *m,GameAddr args)
 {hn_write8(m,0x02000100,hn_read8(m,args));return 1;}
+static void script_copy_contract(void)
+{
+    reset();HNScript script;hn_script_init(&script,&memory,NULL,0);
+    for(unsigned width=1;width<=2;width++){
+        unsigned op=width==1?0x41:0x42;GameAddr base=width==1?0x02004520:0x0201DC40;
+        hn_write8(&memory,0x030005E8,0xA7);hn_write8(&memory,0x02000000,5);
+        hn_write16(&memory,0x02000001,4);hn_write32(&memory,0x02000003,15);
+        hn_write32(&memory,0x03002BEC,base+3*width);
+        hn_write16(&memory,base+3*width,0x91E3);hn_write8(&memory,base+9*width,0x57);
+        CHECK(hn_main_command(&script,op,0x02000000));
+        /* A snapshot/memmove copy would incorrectly preserve later source values. */
+        for(unsigned i=0;i<5;i++)CHECK((width==1?hn_read8(&memory,base+(4+i)*width):hn_read16(&memory,base+(4+i)*width))==(width==1?0xE3:0x91E3));
+        CHECK(hn_read8(&memory,base+9*width)==0x57);CHECK(hn_read8(&memory,0x030005E8)==0xA7);
+        CHECK(hn_read32(&memory,0x030005EC)==base+3*width&&hn_read32(&memory,0x03000014)==7);
+        hn_write8(&memory,0x02000000,0);hn_write32(&memory,0x02000003,0x01000000);
+        CHECK(hn_main_command(&script,op,0x02000000)&&!memory.fault);
+    }
+    hn_write8(&memory,0x02000000,1);hn_script_init(&script,&memory,NULL,0);
+    CHECK(!hn_main_command(&script,0x41,0x02000000)&&script.fault==HN_SCRIPT_MEMORY);
+    reset();hn_script_init(&script,&memory,NULL,0);
+    hn_write32(&memory,0x03003070,0x02010000);hn_write8(&memory,0x03002E10,3);
+    for(unsigned i=0;i<3*44;i++)hn_write8(&memory,0x02010000+i,0xA5);
+    hn_write32(&memory,0x02000000,0x0801D709);hn_write8(&memory,0x02000004,1);
+    CHECK(hn_main_command(&script,0x1C,0x02000000));
+    CHECK(!hn_read8(&memory,0x02010000)&&hn_read8(&memory,0x02010000+44)==0xA5&&!hn_read8(&memory,0x02010000+88));
+    CHECK(hn_read8(&memory,0x02010001)==0xA5&&hn_read32(&memory,0x03000014)==5);
+    hn_write32(&memory,0x02000000,0x08011AAD);hn_write8(&memory,0x03002CC5,0xF0);
+    const unsigned layers[]={0,4,5,31,32,255};
+    for(unsigned i=0;i<sizeof(layers)/sizeof(*layers);i++){
+        hn_write8(&memory,0x02000004,(uint8_t)layers[i]);hn_write8(&memory,0x03002182,0xA5);
+        CHECK(hn_main_command(&script,0x1C,0x02000000));
+        CHECK(hn_read8(&memory,0x03002182)==(layers[i]==4?0xAD:0xA5));
+    }
+}
 static void script_contract(void)
 {
     reset();HNScript script;hn_script_init(&script,&memory,NULL,0);
@@ -242,6 +276,6 @@ static void script_contract(void)
 }
 int main(void)
 {
-    memory_contract();dma_and_bios();angular_contract();video_contract();game_contract();timing_contract();heap_contract();script_contract();
+    memory_contract();dma_and_bios();angular_contract();video_contract();game_contract();timing_contract();heap_contract();script_copy_contract();script_contract();
     printf("%d native-core checks passed.\n",checks);return 0;
 }

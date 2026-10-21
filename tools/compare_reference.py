@@ -45,9 +45,10 @@ def main() -> None:
     parser.add_argument("--choices-only", action="store_true", help="Run word-choice dialogs and supporting script comparisons")
     parser.add_argument("--motion-only", action="store_true", help="Run motion setup, routes and live follower comparisons")
     parser.add_argument("--collisions-only", action="store_true", help="Run leader motion, collision and wait-handler comparisons")
+    parser.add_argument("--scripts-only", action="store_true", help="Run Main memory commands and scene-transition comparisons")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
-    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only))):
+    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.scripts_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -1429,10 +1430,77 @@ def main() -> None:
                 equal(report_animation[3], call(original, slot, 0x03007010), f"animation audio yield {case} {opcode}")
                 compare(f"animation audio {case} {opcode}", audio_ranges)
 
+    def script_memory_checks():
+        local=random.Random(0x414248)
+        for opcode,name,width,base in ((0x41,"MainScriptCopyPointerBytes",1,0x02004520),
+                                       (0x42,"MainScriptCopyPointerHalfwords",2,0x0201DC40)):
+            equal(struct.unpack_from("<I",rom,0x58E5D4+opcode*4)[0]&~1,symbols[name],f"Main dispatch {opcode:02X}")
+            for case in range(120):
+                fresh();count=(0,1,2,7,31,255)[case%6];index=(3,65535,32)[case%3]
+                destination=base+index*width
+                source=(0x02024000,destination-width,destination+width,0x030005E8)[case%4]
+                pointer=15 if case&1 else source
+                both(0x02024000,local.randbytes(512));both(destination-width,local.randbytes(514))
+                both(0x030005E8,local.randbytes(12));both(0x03002BEC,struct.pack("<I",source))
+                both(0x02020000,struct.pack("<BHI",count,index,pointer))
+                both(0x03000010,bytes([opcode])+local.randbytes(15))
+                equal(command(memory,opcode,0x02020000),1,f"native pointer copy {opcode:02X} {case}")
+                call(name,0x02020000)
+                compare(f"pointer copy {opcode:02X} {case}",((0x02000000,0x40000),(0x03000000,0x7000)))
+
+        for enabled in range(32):
+            for layer in (0,1,2,3,4,5,31,32,255):
+                fresh();both(0x03002CC5,bytes([enabled|(local.randrange(8)<<5)]));both(0x03002180,local.randbytes(8))
+                both(0x02020000,struct.pack("<IB",symbols["ScriptCallbackSetGameFlag13FromDisplayLayer"]|1,layer))
+                both(0x03000010,bytes([0x1C])+local.randbytes(15))
+                equal(command(memory,0x1C,0x02020000),1,f"native display-layer flag {enabled} {layer}")
+                call("MainScriptInvokeCallback",0x02020000)
+                compare(f"display-layer flag {enabled} {layer}",((0x03000010,16),(0x030005E8,12),(0x03002180,8),(0x03002CC4,2)))
+        for count in (0,1,8,255):
+            for kept in (0,max(0,count-1),255):
+                fresh();both(0x03002E10,bytes([count]));both(0x03003070,struct.pack("<I",0x02010000))
+                both(0x02010000,local.randbytes(count*44+1))
+                both(0x02020000,struct.pack("<IB",symbols["ScriptCallbackDisableGraphicsScriptsExcept"]|1,kept))
+                both(0x03000010,bytes([0x1C])+local.randbytes(15))
+                equal(command(memory,0x1C,0x02020000),1,f"native disable graphics except {count} {kept}")
+                call("MainScriptInvokeCallback",0x02020000)
+                compare(f"disable graphics except {count} {kept}",((0x02000000,0x40000),(0x03000000,0x7000)))
+
+        transitions=(("ScriptCallbackSaveActorsAndChangeMap10_4","ScriptCallbackRestoreActorsAndPreviousMapC2A9C"),
+                     ("ScriptCallbackSaveActorsAndChangeMap10_5","ScriptCallbackRestoreActorsAndPreviousMapC3B20"),
+                     ("ScriptCallbackSaveActorsAndChangeMap10_10","ScriptCallbackRestoreActorsAndPreviousMap"),
+                     ("ScriptCallbackSaveActorsAndChangeMap10_11","ScriptCallbackRestoreActorsAndPreviousMapCBA34"),
+                     ("ScriptCallbackSaveActorsAndChangeMap10_12","ScriptCallbackRestoreActorsAndPreviousMapCC6DC"),
+                     ("ScriptCallbackSaveActorsAndChangeMap10_17","ScriptCallbackRestoreActorsAndPreviousMapCEEA8"))
+        for save_name,restore_name in transitions:
+            for case in range(16):
+                fresh();heap_init(memory);call("InitializeHeap",0)
+                equal(native("hn_map_initialize",2,C.c_bool)(memory,10,10),True,"actor snapshot map setup")
+                call("InitializeMapDescriptor",10,10)
+                slots=struct.unpack("<I",native_bytes(0x03002D98,4))[0]
+                both(slots,local.randbytes(16*104));both(0x02002EB0,local.randbytes(624))
+                both(0x03001F60,bytes([case&1]));both(0x03001F90,bytes([(case>>1)&1]))
+                both(0x03002182,bytes([128|(case&127)]))
+                indices=(1,0 if case&8 else 2,3,4)
+                for i,index in enumerate(indices):
+                    both((0x03002C0C,0x03002274,0x03001F50,0x03002270)[i],bytes([index]))
+                    active=i==0 or case&(1<<(i-1))
+                    both(slots+index*104+96,bytes([((case+i)%4)+1 if active else 0]))
+                for name in (save_name,restore_name):
+                    both(0x02020000,struct.pack("<I",symbols[name]|1));both(0x03000010,bytes([0x1C])+bytes(15))
+                    both(0x03002C60,struct.pack("<I",0x02020111))
+                    equal(command(memory,0x1C,0x02020000),1,f"native actor map callback {name} {case}")
+                    call("MainScriptInvokeCallback",0x02020000,limit=1000000)
+                    compare(f"actor map callback {name} {case}",((0x02000000,0x40000),(0x03000000,0x7000)))
+
     if args.bios_oracle:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.scripts_only:
+            script_memory_checks()
+            print(f"{checks} private Main memory/scene-transition comparisons passed; full gameplay remains unverified.")
+            return
         if args.collisions_only:
             collision_checks()
             print(f"{checks} private leader/collision comparisons passed; full gameplay remains unverified.")
@@ -1466,6 +1534,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
+        script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

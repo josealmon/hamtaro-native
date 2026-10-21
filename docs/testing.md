@@ -26,6 +26,8 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   Word-choice checks cover initial/requested selection, grid/highlight boundaries,
   configuration selectors, reset ownership, retained key-repeat settings and Main
   result preservation during background-controlled closure.
+  Scene actor checks cover four render snapshots, inactive-slot retention and
+  animation execution-flag clearing.
 - render: animation repeat/call/delay flow, typed callback guards, physics,
   affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
   PPU regressions for tile mapping, transparency, mosaic/window phase and effects;
@@ -82,6 +84,18 @@ The executable also accepts:
 Exit code 0 means identity and full SHA-256 match; 2 means the content does not
 match. No profile import is performed by this command.
 
+An input-only native runtime scenario uses the optional test DLL:
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
+
+It runs 8,105 clocked native updates from an erased SRAM image, confirms bedroom
+control, walks to the exit and checks the Clubhouse entrance script/position. The
+JSON contains only button inputs and metadata checkpoints. The runner writes no
+save or capture, rejects unknown inputs and fails on any native runtime fault or
+checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
+This is native runtime scenario evidence, not a desktop playthrough or an independent
+full-machine comparison. Ham-Chat acquisition and later story steps remain pending.
+
 For private function comparisons, use a Python environment with Unicorn 2.1.4
 and the test-only hn_reference_probe.dll built by BUILD_TESTING:
 
@@ -105,12 +119,23 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 494,314 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 497,184 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
 directional movement. Word-choice handlers use opcodes 0x24 (await) and 0x45
 (configure). The desktop loop is now connected; complete playthrough remains pending.
+
+The Main memory and scene-transition group can also run separately:
+
+    python -B tools/compare_reference.py --scripts-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+This passes 2,870 comparisons: byte/halfword pointer copies, zero/max counts,
+variable indirection and overlap, graphics disable-except, display-layer flags,
+and 96 actor snapshot/modal-map roundtrips across six map callbacks. Cases include
+optional/absent actors, all direction variants, retained cursor and first/third
+variant reuse for the fourth restored actor. Input data is synthetic; original
+animation families and map descriptors remain in the private ROM.
 
 The audio part can be run independently with the same private ROM and reference:
 

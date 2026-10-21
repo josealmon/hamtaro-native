@@ -47,15 +47,16 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular HBlank callback compared, remaining scanline callbacks and timed DMA/PPU integration pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
+| Scene actor snapshots | Adapted | Four 104-byte render snapshots, active-slot restoration and six modal map roundtrips compared; idle animation variants, optional slots and script cursor retention preserved |
 | Motion and collision | Adapted | Leader input/walk/run, action priority, map edge sampling/sliding, circle/rectangle queries/responses, event staging, circular follower routes, proximity/idle animation and movement wait protocol compared; full-game coverage remains pending |
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases and typed animation callback compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Word-choice dialogs | Adapted | Nine text contexts, expression-filtered options, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
-| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
+| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; later scene callbacks remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | Native loop connected; function-level movement/save comparisons and atomic host persistence verified; actual story and in-game save/reload playthrough remain pending |
+| New game, movement, in-game save/load | Partial | An 8,105-update native input scenario reaches bedroom control and the Clubhouse entrance; function-level movement/save comparisons and atomic host persistence verified; live-window story and in-game save/reload playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -66,6 +67,13 @@ unsupported CPU-transfer queue, communication update or IRQ target stops executi
 and opens the menu with a private runtime-error.log diagnostic. It never switches
 to guest instruction execution. The language selector and menu music establish a
 native desktop boot milestone, not a completed title/story/playthrough.
+
+The private opening scenario now leaves the bedroom and reaches the Clubhouse.
+It exercises actual native clocked updates from a fresh game, with fixed input
+and script/position checkpoints; it does not inject game state. Subsequent input
+reaches the Ham-Chat acquisition screen, where ScriptCallbackRecordTaskTextAcquisition
+at 0x080C2721 is still unsupported. This is the current reproduced story frontier,
+not a complete opening or playthrough. No game capture is stored in this repository.
 
 The runtime follows the source's VBlank service, input, Main, follower motion,
 actors, tasks, background/object/graphics scripts, mosaic and PRNG update order.
@@ -125,7 +133,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-494,314 comparisons with the independent BIOS and PPU oracles.
+497,184 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -169,6 +177,16 @@ cursor, return stack, wait/result fields and execution flags. Actors activate in
 index order, including a new later actor started during the same frame. Script and
 budget faults retain the actor's diagnostic state and restore Main before returning.
 The three padding bytes are preserved. Native context setup rejects indexes above 16.
+
+Scene transitions separately snapshot four render slots into the original save-group
+RAM. Six modal map callbacks retain the previous map bytes and return the original
+unsigned -4 consumed count. Their restore path retains the caller's script cursor,
+restores active actors and selects native idle animations from ROM tables. The fourth
+slot keeps the first or third slot's direction variant exactly as the source does.
+The plain restore path clears each restored animation execution flag and preserves
+inactive destinations. Main pointer-copy commands retain their seven-byte packed
+arguments, variable indirection and forward overlap semantics. Graphics-script
+disable-except and display-layer flag callbacks are also compared with the source.
 
 Text tasks preserve their 52-byte guest layout and doubly linked context list.
 The updater uses the original key cache, packed glyphs and ROM advance widths,

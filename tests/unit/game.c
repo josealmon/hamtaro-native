@@ -802,6 +802,24 @@ static void collision_contract(void)
     CHECK(hn_read8(&memory,0x03000018)==1&&!(hn_read8(&memory,0x030021E0)&4));
     CHECK(!memory.fault);free(rom);reset();
 }
+static void actor_snapshot_contract(void)
+{
+    reset();const GameAddr slots=0x02010000;uint32_t consumed=99;
+    hn_write32(&memory,HN_RENDER_SLOTS,slots);hn_write8(&memory,HN_RENDER_INFO+16,8);
+    const GameAddr classes[]={HN_RENDER_CLASS_LEADER,0x03002274,HN_RENDER_CLASS_FOLLOWER,0x03002270};
+    for(unsigned i=0;i<4;i++){
+        hn_write8(&memory,classes[i],(uint8_t)i);
+        for(unsigned j=0;j<104;j++)hn_write8(&memory,slots+i*104+j,(uint8_t)(i*16+j));
+    }
+    hn_write8(&memory,slots+2*104+96,0);
+    CHECK(hn_scene_callback(&memory,0x080C1C41,0,&consumed)==HN_SCENE_OK&&consumed==0);
+    CHECK(!memcmp(memory.ewram+0x2EB0,memory.ewram+0x10000,416));
+    memset(memory.ewram+0x10000,0xA5,416);
+    CHECK(hn_scene_callback(&memory,0x080C1CBD,0,&consumed)==HN_SCENE_OK);
+    CHECK(!hn_read8(&memory,slots+99)&&!hn_read8(&memory,slots+104+99)&&!hn_read8(&memory,slots+312+99));
+    CHECK(hn_read8(&memory,slots+208)==0xA5&&hn_read8(&memory,slots+208+99)==0xA5);
+    CHECK(hn_read32(&memory,slots+104)==0x13121110&&!memory.fault);
+}
 static void runtime_contract(void)
 {
     HNGame *game=malloc(sizeof(*game));CHECK(game!=NULL);
@@ -827,6 +845,6 @@ static void runtime_contract(void)
 int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
-    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();runtime_contract();
+    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();actor_snapshot_contract();runtime_contract();
     printf("%u native game subsystem checks passed.\n",checks);return 0;
 }
