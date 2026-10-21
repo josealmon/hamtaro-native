@@ -43,6 +43,7 @@ def main() -> None:
     parser.add_argument("--actors-only", action="store_true", help="Run actor contexts, motion setup/routes and supporting Main commands")
     parser.add_argument("--tasks-only", action="store_true", help="Run text-task lifecycle, graphics and script comparisons")
     parser.add_argument("--choices-only", action="store_true", help="Run word-choice dialogs and supporting script comparisons")
+    parser.add_argument("--motion-only", action="store_true", help="Run motion setup, routes and live follower comparisons")
     args = parser.parse_args()
     spec = json.loads((ROOT / "config/rom.json").read_text())
     rom = args.rom.read_bytes()
@@ -594,6 +595,66 @@ def main() -> None:
             call("MainScriptConfigure065D8",0x02020000,limit=1000000);compare("Main collision configuration",ranges)
             equal(command(memory,0x3D,0x02020000),1,"native Main follower route")
             call("MainScriptRebuildFollowerRoute",0x02020000);compare("Main follower route",ranges)
+
+    def motion_live_checks():
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000))
+        steps=bind("hn_probe_motion_steps",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        result=C.c_uint32();leader,follower=0x02017000+10*104,0x02017000+13*104
+        def fixture(case):
+            fresh()
+            both(0x03002D98,struct.pack("<I",0x02017000));both(0x03002DC0,b"\x20")
+            both(0x02017000,rng.randbytes(32*104));both(0x03002C0C,b"\x0A");both(0x03001F50,b"\x0D")
+            both(0x03002A90,rng.randbytes(256));both(0x03001F54,bytes([case%32]));both(0x03002BF8,bytes([case*7%32]))
+            both(0x03001F60,bytes([case%2]));both(0x03001F90,bytes([case//2%2]));both(0x03002270,bytes([11 if case%3 else 0]))
+            both(follower+0x60,bytes([case%8+1]));both(0x03000786,bytes([(0,1,2,3,255)[case%5]]))
+            both(0x03000780,struct.pack("<i",case%9-3));both(0x03000788,rng.randbytes(12))
+            both(0x02000138,struct.pack("<HH",64,64));both(0x03002BFC,struct.pack("<I",0x02010000))
+            both(0x02010000,struct.pack("<4096H",*[(rng.randrange(4096)|(0x1000 if rng.randrange(97)==0 else 0)) for _ in range(4096)]))
+            for slot in (leader,follower):
+                for field in (0x18,0x20):both(slot+field,struct.pack("<I",rng.getrandbits(32)))
+        for case in range(1024):
+            fixture(case)
+            velocities=(0,1,65535,65536,0xFFFF0000,0xFFFE0000,0xFFFD0000,0x20000,0x80000000,0x7FFFFFFF)
+            x,z=velocities[case%10],velocities[case//10%10]
+            if case>=1000:x,z=rng.getrandbits(32),rng.getrandbits(32)
+            for slot in (leader,follower):
+                both(slot+0x24,struct.pack("<I",x));both(slot+0x2C,struct.pack("<I",z))
+            equal(native("hn_motion_direction",1,C.c_uint32)(memory,leader),call("GetRenderXZMotionDirection",leader),"motion direction")
+            equal(native("hn_motion_classify",1,C.c_uint32)(memory,leader),call("ClassifyLeaderRenderXZMotion"),"motion classification")
+            equal(steps(memory,0x02023000,0x02023002,C.byref(result)),1,"native follower step quantization")
+            equal(result.value,call("QuantizeFollowerRenderXZSteps",0x02023000,0x02023002),"quantized follower class")
+            compare("motion directions/quantization",ranges)
+        for case in range(320):
+            fixture(case);point=0x03002A90+(case*7%32)*8
+            values=[rng.randrange(-32768,32768) for _ in range(4)]
+            x,z=(rng.getrandbits(32) for _ in range(2))
+            if case%5==0:x=((values[0]&65535)<<16)|rng.randrange(65536)
+            if case%5==1:z=((values[1]&65535)<<16)|rng.randrange(65536)
+            if case%5==2:
+                x=((values[0]+values[2])&65535)<<16;z=((values[1]+values[3])&65535)<<16
+            if case%5==3:
+                values=[5,-7,8,4];x=9<<16;z=(-5<<16)&0xFFFFFFFF
+            both(point,struct.pack("<4h",*values));both(leader+0x18,struct.pack("<I",x));both(leader+0x20,struct.pack("<I",z))
+            equal(native("hn_motion_extend_route",result=C.c_bool)(memory),True,"native follower route extension")
+            call("UpdateLeaderFollowerRouteSegment");compare(f"follower route extension {case}",ranges)
+        for case in range(320):
+            fixture(case);point=0x03002A90+(case%32)*8
+            origin=(rng.randrange(-256,257),rng.randrange(-256,257));delta=(0,0) if case%8==0 else (rng.randrange(-8,9),rng.randrange(-8,9))
+            if case%8==1:delta=(0,-2)
+            if case%8==2:delta=(-2,0)
+            both(point,struct.pack("<4h",*origin,*delta))
+            for slot in (leader,follower):
+                for axis,value in zip((0x18,0x20),origin):
+                    both(slot+axis,struct.pack("<I",((value+rng.randrange(-80,81))<<16|rng.randrange(65536))&0xFFFFFFFF))
+            if case%8 in (3,4):
+                both(follower+0x18,native_bytes(leader+0x18,4));both(follower+0x20,native_bytes(leader+0x20,4))
+            for tick in range(4):
+                equal(native("hn_motion_follower",result=C.c_bool)(memory),True,f"native live follower {case}/{tick}")
+                equal(call("UpdateFollowerRenderXZMotion"),0,"follower result")
+                compare(f"live follower {case}/{tick}",ranges)
+            both(0x03002170,bytes([case%2]));both(0x03002183,bytes([case//2%2]))
+            equal(native("hn_motion_update_following",result=C.c_bool)(memory),True,"native gated following")
+            call("UpdateRenderXZMotion");compare("gated follower integration",ranges)
 
     def task_checks():
         ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x06000000,0x18000),(0x040000D8,8))
@@ -1269,6 +1330,10 @@ def main() -> None:
                 compare(f"animation audio {case} {opcode}", audio_ranges)
 
     try:
+        if args.motion_only:
+            motion_checks();motion_live_checks()
+            print(f"{checks} private motion comparisons passed; leader movement and full gameplay remain unverified.")
+            return
         if args.choices_only:
             choice_checks()
             print(f"{checks} private word-choice comparisons passed; full gameplay remains unverified.")
@@ -2196,6 +2261,8 @@ def main() -> None:
                 call("SyncAudioDmaAtVblankAsm")
                 equal(frame(memory, 4096, report), 1, f"coupled Main {index}")
                 call("RunMainScriptFrame")
+                equal(native("hn_motion_update_following",result=C.c_bool)(memory),True,f"coupled gated following {index}")
+                call("UpdateRenderXZMotion")
                 equal(actor_frames(memory,4096,report3),1,f"coupled native actor scripts {index}: {list(report3)}")
                 call("RunActorScriptFrames",limit=2000000)
                 equal(task_frames(memory,4096,report3),1,f"coupled native text tasks {index}: {list(report3)}")
@@ -2256,6 +2323,7 @@ def main() -> None:
         counter_checks()
         actor_checks()
         motion_checks()
+        motion_live_checks()
         task_checks()
         choice_checks()
         raster_checks()

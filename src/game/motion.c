@@ -3,6 +3,144 @@
 #include "game/render.h"
 #include "gba/bios.h"
 
+static int32_t magnitude(int32_t value){return value<0?(int32_t)(0u-(uint32_t)value):value;}
+static GameAddr motion_slot(HNMemory *m,GameAddr selector)
+{
+    unsigned index=hn_read8(m,selector);
+    return index<hn_read8(m,HN_RENDER_INFO+16)&&hn_read32(m,HN_RENDER_SLOTS)?hn_render_slot(m,index):0;
+}
+uint32_t hn_motion_direction(HNMemory *m,GameAddr slot)
+{
+    int32_t x=(int32_t)hn_read32(m,slot+0x24),z=(int32_t)hn_read32(m,slot+0x2C);
+    int32_t ax=magnitude(x),az=magnitude(z);if(!ax&&!az)return 0;
+    return ax>=az?(x<0?3u:4u):(z<0?1u:2u);
+}
+uint32_t hn_motion_classify(HNMemory *m,GameAddr slot)
+{
+    int32_t x=(int16_t)hn_read16(m,slot+0x26),z=(int16_t)hn_read16(m,slot+0x2E);
+    if(!x&&!z)return 0;if(!z)return magnitude(x)>1?2u:1u;if(!x)return magnitude(z)>1?2u:1u;
+    return (uint32_t)(x*x)+(uint32_t)(z*z)==0?2u:1u;
+}
+bool hn_motion_steps(HNMemory *m,uint16_t *x,uint16_t *z,uint32_t *mode)
+{
+    GameAddr slot=motion_slot(m,HN_RENDER_CLASS_FOLLOWER);if(!slot)return false;
+    int values[2]={(int16_t)hn_read16(m,slot+0x26),(int16_t)hn_read16(m,slot+0x2E)};
+    uint16_t *outputs[2]={x,z};
+    for(unsigned i=0;i<2;i++){
+        int value=values[i];*outputs[i]=(uint16_t)(value<-2?-2:value<0?-1:value==0?0:value<=1?1:2);
+    }
+    *mode=hn_motion_classify(m,slot);return !m->fault;
+}
+bool hn_motion_extend_route(HNMemory *m)
+{
+    GameAddr slot=motion_slot(m,HN_RENDER_CLASS_LEADER);if(!slot)return false;
+    unsigned end=hn_read8(m,HN_ROUTE_END);GameAddr point=HN_ROUTE_POINTS+end*8;
+    int32_t x_fixed=(int32_t)hn_read32(m,slot+0x18),x=x_fixed>>16,z=(int16_t)hn_read16(m,slot+0x22);
+    int32_t ox=(int16_t)hn_read16(m,point),oz=(int16_t)hn_read16(m,point+2);
+    int32_t dx=(int16_t)hn_read16(m,point+4),dz=(int16_t)hn_read16(m,point+6);
+    if(x==ox||z==oz){
+        if(x==ox+dx&&z==oz+dz)return !m->fault;
+        if(z==oz){hn_write16(m,point+4,(uint16_t)((int32_t)((uint32_t)x_fixed-((uint32_t)ox<<16))>>16));hn_write16(m,point+6,0);}
+        else{hn_write16(m,point+4,0);hn_write16(m,point+6,(uint16_t)((int32_t)(hn_read32(m,slot+0x20)-((uint32_t)oz<<16))>>16));}
+    }else{
+        int16_t nx=(int16_t)(x-ox),nz=(int16_t)(z-oz);
+        if((int32_t)nx*dz==(int32_t)nz*dx){hn_write16(m,point+4,(uint16_t)nx);hn_write16(m,point+6,(uint16_t)nz);}
+        else{
+            uint16_t ex=(uint16_t)(ox+dx),ez=(uint16_t)(oz+dz);end=(end+1)&31;hn_write8(m,HN_ROUTE_END,(uint8_t)end);
+            point=HN_ROUTE_POINTS+end*8;hn_write16(m,point,ex);hn_write16(m,point+2,ez);
+            hn_write16(m,point+4,(uint16_t)(x-(int16_t)ex));hn_write16(m,point+6,(uint16_t)(z-(int16_t)ez));
+        }
+    }
+    return !m->fault;
+}
+static void follower_idle(HNMemory *m,GameAddr slot)
+{
+    unsigned direction=(uint8_t)((hn_read8(m,slot+0x60)&15)-1),primary=hn_read8(m,0x03001F60),secondary=hn_read8(m,0x03001F90);
+    GameAddr family=hn_read32(m,0x0858BF68+((primary^1)*2+1)*4);
+    hn_write32(m,HN_FOLLOWER_ANIMATION,hn_read32(m,family+direction*4));
+    family=hn_read32(m,0x0858BFB8+(secondary*2+1)*4);
+    hn_write32(m,HN_FOLLOWER_SECONDARY_ANIMATION,hn_read32(m,family+direction*8));
+    hn_write8(m,HN_FOLLOWER_DIRECTION,0);hn_write32(m,slot+0x24,0);hn_write32(m,slot+0x2C,0);
+}
+bool hn_motion_follower(HNMemory *m)
+{
+    GameAddr slot=motion_slot(m,HN_RENDER_CLASS_FOLLOWER),leader=motion_slot(m,HN_RENDER_CLASS_LEADER);
+    if(!slot||!leader)return false;
+    hn_write32(m,slot+0x24,0);hn_write32(m,slot+0x2C,0);
+    GameAddr point=HN_ROUTE_POINTS+hn_read8(m,HN_ROUTE_READ)*8;unsigned mode=hn_read8(m,HN_MOTION_MODE),direction=0;
+    if(!mode||!hn_read32(m,point+4))follower_idle(m,slot);
+    else{
+        unsigned speed=mode==2?1:0,amount=speed+1;int32_t dx=(int16_t)hn_read16(m,point+4),dz=(int16_t)hn_read16(m,point+6);
+        if(!dx){direction=dz<0?1:2;hn_write32(m,slot+0x2C,(dz<0?0u-amount:amount)<<16);}
+        else if(!dz){direction=dx<0?3:4;hn_write32(m,slot+0x24,(dx<0?0u-amount:amount)<<16);}
+        else{
+            hn_write32(m,slot+0x24,(uint32_t)dx<<16);hn_write32(m,slot+0x2C,(uint32_t)dz<<16);
+            uint16_t x,z;uint32_t classification;if(!hn_motion_steps(m,&x,&z,&classification))return false;
+            hn_write32(m,slot+0x24,(uint32_t)x<<16);hn_write32(m,slot+0x2C,(uint32_t)z<<16);direction=hn_motion_direction(m,slot)&255;
+        }
+        unsigned index=direction*2+speed-2;
+        GameAddr family=hn_read32(m,0x0858BF68+(hn_read8(m,0x03001F60)^1)*8);
+        hn_write32(m,HN_FOLLOWER_ANIMATION,hn_read32(m,family+index*4));hn_write8(m,HN_FOLLOWER_DIRECTION,(uint8_t)direction);
+        family=hn_read32(m,0x0858BFB8+(hn_read8(m,0x03001F90)*2+1)*4);
+        hn_write32(m,HN_FOLLOWER_SECONDARY_ANIMATION,hn_read32(m,family+index*4));
+    }
+    int32_t dx=(int32_t)(hn_read32(m,slot+0x18)-hn_read32(m,leader+0x18)),dz=(int32_t)(hn_read32(m,slot+0x20)-hn_read32(m,leader+0x20));
+    if((magnitude(dx)<=0xFFFF&&magnitude(dz)<=0x17FFFF)||(magnitude(dx)<=0x27FFFF&&magnitude(dz)<=0xFFFF)){
+        follower_idle(m,slot);direction=0;if(!hn_motion_rebuild_route(m))return false;
+    }
+    int32_t component=(int16_t)hn_read16(m,point+4);
+    uint32_t target=((uint32_t)((int16_t)hn_read16(m,point)+component)<<16)+(component>0?0xFFFF8000u:0x8000u);
+    uint32_t x=hn_read32(m,slot+0x18),vx=hn_read32(m,slot+0x24);
+    int32_t error_x=(int32_t)(target-(x+vx))>>16;
+    component=(int16_t)hn_read16(m,point+6);
+    target=((uint32_t)((int16_t)hn_read16(m,point+2)+component)<<16)+(component>0?0xFFFF8000u:0x8000u);
+    uint32_t z=hn_read32(m,slot+0x20),vz=hn_read32(m,slot+0x2C);int32_t error_z=(int32_t)(target-(z+vz))>>16;
+    if((!error_x&&!error_z)||(int32_t)((uint32_t)error_x*vx)<0||(int32_t)((uint32_t)error_z*vz)<0){
+        unsigned current=hn_read8(m,HN_ROUTE_READ),end=hn_read8(m,HN_ROUTE_END);
+        if(current!=end){
+            current=(current+1)&31;hn_write8(m,HN_ROUTE_READ,(uint8_t)current);point=HN_ROUTE_POINTS+current*8;
+            hn_write32(m,slot+0x24,((uint32_t)(int32_t)(int16_t)hn_read16(m,point)<<16)-hn_read32(m,slot+0x18));
+            hn_write32(m,slot+0x2C,((uint32_t)(int32_t)(int16_t)hn_read16(m,point+2)<<16)-hn_read32(m,slot+0x20));
+        }else{
+            if(magnitude(error_x)<=1&&magnitude(error_z)<=1&&direction){
+                hn_write32(m,slot+0x24,((uint32_t)((int16_t)hn_read16(m,point)+(int16_t)hn_read16(m,point+4))<<16)-x);
+                hn_write32(m,slot+0x2C,((uint32_t)((int16_t)hn_read16(m,point+2)+(int16_t)hn_read16(m,point+6))<<16)-z);
+            }
+            if(!hn_motion_rebuild_route(m))return false;
+        }
+    }
+    GameAddr primary=hn_read32(m,HN_FOLLOWER_ANIMATION);
+    if(primary){
+        bool reset_delay=true;
+        if(hn_read32(m,slot+4)!=primary){
+            unsigned moving=hn_read8(m,HN_FOLLOWER_DIRECTION);
+            if(moving){hn_write8(m,slot+0x60,(uint8_t)moving);hn_render_set_animation(m,hn_read8(m,HN_RENDER_CLASS_FOLLOWER),primary);}
+            else{
+                int32_t delay=(int32_t)hn_read32(m,HN_FOLLOWER_IDLE_DELAY);
+                if(delay<=1){hn_write32(m,HN_FOLLOWER_IDLE_DELAY,(uint32_t)delay+1);reset_delay=false;}
+                else hn_render_set_animation(m,hn_read8(m,HN_RENDER_CLASS_FOLLOWER),primary);
+            }
+        }
+        if(reset_delay)hn_write32(m,HN_FOLLOWER_IDLE_DELAY,0);
+        unsigned extra=hn_read8(m,0x03002270);
+        if(extra){
+            if(extra>=hn_read8(m,HN_RENDER_INFO+16))return false;
+            GameAddr secondary=hn_read32(m,HN_FOLLOWER_SECONDARY_ANIMATION);
+            if(hn_read32(m,hn_render_slot(m,extra)+4)!=secondary)hn_render_set_animation(m,extra,secondary);
+        }
+    }
+    return !m->fault;
+}
+bool hn_motion_update_following(HNMemory *m)
+{
+    if(!hn_read8(m,HN_RENDER_CLASS_FOLLOWER)||!hn_read8(m,0x03002170))return !m->fault;
+    hn_write8(m,HN_MOTION_MODE,(hn_read8(m,0x03002183)&1)?2:1);if(!hn_motion_follower(m))return false;
+    GameAddr slot=motion_slot(m,HN_RENDER_CLASS_FOLLOWER);if(!slot)return false;
+    hn_write32(m,slot+0x18,hn_read32(m,slot+0x18)+hn_read32(m,slot+0x24));
+    hn_write32(m,slot+0x20,hn_read32(m,slot+0x20)+hn_read32(m,slot+0x2C));
+    hn_write32(m,slot+0x24,0);hn_write32(m,slot+0x2C,0);return !m->fault;
+}
+
 bool hn_motion_idle_render(HNMemory *m,bool follower)
 {
     unsigned index=hn_read8(m,follower?HN_RENDER_CLASS_FOLLOWER:HN_RENDER_CLASS_LEADER);

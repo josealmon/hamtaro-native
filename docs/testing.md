@@ -14,6 +14,8 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   waits, same-frame activation, stop, padding and bounded/unsupported script failures.
   Counter checks cover palette/template banks, signed digits and the low yield byte.
   Motion checks cover route edges/obstacle order, collision setup and resource branches.
+  Following checks cover walk/run speeds, boot-gated position updates, near-leader
+  stopping, delayed idle animation, asymmetric quantization and circular route bends.
   Task checks cover list removal/relinking, synthetic glyphs, independent contexts,
   delay/fast advance, name returns, tile-row scrolling, numeric text, unsupported
   callbacks, cyclic lists, memory faults and command budgets.
@@ -72,18 +74,19 @@ map/core initialization and SRAM initialization/repair/read/write behavior. It a
 compares Main save-load commands with successful and failed records. The ROM
 schedules cover 88 Main-only iterations, 180 coupled idle iterations and a separate
 7,296 iterations using the guest input adapter and matching ReadKeys calls. The latter schedules call
-actor scripts, text tasks, background/object/graphics/mosaic updates, video transfers and audio service with
+gated follower motion, actor scripts, text tasks, background/object/graphics/mosaic updates, video transfers and audio service with
 driver initialization and VBlank-counter synchronization. Graphics slots are active
 in 262 input-schedule iterations; synthetic per-command/update tests provide the
 remaining graphics evidence. It compares 3,581 sampled HBlank callbacks during
-the circular transition; deferred DMA0/PPU timing is not modeled. Live motion, word-choice dialogs, CPU-transfer flushing, real IRQ
+the circular transition; deferred DMA0/PPU timing is not modeled. Leader movement, word-choice dialogs, CPU-transfer flushing, real IRQ
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with the optional PPU oracle passes 422,485 comparisons.
+GBA machine. The complete run with the optional PPU oracle passes 443,145 comparisons.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
-The coupled schedule stops before MainScriptWaitForByte1FA8 (0x21); live movement
-is not implemented. Word-choice handlers use opcodes 0x24 (await) and 0x45 (configure).
+The coupled schedule stops before MainScriptWaitForByte1FA8 (0x21); leader movement
+and collision resolution are not implemented. Word-choice handlers use opcodes
+0x24 (await) and 0x45 (configure).
 
 The audio part can be run independently with the same private ROM and reference:
 
@@ -141,8 +144,19 @@ the NULL sentinel, indirect callback storage, nested script calls, waits, Main-s
 restoration and same-frame activation. Motion fixtures cover 400 tile-route queries,
 120 route builds, 80 scene/resource configurations and 64 supporting Main command
 cases. The compressed branch uses a synthetic stream with a nonzero low header
-nibble; no collision map or game script is embedded. Live movement and the full
-movement loop remain unverified.
+nibble; no collision map or game script is embedded. Leader movement and the full
+game loop remain unverified.
+
+Motion and live follower comparisons can be run separately:
+
+    python -B tools/compare_reference.py --motion-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+This passes 15,768 private comparisons. In addition to motion setup/routes, it
+checks 1,024 direction/classification/quantization cases, 320 circular route
+extensions, 1,280 follower updates and 320 gated-following updates. Cases cover
+fractional/negative coordinates, route consumption and wrap, proximity resets,
+walk/run modes, animation delay and the original INT_MIN direction quirk. Full
+EWRAM/IWRAM state is compared. Leader input/collisions remain outside this suite.
 
 Text-task checks can be run separately:
 

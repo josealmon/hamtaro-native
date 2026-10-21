@@ -703,9 +703,58 @@ static void choice_contract(void)
     CHECK(hn_read16(&memory,HN_CHOICE_STATE)==0&&hn_read16(&memory,0x03001FBC)==4&&hn_read32(&memory,0x03000014)==9);
     CHECK(!memory.fault);free(rom);reset();
 }
+static void following_contract(void)
+{
+    uint8_t *rom=calloc(1,0x900000);CHECK(rom!=NULL);hn_memory_init(&memory,rom,0x900000);
+    for(unsigned bank=0;bank<4;bank++){
+        const GameAddr tables[2]={0x0858BF68,0x0858BFB8};
+        for(unsigned type=0;type<2;type++){
+            GameAddr family=0x02001000+bank*0x100+type*0x400;
+            for(unsigned byte=0;byte<4;byte++)rom[tables[type]-HN_ROM_BASE+bank*4+byte]=(uint8_t)(family>>(byte*8));
+            for(unsigned index=0;index<16;index++)hn_write32(&memory,family+index*4,0x02008000+type*0x1000+bank*0x100+index*4);
+        }
+    }
+    const GameAddr slots=0x02003000,a=slots+10*104,b=slots+13*104;
+    hn_write32(&memory,HN_RENDER_SLOTS,slots);hn_write8(&memory,HN_RENDER_INFO+16,32);
+    hn_write8(&memory,HN_RENDER_CLASS_LEADER,10);hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,13);
+    hn_write16(&memory,HN_COLLISION_DIMENSIONS,64);hn_write16(&memory,HN_COLLISION_DIMENSIONS+2,64);
+    hn_write32(&memory,HN_COLLISION_MAP,0x02010000);hn_write8(&memory,b+0x60,4);
+    hn_write32(&memory,a+0x18,100u*65536+32768);hn_write32(&memory,a+0x20,100u*65536+32768);
+    hn_write32(&memory,b+0x18,20u*65536+32768);hn_write32(&memory,b+0x20,100u*65536+32768);
+    hn_write16(&memory,HN_ROUTE_POINTS,20);hn_write16(&memory,HN_ROUTE_POINTS+2,100);hn_write16(&memory,HN_ROUTE_POINTS+4,80);
+    hn_write8(&memory,HN_MOTION_MODE,1);CHECK(hn_motion_follower(&memory));
+    CHECK(hn_read32(&memory,b+0x24)==65536&&!hn_read32(&memory,b+0x2C));
+    CHECK(hn_read32(&memory,b+4)==0x02008218&&hn_read8(&memory,b+0x60)==4);
+    hn_write8(&memory,HN_MOTION_MODE,2);CHECK(hn_motion_follower(&memory));CHECK(hn_read32(&memory,b+0x24)==131072);
+    CHECK(hn_read32(&memory,b+4)==0x0200821C);
+    hn_write8(&memory,0x03002170,0);CHECK(hn_motion_update_following(&memory));CHECK(hn_read32(&memory,b+0x18)==20u*65536+32768);
+    hn_write8(&memory,0x03002170,1);CHECK(hn_motion_update_following(&memory));
+    CHECK(hn_read32(&memory,b+0x18)==21u*65536+32768&&!hn_read32(&memory,b+0x24));
+    hn_write8(&memory,0x03002183,1);CHECK(hn_motion_update_following(&memory));
+    CHECK(hn_read32(&memory,b+0x18)==23u*65536+32768&&hn_read8(&memory,HN_MOTION_MODE)==2);
+    /* Idle animation waits for three updates; route rebuilding keeps fractional positions. */
+    hn_write32(&memory,b+0x18,100u*65536);hn_write32(&memory,HN_FOLLOWER_IDLE_DELAY,0);
+    CHECK(hn_motion_follower(&memory));CHECK(hn_read32(&memory,HN_FOLLOWER_IDLE_DELAY)==1&&hn_read32(&memory,b+4)==0x0200821C);
+    CHECK(hn_motion_follower(&memory));CHECK(hn_read32(&memory,HN_FOLLOWER_IDLE_DELAY)==2);
+    CHECK(hn_motion_follower(&memory));CHECK(hn_read32(&memory,HN_FOLLOWER_IDLE_DELAY)==0&&hn_read32(&memory,b+4)==0x0200830C);
+    CHECK(!hn_read32(&memory,b+0x24)&&!hn_read32(&memory,b+0x2C));
+    /* The native quantizer maps exactly -2 to -1, and preserves the original class. */
+    hn_write32(&memory,b+0x24,0xFFFE0000);hn_write32(&memory,b+0x2C,0xFFFD0000);
+    uint16_t x,z;uint32_t mode;CHECK(hn_motion_steps(&memory,&x,&z,&mode));CHECK(x==65535&&z==65534&&mode==1);
+    hn_write32(&memory,b+0x24,0x80000000);hn_write32(&memory,b+0x2C,0);CHECK(hn_motion_direction(&memory,b)==2);
+    /* A bend advances the circular tail and retains the prior segment's endpoint. */
+    hn_write8(&memory,HN_ROUTE_END,31);GameAddr point=HN_ROUTE_POINTS+31*8;
+    hn_write16(&memory,point,5);hn_write16(&memory,point+2,(uint16_t)-7);hn_write16(&memory,point+4,8);hn_write16(&memory,point+6,4);
+    hn_write32(&memory,a+0x18,9u<<16);hn_write32(&memory,a+0x20,(uint32_t)-4<<16);
+    CHECK(hn_motion_extend_route(&memory));CHECK(hn_read8(&memory,HN_ROUTE_END)==0);
+    CHECK(hn_read16(&memory,HN_ROUTE_POINTS)==13&&hn_read16(&memory,HN_ROUTE_POINTS+2)==(uint16_t)-3);
+    CHECK(hn_read16(&memory,HN_ROUTE_POINTS+4)==(uint16_t)-4&&hn_read16(&memory,HN_ROUTE_POINTS+6)==(uint16_t)-1);
+    hn_write8(&memory,HN_RENDER_INFO+16,0);CHECK(!hn_motion_follower(&memory));CHECK(!hn_motion_extend_route(&memory));
+    CHECK(!memory.fault);free(rom);reset();
+}
 int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
-    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();
+    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();
     printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

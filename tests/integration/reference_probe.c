@@ -8,6 +8,7 @@
 #include "game/audio.h"
 #include "game/actor.h"
 #include "game/task.h"
+#include "game/motion.h"
 #include <stdlib.h>
 #include <string.h>
 /* Optional private oracle bridge. Never installed or shipped with the app. */
@@ -62,6 +63,11 @@ int hn_probe_tasks(HNMemory *m,unsigned budget,uint32_t report[3])
 {
     HNTasks tasks;hn_tasks_init(&tasks,m);bool ok=hn_tasks_update(&tasks,budget);
     report[0]=tasks.fault;report[1]=tasks.fault_opcode;report[2]=tasks.fault_address;return ok;
+}
+int hn_probe_motion_steps(HNMemory *m,GameAddr x,GameAddr z,uint32_t *mode)
+{
+    uint16_t sx,sz;if(!hn_motion_steps(m,&sx,&sz,mode))return 0;
+    hn_write16(m,x,sx);hn_write16(m,z,sz);return !m->fault;
 }
 int hn_probe_task_command(HNMemory *m,GameAddr task,unsigned opcode,uint32_t report[4])
 {

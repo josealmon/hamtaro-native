@@ -45,14 +45,14 @@ PCM to the output device's format.
 | Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular HBlank callback compared, remaining scanline callbacks and timed DMA/PPU integration pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
-| Motion and collision setup | Partial | Scene/resource setup, conservative tile-route queries, two-segment follower routes and leader/follower idle-animation selection compared; live movement and record collision resolution pending |
+| Motion and collision setup | Partial | Scene/resource setup, tile-route queries, circular route extension, live follower stepping/quantization, proximity/idle animation and gated following compared; leader movement and record collision resolution pending |
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases and typed animation callback compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Word-choice dialogs | Adapted | Nine text contexts, expression-filtered options, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; later scene callbacks remain incomplete |
-| Native boot/title | Pending | 88 Main-only, 180 idle and 7,296 input-driven script/actor/text/render/audio iterations compared; live motion, full dialog integration, real IRQ cadence and hardware audio output remain incomplete |
+| Native boot/title | Pending | 88 Main-only, 180 idle and 7,296 input-driven script/follower/actor/text/render/audio iterations compared; leader movement, full dialog integration, real IRQ cadence and hardware audio output remain incomplete |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
 | Music and effects | Partial | Sequencer, original PCM mixer, PSG register service, four native PSG generators, script controls and Direct Sound/PWM tested as components; final game output, filtering, trigger quirks and host delivery remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
@@ -94,7 +94,7 @@ also run 88 Main-only iterations, 180 idle iterations and a separate 7,296-itera
 schedule with scripted input through the original guest input adapter. The latter
 enters and confirms both name fields, completes a circular menu transition and
 advances into the opening scene, including collision setup, counter drawing and text.
-Those schedules call Main, actor scripts, text tasks, background,
+Those schedules call Main, gated follower motion, actor scripts, text tasks, background,
 object, graphics and mosaic updates, OAM transfer, video commit, DMA flush and
 audio service. They initialize the audio driver and synchronize its VBlank counter.
 Graphics slots are active in 262 iterations of the input schedule; command
@@ -102,13 +102,13 @@ comparisons and synthetic updates cover the remaining implemented behavior. Twen
 static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
-These schedules omit live leader/follower motion, word-choice dialogs, CPU-transfer
+These schedules omit leader control/collision movement, word-choice dialogs, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
 sound DMA1/2 register images are compared. These are not a verified native boot,
 title screen or playthrough.
 The next unsupported command is MainScriptWaitForByte1FA8 (0x21), which requires
-the live leader/follower movement and collision update. Word-choice awaiting and
+the leader movement and collision update. Word-choice awaiting and
 configuration use opcodes 0x24 and 0x45, respectively.
 See docs/testing.md in this repository for the commands and current check count.
 
@@ -177,7 +177,12 @@ Selected background bounds are updated; unselected bounds are preserved. Route
 queries keep unsigned coordinate expansion and exclusive edges, testing tile bits
 12..15. The follower route chooses between X-first and Z-first paths using those
 queries and the original signed distance/tie rules. The native query rejects a
-map extent larger than guest RAM. Per-frame movement is still required.
+map extent larger than guest RAM. The follower update preserves full-word direction
+selection, signed high-half speed classification, asymmetric negative-step
+quantization, circular route bends/consumption, proximity thresholds, fractional
+target bias and the three-tick idle animation delay. Gated following runs between
+Main and actor scripts and commits X/Z while clearing the consumed velocities.
+Leader control, collision resolution and its per-frame integration remain pending.
 
 Object animations retain original 32-bit resource references and explicit typed
 callback dispatch. Missing callback bindings fail visibly. Sound commands require
