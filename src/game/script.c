@@ -13,6 +13,7 @@
 #include "game/input.h"
 #include "game/actor.h"
 #include "game/motion.h"
+#include "game/task.h"
 #include "gba/bios.h"
 #include <string.h>
 enum {
@@ -183,7 +184,7 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         scratch(m,args+2,0,4);
         if(mask&128)mask&=127;else hn_background_layers_reset(m,(uint8_t)mask);
         GameAddr state=hn_read32(m,HN_RENDER_STATES)+slot*80;
-        for(unsigned i=0;i<20;i++)hn_write32(m,state+i*4,0);
+        if(!hn_transfer_fill_words(m,state,0,20))return fail(s,HN_SCRIPT_RESOURCE,op,state);
         hn_write8(m,state+0x38,(uint8_t)mask);
         GameAddr script=resolve_variable(m,0);if(script)hn_write32(m,state+0x14,script);
         advance(m,6);break;
@@ -227,6 +228,8 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         }else transfer16(m,SCRATCH,destination,hn_read16(m,SCRATCH+2),true);
         advance(m,9);break;
     }
+    case 0x19:case 0x1A:case 0x1B:case 0x38:case 0x54:
+        if(!hn_task_main_command(m,op,args))return fail(s,HN_SCRIPT_RESOURCE,op,args);break;
     case 0x1C: {
         scratch(m,args,0,4);GameAddr address=hn_read32(m,SCRATCH);
         HNMainFunction function=NULL;

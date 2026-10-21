@@ -14,6 +14,9 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   waits, same-frame activation, stop, padding and bounded/unsupported script failures.
   Counter checks cover palette/template banks, signed digits and the low yield byte.
   Motion checks cover route edges/obstacle order, collision setup and resource branches.
+  Task checks cover list removal/relinking, synthetic glyphs, independent contexts,
+  delay/fast advance, name returns, tile-row scrolling, numeric text, unsupported
+  callbacks, cyclic lists, memory faults and command budgets.
 - render: animation repeat/call/delay flow, typed callback guards, physics,
   affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
   PPU regressions for tile mapping, transparency, mosaic/window phase and effects;
@@ -65,18 +68,18 @@ and drawing, all 61 background handlers, all 48 graphics handlers, palette trans
 map/core initialization and SRAM initialization/repair/read/write behavior. It also
 compares Main save-load commands with successful and failed records. The ROM
 schedules cover 88 Main-only iterations, 180 coupled idle iterations and a separate
-4,917 iterations using the guest input adapter and matching ReadKeys calls. The latter schedules call
-actor scripts, background/object/graphics/mosaic updates, video transfers and audio service with
+7,296 iterations using the guest input adapter and matching ReadKeys calls. The latter schedules call
+actor scripts, text tasks, background/object/graphics/mosaic updates, video transfers and audio service with
 driver initialization and VBlank-counter synchronization. Graphics slots are active
-in 243 input-schedule iterations; synthetic per-command/update tests provide the
+in 262 input-schedule iterations; synthetic per-command/update tests provide the
 remaining graphics evidence. It compares 3,581 sampled HBlank callbacks during
-the circular transition; deferred DMA0/PPU timing is not modeled. Live motion, task contexts, CPU-transfer flushing, real IRQ
+the circular transition; deferred DMA0/PPU timing is not modeled. Live motion, word-choice dialogs, CPU-transfer flushing, real IRQ
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with the optional PPU oracle passes 329,757 comparisons.
+GBA machine. The complete run with the optional PPU oracle passes 406,635 comparisons.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
-The coupled schedule stops before MainScriptSetTaskContextEnabled (0x19).
+The coupled schedule stops before MainScriptAwaitWordChoice (0x21).
 
 The audio part can be run independently with the same private ROM and reference:
 
@@ -110,7 +113,7 @@ architecture.md; this is not a claim of complete hardware conformance.
 
 Add --video-oracle PATH_TO_ORACLE and, if needed,
 --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to compare_reference.py to compare
-19 static snapshots from its private ROM schedule; sixteen contain multiple colors.
+23 static snapshots from its private ROM schedule; twenty contain multiple colors.
 No snapshots or ROM data are saved.
 
 Scene/input and supporting Main commands can be checked separately:
@@ -135,7 +138,19 @@ restoration and same-frame activation. Motion fixtures cover 400 tile-route quer
 120 route builds, 80 scene/resource configurations and 64 supporting Main command
 cases. The compressed branch uses a synthetic stream with a nonzero low header
 nibble; no collision map or game script is embedded. Live movement and the full
-task/text loop remain unverified.
+movement loop remain unverified.
+
+Text-task checks can be run separately:
+
+    python -B tools/compare_reference.py --tasks-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+This passes 24,197 private comparisons: allocation/removal, 56 graphics constructors,
+all 32 text commands, both stages of tilemap scrolling, render indicators, clipped
+row transfers, 2,048 numeric formatting cases, bundle retargeting, 27 typed void
+callbacks and 56 text-update scenarios. Width/count/centering cases span all five
+languages and three variants. Full EWRAM/IWRAM state, VRAM and DMA3 destination/control
+are compared where relevant; the transient DMA3 source address is excluded.
+No game text, font, animation table or captured state is written to the checkout.
 
 The same separate project can build the ROM-free hardware audio oracle:
 

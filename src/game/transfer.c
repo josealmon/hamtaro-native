@@ -41,6 +41,15 @@ void hn_transfer_queue_fill(HNMemory *m,uint32_t value,GameAddr destination,uint
     hn_write32(m,HN_TRANSFER_AUX_INDEX,(index+1)&31);
     hn_transfer_queue(m,word|0x80000000u,destination,bytes);
 }
+bool hn_transfer_fill_words(HNMemory *m,GameAddr destination,uint32_t pattern,uint32_t words)
+{
+    if(words>65536)return false;
+    /* Immediate DMA reads a temporary guest word, never a host stack pointer.
+       Restore it after the synchronous transfer; DMA3's source is transient. */
+    GameAddr temporary=0x03007C00;uint32_t saved=hn_read32(m,temporary);
+    hn_write32(m,temporary,pattern);hn_write32(m,0x040000D4,temporary);hn_write32(m,0x040000D8,destination);
+    hn_write32(m,0x040000DC,0x85000000|(words&65535));hn_write32(m,temporary,saved);return !m->fault;
+}
 void hn_transfer_copy(HNMemory *m,GameAddr source,GameAddr destination,uint32_t bytes,bool fill)
 {
     bool word=((source|destination|bytes)&3)==0;

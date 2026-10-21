@@ -41,6 +41,7 @@ def main() -> None:
     parser.add_argument("--audio-only", action="store_true", help="Run just the audio function comparisons")
     parser.add_argument("--scenes-only", action="store_true", help="Run scene menus, input, text and transition comparisons")
     parser.add_argument("--actors-only", action="store_true", help="Run actor contexts, motion setup/routes and supporting Main commands")
+    parser.add_argument("--tasks-only", action="store_true", help="Run text-task lifecycle, graphics and script comparisons")
     args = parser.parse_args()
     spec = json.loads((ROOT / "config/rom.json").read_text())
     rom = args.rom.read_bytes()
@@ -593,6 +594,204 @@ def main() -> None:
             equal(command(memory,0x3D,0x02020000),1,"native Main follower route")
             call("MainScriptRebuildFollowerRoute",0x02020000);compare("Main follower route",ranges)
 
+    def task_checks():
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x06000000,0x18000),(0x040000D8,8))
+        fresh();heap_init(memory);call("InitializeHeap",0)
+        native("hn_task_contexts_init")(memory);call("InitializeTaskContexts");compare("task contexts init",ranges[:2])
+        active=[]
+        for index in range(16):
+            task=native("hn_task_allocate",result=C.c_uint32)(memory)
+            equal(task,call("AllocateTaskContext"),"task allocation")
+            active.append(task);compare("task allocation/list",ranges[:2])
+        rng.shuffle(active)
+        for task in active:
+            equal(native("hn_task_remove",1,C.c_bool)(memory,task),True,"native task removal")
+            call("RemoveTaskContext",task);compare("task removal/list",ranges[:2])
+        dimensions=((1,2),(7,3),(28,4),(32,6),(28,8),(255,2),(1,255))
+        for case in range(56):
+            fresh();task=0x02020000;resource=0x02023000
+            both(task,rng.randbytes(52));both(0x0200C720,rng.randbytes(0x4000))
+            both(0x02011000,rng.randbytes(0x4000));both(0x06008000,rng.randbytes(0x4000))
+            width,height=dimensions[case%len(dimensions)]
+            values=(task,width+(case<<8),height+(case<<16),rng.getrandbits(32),rng.getrandbits(32),
+                    rng.getrandbits(32),rng.getrandbits(32),(0,8,16,24,255)[case%5],0x06008000,0x02011000)
+            equal(native("hn_task_graphics",10,C.c_bool)(memory,*values),True,"native task graphics constructor")
+            call("InitializeTaskContextGraphics",*values,limit=2000000);compare("task graphics constructor",ranges)
+            both(0x03002D98,struct.pack("<I",0x02017000));both(0x03002DC0,bytes([12]))
+            both(0x02017000,rng.randbytes(12*104));both(resource,rng.randbytes(44))
+            both(task+0x30,struct.pack("<I",resource if case%3 else 0));both(task+0xA,bytes([case&31]))
+            both(0x03002170,b"\xFF");both(0x03001F50,bytes([case%8]))
+            for clip,name in ((True,"ScrollTaskRenderSlotsUp"),(False,"StepTaskRenderSlotsUp")):
+                equal(native("hn_task_render_scroll",2,C.c_bool)(memory,task,clip),True,"native task render scroll")
+                call(name,task);compare(name,ranges[:2])
+            equal(native("hn_task_render_disable",1,C.c_bool)(memory,task),True,"native task render disable")
+            call("DisableTaskRenderSlots",task);compare("task render disable",ranges[:2])
+            equal(native("hn_task_indicator",1,C.c_bool)(memory,task),True,"native task indicator")
+            call("InitializeTaskRenderSlot0",task);compare("task indicator",ranges[:2])
+            both(task,bytes([0x83 if case&1 else 3]));both(task+5,bytes([case%3]))
+            both(task+0x1E,struct.pack("<H",rng.randrange(65536)));both(0x03000645,b"\xFF")
+            equal(native("hn_task_row_transfer",1,C.c_bool)(memory,task),True,"native task row transfer")
+            call("QueueTaskTextRowTransfer",task);compare("task row transfer",ranges[:2])
+        measure=bind("hn_task_text_measure",C.c_bool,C.c_void_p,C.c_uint32,C.c_uint8,C.c_bool,C.POINTER(C.c_uint32))
+        result=C.c_uint32()
+        fresh();native("hn_task_contexts_init")(memory);call("InitializeTaskContexts")
+        for case in range(160):
+            both(0x03000646,bytes([case%3]));both(0x0200460B,bytes([case%5]));both(0x02004529,bytes([case%4]))
+            ordinary=bytes(rng.randrange(1,0xE0) for _ in range(case%16))
+            if case<32:program=ordinary+bytes([0xE0+case%5])
+            else:
+                opcode=(0xE6,0xE7,0xF0,0xF1,0xF6,0xF7,0xF8,0xFA,0xFB,0xFC,0xFD,0xFE)[case%12]
+                index=255 if case%7==0 else case%4
+                program=ordinary+bytes([opcode])+(bytes([index]) if opcode>=0xF0 else b"")+b"\xE1"
+            both(0x02010000,program+bytes(16))
+            for items in (True,False):
+                equal(measure(memory,0x02010000,case%3,items,C.byref(result)),True,"native task text measure")
+                expected=call("CountTaskTextItems",0x02010000,limit=2000000) if items else call("MeasureTaskTextWidth",0x02010000,case%3,limit=2000000)
+                equal(result.value,expected,f"task text measure {case}/{items}");compare("task text measure effects",ranges[:2])
+            both(0x02020000,rng.randbytes(52));both(0x02020001,bytes([1+case%32]))
+            both(0x02020004,bytes([(0,1,2,0x80,0x8C)[case%5]]));both(0x02020010,struct.pack("<I",0x02010000))
+            offset=(0,254,255,256,65535,65536)[case%6]
+            equal(native("hn_task_text_offset",2,C.c_bool)(memory,0x02020000,offset),True,"native task text offset")
+            call("SetTaskTextHorizontalOffset",0x02020000,offset,limit=2000000);compare("task text offset",ranges[:2])
+            both(0x02020003,bytes([255 if case&1 else 0]));both(0x0202001C,struct.pack("<H",case%4*100))
+            equal(native("hn_task_set_script",2,C.c_bool)(memory,0x02020000,0x02010000),True,"native task script")
+            call("SetTaskContextScript",0x02020000,0x02010000,limit=2000000);compare("task script/offset",ranges[:2])
+            equal(native("hn_task_text_adjust",2,C.c_uint32)(memory,0x02010000,case%4),call("CopyTaskTextAdjustedInitial",0x02010000,case%4),"adjusted text pointer")
+            compare("adjusted text buffer",ranges[:2])
+
+        for case in range(24):
+            fresh();heap_init(memory);call("InitializeHeap",0)
+            native("hn_task_contexts_init")(memory);call("InitializeTaskContexts")
+            both(0x03002E08,struct.pack("<I",0x02018000));both(0x03002C80,bytes([4]))
+            both(0x03003070,struct.pack("<I",0x02019000));both(0x03002E10,bytes([4]))
+            both(0x03002D98,struct.pack("<I",0x02017000));both(0x03002DC0,bytes([12]))
+            both(0x0200460B,bytes([case%5]));both(0x02021000,b"\x01\x02\x03\xE1"+bytes(32))
+            both(0x02022000,struct.pack("<5I",*([0x02021000]*5)))
+            both(0x03002BB0,struct.pack("<I",0x02022000))
+            slot=case%4
+            def main_task(opcode,name,payload):
+                both(0x02020000,payload)
+                equal(command(memory,opcode,0x02020000),1,f"native task Main {name}")
+                call(name,0x02020000,limit=2000000);compare(name,ranges)
+            main_task(0x38,"MainScriptSetTaskResourceIndex",bytes([slot,case%4]))
+            both(0x02018000+slot*80+0x38,b"\x01")
+            main_task(0x19,"MainScriptSetTaskContextEnabled",bytes([slot,1]))
+            both(0x02018000+slot*80+0x38,b"\0")
+            main_task(0x19,"MainScriptSetTaskContextEnabled",bytes([slot,1]))
+            main_task(0x54,"MainScriptSetTaskField5",bytes([slot,case]))
+            both(0x03000018,b"\0")
+            main_task(0x1A,"MainScriptConfigureTaskContextAndScript",bytes([slot])+struct.pack("<I",0))
+            main_task(0x1A,"MainScriptConfigureTaskContextAndScript",bytes([slot])+struct.pack("<I",0))
+            task=struct.unpack("<I",native_bytes(0x030005F0+slot*4,4))[0]
+            both(task,b"\x01")
+            main_task(0x1A,"MainScriptConfigureTaskContextAndScript",bytes([slot])+struct.pack("<I",0))
+            both(0x03000018,b"\0")
+            main_task(0x1B,"MainScriptSetTaskContextScript",bytes([slot])+struct.pack("<I",0))
+            both(task,b"\x01")
+            main_task(0x1B,"MainScriptSetTaskContextScript",bytes([slot])+struct.pack("<I",0))
+            both(0x03000018,b"\0")
+            main_task(0x19,"MainScriptSetTaskContextEnabled",bytes([slot,0]))
+            main_task(0x19,"MainScriptSetTaskContextEnabled",bytes([slot,0]))
+
+        task_command=bind("hn_probe_task_command",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        tasks_update=bind("hn_probe_tasks",C.c_int,C.c_void_p,C.c_uint32,C.POINTER(C.c_uint32))
+        report=(C.c_uint32*4)()
+        task,script,resource=0x02020000,0x02018000,0x02023000
+        def task_fixture(case, audio=False):
+            fresh();heap_init(memory);call("InitializeHeap",0)
+            if audio:
+                equal(native("hn_audio_driver_init",result=C.c_bool)(memory),True,"task acknowledgement audio")
+                call("InitializeAudioDriver",limit=2000000)
+            native("hn_input_initialize")(memory);call("InitializeKeys")
+            both(0x03002D98,struct.pack("<I",0x02017000));both(0x03002DC0,bytes([32]))
+            both(0x02017000,rng.randbytes(32*104))
+            both(0x03003070,struct.pack("<I",0x02019000));both(0x03002E10,bytes([8]))
+            both(0x02019000,rng.randbytes(8*44))
+            both(resource,rng.randbytes(44));both(resource+0x28,struct.pack("<I",0x02016000))
+            both(task,bytes(52));both(task+0x30,struct.pack("<I",resource if case%3 else 0))
+            both(0x0200C720,rng.randbytes(2048));both(0x02010000,rng.randbytes(512))
+            both(0x06008000,rng.randbytes(2048))
+            values=(task,(1,7,28,32)[case%4],(2,4,6,8)[case%4],case%13,(0,1,0x8C)[case%3],case%3,case%4,case%2*8,0x06008000,0x02010000)
+            equal(native("hn_task_graphics",10,C.c_bool)(memory,*values),True,"task fixture graphics")
+            call("InitializeTaskContextGraphics",*values,limit=2000000)
+            both(task,b"\x03");both(task+0x10,struct.pack("<I",script));both(task+0x2C,struct.pack("<I",0x03000610))
+            both(0x03000608,struct.pack("<I",task));both(0x03000645,bytes([case&1]))
+            both(0x0200460B,bytes([case%5]));both(0x03000646,bytes([case%3]))
+            both(0x03001F50,bytes([(16,17,31)[case%3]]));both(0x03002170,b"\xFF")
+
+        for case in range(48):
+            task_fixture(case)
+            both(task+7,bytes([case*5&255]));both(task+0x1E,struct.pack("<H",(0,1,2,7,255,65535)[case%6]))
+            for complete,name in ((False,"AdvanceTaskTextMapRows"),(True,"CompleteTaskTextMapScroll")):
+                equal(native("hn_task_scroll_map",2,C.c_bool)(memory,task,complete),True,"native task map scroll")
+                call(name,task,limit=2000000);compare(f"task map scroll {case}/{complete}",ranges)
+
+        for opcode in (*range(0xE0,0xF4),*range(0xF5,0x100)):
+            for variant in range(8):
+                case=(opcode-0xE0)*8+variant;keys=3 if variant&1 else 0
+                task_fixture(case,audio=bool(keys))
+                both(script,bytes([variant%4,0xE1])+bytes(16))
+                both(task+0x14,struct.pack("<I",script+8 if variant&2 else 0))
+                both(task+0x1E,struct.pack("<H",variant%4));both(task+8,bytes([variant%2]))
+                for index in range(5):both(0x02017000+(index+3)*104+0x60,bytes([int(index<variant%6)]))
+                both(0x02004520,bytes([variant*31&255])*64);both(0x0201DC40,struct.pack("<H",variant*9362)*16)
+                for index in range(16):both(0x03002BB0+index*4,struct.pack("<I",0x02024000))
+                both(0x02024000,struct.pack("<5I",*([script+8]*5)))
+                both(0x03001FB0,struct.pack("<H",keys));both(0x03001FAC,bytes([variant%32]))
+                target=0x02017000+(variant%32)*104
+                both(0x03001F7C,struct.pack("<I",struct.unpack("<I",native_bytes(target+4,4))[0] if variant&4 else 0))
+                equal(task_command(memory,task,opcode,report),1,f"native task command {opcode:02X}/{variant} report {tuple(report)}")
+                names=("TaskCommandCallSecondFlags","TaskCommandCallFirstFlags","TaskCommandSetFill3","TaskCommandSetFill2",
+                       "TaskCommandSetFill1","TaskCommandSetDelay0","TaskCommandSetDelay6","TaskCommandSetDelay2")
+                name=names[opcode-0xE6] if 0xE6<=opcode<=0xED else f"TaskCommand{opcode:02X}"
+                equal(report[3],call(name,task,limit=2000000),f"task command continuation {opcode:02X}/{variant}")
+                compare(f"task command {opcode:02X}/{variant}",ranges)
+
+        fresh()
+        for format_value in range(256):
+            for value in (0,9,10,99,100,9999,65535,rng.getrandbits(32)):
+                both(0x03000648,rng.randbytes(128))
+                native("hn_task_text_number",2)(memory,format_value,value)
+                call("FormatTaskNumericText",format_value,value)
+                compare(f"numeric task text {format_value}/{value}",ranges[:2])
+        for selected in range(3):
+            for variant in range(3):
+                for group in range(5):
+                    family=struct.unpack("<I",native_bytes(0x0858CFD4+group*4,4))[0]
+                    table=struct.unpack("<I",native_bytes(family+variant*4,4))[0]
+                    for index in range(8):
+                        bundle=native_bytes(table+index*4,4)
+                        if struct.unpack("<I",bundle)[0]==0x0858C6B0:break
+                        both(0x03000646,bytes([selected]));both(0x03002BB0,bundle)
+                        equal(native("hn_task_text_retarget",1,C.c_bool)(memory,0x03002BB0),True,"native task variant retarget")
+                        call("RetargetTaskTextBundle",0x03002BB0)
+                        compare("task text variant retarget",ranges[:2])
+
+        callbacks=[row for row in entries if row["source"]=="src/scripts/script_callbacks_slot16_presets.c"
+                   and row["name"]!="ScriptCallbackSetBackground2RightBottom1024"]
+        for callback in callbacks:
+            for variant in range(3):
+                task_fixture(variant)
+                both(script,b"\x07\xE1");both(0x03001FC0+7*4,struct.pack("<I",callback["address"]|1))
+                equal(task_command(memory,task,0xF4,report),1,f"native typed task callback {callback['name']}")
+                equal(report[3],call("TaskCommandF4",task,limit=2000000),"task callback continuation")
+                compare(f"typed task callback {callback['name']}/{variant}",ranges)
+
+        programs=(b"\x01\x02\x03\xE1",b"\x01\xE4\x02\xE4\x03\xE4\x04\xE1",
+                  b"\xE6\x01\xE7\xE1",b"\xFF\xF6\x00\xE1",b"\x5E\xF6\x01\xE1",
+                  b"\xEC\x01\x02\xED\x03\xEB\x04\xE1",b"\xE8\x01\xE9\x02\xEA\x03\xE1")
+        for case in range(56):
+            task_fixture(case)
+            both(script,programs[case%len(programs)]+bytes(16))
+            both(0x03001F70,b"\x01\x02\xE1"+bytes(6));both(0x03002BA0,b"\x03\x04\xE1"+bytes(6))
+            both(task+0xB,bytes([(0,1,4,8,12)[case%5]]))
+            for frame in range(32):
+                held=2 if case&1 and frame%4==0 else 0
+                equal(native("hn_input_update",1,C.c_bool)(memory,held),True,"task frame input")
+                both(0x04000130,struct.pack("<H",(~held)&1023));call("ReadKeys")
+                equal(tasks_update(memory,4096,report),1,f"native task update {case}/{frame} report {tuple(report)}")
+                call("UpdateTaskContexts",limit=4000000);compare(f"task update {case}/{frame}",ranges)
+
     def raster_checks():
         ranges = ((0x02000000,0x40000),(0x03000000,0x7000),(0x04000000,0x60),(0x040000B0,12))
         graphics_command = bind("hn_probe_graphics_command", C.c_int, C.c_void_p, C.c_uint32,
@@ -974,6 +1173,10 @@ def main() -> None:
                 compare(f"animation audio {case} {opcode}", audio_ranges)
 
     try:
+        if args.tasks_only:
+            task_checks()
+            print(f"{checks} private text-task comparisons passed; full gameplay remains unverified.")
+            return
         if args.actors_only:
             actor_checks()
             motion_checks()
@@ -1862,6 +2065,7 @@ def main() -> None:
         memory_copy = bind("hn_memory_copy", C.c_bool, C.c_void_p, C.c_uint32, C.c_uint32, C.c_size_t)
         mix_frame = bind("hn_probe_audio_mix", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
         actor_frames = bind("hn_probe_actor_frames", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
+        task_frames = bind("hn_probe_tasks", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
         video_render = bind("hn_video_render", None, C.c_void_p, C.c_void_p)
         if args.video_oracle:
             from compare_video import VideoOracle
@@ -1869,7 +2073,7 @@ def main() -> None:
         else:
             oracle_context = nullcontext(None)
         video_frames, nonuniform, active_graphics_iterations, hblank_calls = 0, 0, 0, 0
-        input_iterations=4917
+        input_iterations=7296
         with oracle_context as video_oracle:
             for index in range(180+input_iterations):
                 if index == 180:
@@ -1877,7 +2081,7 @@ def main() -> None:
                     prepare_core(True)
                     active_graphics_iterations = 0
                 # Original input state/repeat adapter, still a component schedule
-                # without the complete task loop or real IRQ instruction cadence.
+                # without live motion, CPU queue flushing or real IRQ cadence.
                 relative=index-180
                 keys=0
                 if index>=180:
@@ -1894,6 +2098,8 @@ def main() -> None:
                 call("RunMainScriptFrame")
                 equal(actor_frames(memory,4096,report3),1,f"coupled native actor scripts {index}: {list(report3)}")
                 call("RunActorScriptFrames",limit=2000000)
+                equal(task_frames(memory,4096,report3),1,f"coupled native text tasks {index}: {list(report3)}")
+                call("UpdateTaskContexts",limit=4000000)
                 equal(background(memory, 4096, report3), 1, f"coupled native background {index}: {list(report3)}")
                 call("UpdateBackgroundStates", limit=1000000)
                 equal(render(memory, 4096, 1, report3), 1, f"coupled native render {index}")
@@ -1932,7 +2138,7 @@ def main() -> None:
                     expected_mode,expected_choice={1240:(1,0),1900:(0,1),2020:(0,2)}[relative]
                     equal(native_bytes(0x020046C2,1)[0],expected_mode,f"name scenario mode {relative}")
                     equal(native_bytes(0x020046C1,1)[0],expected_choice,f"name scenario selection {relative}")
-                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179, 580, 780, 980, 1420, 1880, 2200, 2600, 3000, 3166, 3500, 4300, 5096):
+                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179, 580, 780, 980, 1420, 1880, 2200, 2600, 3000, 3166, 3500, 4300, 5096, 5800, 6180, 6780, 7475):
                     pixels = (C.c_uint32 * (240 * 160))()
                     video_render(memory, pixels)
                     parts = [native_bytes(address, size) for address, size in
@@ -1950,6 +2156,7 @@ def main() -> None:
         counter_checks()
         actor_checks()
         motion_checks()
+        task_checks()
         raster_checks()
     finally:
         destroy(memory)

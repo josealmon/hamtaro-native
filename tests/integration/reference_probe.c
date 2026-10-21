@@ -7,6 +7,7 @@
 #include "game/graphics.h"
 #include "game/audio.h"
 #include "game/actor.h"
+#include "game/task.h"
 #include <stdlib.h>
 #include <string.h>
 /* Optional private oracle bridge. Never installed or shipped with the app. */
@@ -56,6 +57,16 @@ int hn_probe_actor_frames(HNMemory *m,unsigned budget,uint32_t report[3])
 {
     HNScript script;hn_script_init(&script,m,NULL,0);bool ok=hn_actor_frames(&script,budget);
     report[0]=script.fault;report[1]=script.fault_opcode;report[2]=script.fault_address;return ok;
+}
+int hn_probe_tasks(HNMemory *m,unsigned budget,uint32_t report[3])
+{
+    HNTasks tasks;hn_tasks_init(&tasks,m);bool ok=hn_tasks_update(&tasks,budget);
+    report[0]=tasks.fault;report[1]=tasks.fault_opcode;report[2]=tasks.fault_address;return ok;
+}
+int hn_probe_task_command(HNMemory *m,GameAddr task,unsigned opcode,uint32_t report[4])
+{
+    HNTasks tasks;hn_tasks_init(&tasks,m);uint32_t keep_going=0;bool ok=hn_task_command(&tasks,task,opcode,&keep_going);
+    report[0]=tasks.fault;report[1]=tasks.fault_opcode;report[2]=tasks.fault_address;report[3]=keep_going;return ok;
 }
 int hn_probe_animation(HNMemory *m,GameAddr slot,unsigned op,GameAddr cursor_field,uint32_t report[4])
 {

@@ -80,7 +80,7 @@ bool hn_background_configure(HNMemory *m,uint8_t slot,uint8_t mask,GameAddr scri
     if(slot>=hn_read8(m,HN_BACKGROUND_COUNT))return false;
     if(mask&128)mask&=127;else hn_background_layers_reset(m,mask);
     GameAddr state=hn_read32(m,HN_RENDER_STATES)+slot*80;
-    for(unsigned i=0;i<20;i++)hn_write32(m,state+i*4,0);
+    if(!hn_transfer_fill_words(m,state,0,20))return false;
     hn_write8(m,state+0x38,mask);hn_write32(m,state+0x14,script);return !m->fault;
 }
 static void dma_halfwords(HNMemory *m,GameAddr source,GameAddr destination,uint32_t halfwords)

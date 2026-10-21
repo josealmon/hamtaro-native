@@ -13,6 +13,7 @@
 #include "game/render.h"
 #include "game/actor.h"
 #include "game/motion.h"
+#include "game/task.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -566,9 +567,86 @@ static void save_contract(void)
     CHECK(!hn_save_load_group(&memory,5));CHECK(!hn_save_consume(&memory,5,0x02000000));
     CHECK(!memory.fault);
 }
+static void task_contract(void)
+{
+    /* Generated font and metadata: these tests need no game dump. */
+    uint8_t *rom=calloc(1,0x900000);CHECK(rom!=NULL);
+    memset(rom+HN_TEXT_GLYPHS-HN_ROM_BASE,0x55,64);
+    memset(rom+HN_TEXT_GLYPHS-HN_ROM_BASE+64,0xAA,64);
+    rom[HN_TEXT_ADVANCES-HN_ROM_BASE]=3;rom[HN_TEXT_ADVANCES-HN_ROM_BASE+1]=5;
+    hn_memory_init(&memory,rom,0x900000);hn_heap_init(&memory);hn_task_contexts_init(&memory);
+    GameAddr a=hn_task_allocate(&memory),b=hn_task_allocate(&memory),c=hn_task_allocate(&memory);
+    CHECK(a&&b&&c&&a!=b&&b!=c);CHECK(hn_read32(&memory,HN_TASK_HEAD)==a);
+    CHECK(hn_read32(&memory,b+0x28)==a+0x2C);CHECK(hn_task_remove(&memory,b));
+    CHECK(hn_read32(&memory,a+0x2C)==c&&hn_read32(&memory,c+0x28)==a+0x2C);
+    CHECK(hn_task_remove(&memory,a));CHECK(hn_read32(&memory,HN_TASK_HEAD)==c);
+    CHECK(hn_task_remove(&memory,c));CHECK(hn_read32(&memory,HN_TASK_HEAD)==HN_TASK_SENTINEL);
+    CHECK(!hn_task_remove(&memory,c));CHECK(!hn_task_remove(&memory,HN_TASK_SENTINEL));
+    a=hn_task_allocate(&memory);CHECK(a!=0);
+    const GameAddr script=0x02010000,shadow=0x0200C720,map=0x02011000;
+    hn_write32(&memory,0x03007C00,0x12345678);
+    hn_write16(&memory,map,0xAC00);hn_write16(&memory,map+64,0xBC00);
+    CHECK(hn_task_graphics(&memory,a,258,258,256,0,2,1,256,0x06008000,map));
+    CHECK(hn_read8(&memory,a+1)==2&&hn_read8(&memory,a+2)==2);
+    CHECK(hn_read32(&memory,0x03007C00)==0x12345678);
+    CHECK(hn_read32(&memory,shadow)==0x44444444);
+    CHECK(hn_read16(&memory,map)==0xAC00);
+    CHECK(hn_read16(&memory,map+64)==0xBC02);
+    CHECK(hn_read32(&memory,0x040000D8)==0x06008000);
+    CHECK(!hn_task_graphics(&memory,a,0,2,0,0,0,0,0,0x06008000,map));
+    hn_write8(&memory,script,1);hn_write8(&memory,script+1,2);hn_write8(&memory,script+2,0xE1);
+    hn_write32(&memory,HN_RENDER_SLOTS,0x02014000);hn_write8(&memory,HN_RENDER_INFO+0x10,32);
+    b=hn_task_allocate(&memory);CHECK(b!=0);
+    CHECK(hn_task_graphics(&memory,b,2,2,0,0,0,1,0,0x06008800,map+512));
+    hn_write8(&memory,script+64,2);hn_write8(&memory,script+65,0xE1);
+    CHECK(hn_task_set_script(&memory,b,script+64));
+    CHECK(hn_task_set_script(&memory,a,script));HNTasks tasks;hn_tasks_init(&tasks,&memory);
+    hn_input_initialize(&memory);CHECK(hn_tasks_update(&tasks,32));
+    CHECK(hn_read8(&memory,b)==1&&hn_read16(&memory,b+0x1C)==5);
+    CHECK(text_pixel(hn_read32(&memory,b+0x18),2,0,0)==6);
+    CHECK(hn_read8(&memory,a)==4&&hn_read8(&memory,a+6)==2);
+    CHECK(hn_read16(&memory,a+0x1C)==3&&hn_read32(&memory,a+0x10)==script+1);
+    CHECK(text_pixel(shadow,2,0,0)==5&&text_pixel(shadow,2,0,15)==5);
+    CHECK(hn_tasks_update(&tasks,32));CHECK(hn_read8(&memory,a+6)==1);
+    CHECK(hn_tasks_update(&tasks,32));CHECK(hn_read8(&memory,a)==3);
+    CHECK(hn_tasks_update(&tasks,32));CHECK(hn_read16(&memory,a+0x1C)==8);
+    CHECK(hn_input_update(&memory,2));CHECK(hn_tasks_update(&tasks,32));
+    CHECK(hn_read8(&memory,a)==1&&hn_read32(&memory,a+0x10)==script+2);
+    CHECK(!hn_read8(&memory,HN_TASK_DIRTY));
+    /* Return to a caller after an automatically terminated name substitution. */
+    hn_write8(&memory,HN_TEXT_FIRST,1);hn_write8(&memory,HN_TEXT_FIRST+1,0);
+    hn_write8(&memory,script,0xE7);hn_write8(&memory,script+1,2);hn_write8(&memory,a+5,0);
+    hn_write16(&memory,a+0x1C,0);CHECK(hn_task_set_script(&memory,a,script));
+    CHECK(hn_tasks_update(&tasks,32));CHECK(hn_read8(&memory,a)==1);
+    CHECK(hn_read16(&memory,a+0x1C)==8&&hn_read32(&memory,a+0x14)==0);
+    /* A scrolling window keeps palette attributes and wraps tile rows. */
+    hn_write8(&memory,a+2,4);hn_write16(&memory,a+0x1E,3);hn_write8(&memory,a+7,2);
+    for(unsigned row=0;row<4;row++)for(unsigned col=0;col<2;col++)hn_write16(&memory,map+row*64+col*2,(uint16_t)(0xA800+row*2+col));
+    CHECK(hn_task_scroll_map(&memory,a,false));CHECK(hn_read16(&memory,map)==0xA802);
+    CHECK(hn_read16(&memory,map+192)==0xA805&&hn_read8(&memory,HN_TASK_GATE)==1);
+    CHECK(hn_read32(&memory,0x06008080)==0x88888888);
+    CHECK(hn_task_scroll_map(&memory,a,true));CHECK(hn_read16(&memory,map+192)==0xA807);
+    CHECK(hn_read8(&memory,a)==3&&hn_read8(&memory,HN_TASK_GATE)==0);
+    hn_task_text_number(&memory,0,65535);CHECK(hn_read8(&memory,0x03000648)==8&&hn_read8(&memory,0x0300064C)==7);
+    hn_task_text_number(&memory,0x84,12);CHECK(hn_read32(&memory,0x03000648)==0x04030101);
+    hn_task_text_number(&memory,2,1234);CHECK(hn_read16(&memory,0x03000648)==0x0605);
+    /* Unknown callbacks and recursive text stop explicitly instead of executing guest words. */
+    hn_write32(&memory,a+0x10,script);hn_write8(&memory,script,7);hn_write32(&memory,0x03001FC0+28,0x08001235);
+    uint32_t keep=0;hn_tasks_init(&tasks,&memory);CHECK(!hn_task_command(&tasks,a,0xF4,&keep));
+    CHECK(tasks.fault==HN_TASK_CALLBACK&&tasks.fault_address==0x08001235);
+    hn_write8(&memory,script,0xF9);hn_write8(&memory,script+1,0);hn_write32(&memory,0x03002BB0,script+32);
+    hn_write32(&memory,script+32,script);hn_write8(&memory,HN_TASK_VARIANT,0);
+    hn_write8(&memory,a,3);hn_write32(&memory,a+0x10,script);hn_tasks_init(&tasks,&memory);
+    CHECK(!hn_tasks_update(&tasks,8)&&tasks.fault==HN_TASK_BUDGET);
+    hn_write8(&memory,a,1);hn_write32(&memory,a+0x2C,a);hn_tasks_init(&tasks,&memory);
+    CHECK(!hn_tasks_update(&tasks,8)&&tasks.fault==HN_TASK_RESOURCE);
+    CHECK(!memory.fault);hn_write32(&memory,HN_TASK_HEAD,0xDEADBEEF);hn_tasks_init(&tasks,&memory);
+    CHECK(!hn_tasks_update(&tasks,8)&&tasks.fault==HN_TASK_MEMORY&&tasks.fault_address==0xDEADBEEF);
+    free(rom);reset();
+}
 int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
-    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();
+    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();
     printf("%u native game subsystem checks passed.\n",checks);return 0;
 }
