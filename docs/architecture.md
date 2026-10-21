@@ -34,9 +34,9 @@ PCM to the output device's format.
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division semantics and modeled ObjAffine; hardware matrix rounding remains unverified |
-| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; seven private ROM snapshots compared; raster timing still pending |
+| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; ten private ROM snapshots compared; raster timing still pending |
 | Video timing and IRQ | Foundation | Scanline/VBlank/HBlank, four timers, cascades, IRQ flags and FIFO DMA tested independently; real game IRQ cadence and DMA bus contention remain pending |
-| Native game helpers | Foundation | Button transitions/repeat and integer PRNG |
+| Native game helpers | Adapted | Original guest input layout, directions/repeat/query semantics and integer PRNG/ranges compared; host-to-game loop connection remains pending |
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |
 | Video state and transfer queues | Adapted | Original video shadows, mosaic/blend/fade updates, DMA queue wrap/fill/flush; private function comparisons |
 | Map and core initialization | Adapted | Runtime tables read from ROM, task sentinel, render slots/order, background state and all 11 map banks tested at index 0 |
@@ -45,8 +45,9 @@ PCM to the output device's format.
 | Graphics scripts and palette effects | Partial | 37 of 48 handlers compared: palette interpolation, delay/call/repeat flow, blend/fade, mosaic and windows; 11 raster-effect handlers remain unsupported |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
-| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, fades and typed callbacks; unsupported opcodes fail explicitly |
-| Native boot/title | Pending | 88 Main-only, 180 idle and 369 input-injected script/render/audio iterations compared; scene-menu callbacks, task/actor updates, real IRQ cadence and hardware audio output remain incomplete |
+| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
+| Scene menus | Partial | Menu/record selection, cursor setup, language snapshots, input dialogs and save-record selection compared; scene text/name rendering and other scene callbacks remain incomplete |
+| Native boot/title | Pending | 88 Main-only, 180 idle and 918 input-driven script/render/audio iterations compared; scene text, task/actor updates, real IRQ cadence and hardware audio output remain incomplete |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
 | Music and effects | Partial | Sequencer, original PCM mixer, PSG register service, four native PSG generators, script controls and Direct Sound/PWM tested as components; final game output, filtering, trigger quirks and host delivery remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
@@ -84,19 +85,31 @@ by these functions; it does not provide a complete machine/timing oracle.
 Heap layouts, input, PRNG, expressions, video, transfers, object/background
 rendering, maps, core initialization and save operations are compared. Synthetic
 fixtures exercise resource commands without embedding a game resource. Tests
-also run 88 Main-only iterations, 180 idle iterations and a separate 369-iteration
-schedule with injected A-button registers. Those schedules call Main, background,
+also run 88 Main-only iterations, 180 idle iterations and a separate 918-iteration
+schedule with scripted A-button input through the original guest input adapter.
+Those schedules call Main, background,
 object, graphics and mosaic updates, OAM transfer, video commit, DMA flush and
 audio service. They initialize the audio driver and synchronize its VBlank counter.
-Graphics slots are inactive in both ROM schedules; their implementation evidence
-comes from separate command comparisons and synthetic update-loop tests. Seven
-idle-schedule static PPU snapshots match a separate mGBA renderer; five contain
-multiple colors. These schedules omit task/actor systems, CPU-transfer flushing,
-the complete IRQ/input cadence and hardware audio output. Transient DMA3 register
+Graphics slots are active in two iterations of the input schedule; command
+comparisons and synthetic updates cover the remaining implemented behavior. Ten
+static PPU snapshots across the schedules match a separate mGBA renderer; eight
+contain multiple colors. These schedules omit task/actor systems, CPU-transfer
+flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
 sound DMA1/2 register images are compared. These are not a verified native boot,
 title screen or playthrough.
-The source checkout's docs/testing.md records the command and current check count.
+See docs/testing.md in this repository for the commands and current check count.
+
+Scene callbacks use typed native dispatch with explicit resource failures. They
+read menu banks, option codes, background scripts and animations from the private
+ROM. The reusable render-slot adapter preserves halfword coordinate truncation,
+priority flags and the class-slot boot gate. Menu movement retains original
+boundaries and sound triggers; guest input preserves direction caching, repeat
+delays, held-frame wrapping and key-mask side effects. Random save-record selection
+uses the original guest PRNG/range calculation with a bounded retry guard for
+degenerate state. No menu strings, glyphs or background data are embedded.
+The current component schedule stops at ScriptCallbackResetBothSceneTexts; name
+text preparation, glyph blitting and later task/actor integration are still required.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
 in their original 32-bit memory views. Callback bindings accept a specific typed

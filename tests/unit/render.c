@@ -25,6 +25,18 @@ static void reset(void)
     hn_render_reset(&memory);
     for(unsigned i=0;i<32;i++)hn_write8(&memory,HN_AFFINE_USAGE+i,255);
 }
+static void configuration(void)
+{
+    reset();hn_write8(&memory,0x03001F50,3);hn_write8(&memory,0x03002170,1);hn_write8(&memory,0x03002182,0x85);
+    CHECK(hn_render_configure(&memory,3,1,0x70,-1,0x18000,0x10000,0x02020000));
+    GameAddr slot=hn_render_slot(&memory,3);CHECK(hn_read32(&memory,slot+4)==0x02020000);
+    CHECK(hn_read32(&memory,slot+0x18)==0xFFFF8000&&hn_read32(&memory,slot+0x1C)==0x80008000);
+    CHECK(hn_read32(&memory,slot+0x20)==0x8000&&hn_read8(&memory,slot+0x61)==0x68);
+    CHECK(hn_read8(&memory,slot+0x60)==1&&hn_read8(&memory,slot+0x62)==0x70);
+    CHECK(hn_read8(&memory,0x03002170)==0&&hn_read8(&memory,0x03002182)==5);
+    CHECK(!hn_render_configure(&memory,16,1,0,0,0,0,0));CHECK(!memory.fault);
+    CHECK(hn_render_configure(&memory,3,0,0x80,1,2,3,0));CHECK(hn_read32(&memory,slot+4)==0);
+}
 static void matrices(void)
 {
     int16_t out[4];hn_bios_obj_matrix(256,512,0,out);
@@ -271,6 +283,6 @@ int main(void)
         int16_t sine=(int16_t)lround(sin(i*3.14159265358979323846/128)*256);
         unsigned p=HN_RENDER_SINE_TABLE-HN_ROM_BASE+i*2;rom[p]=(uint8_t)sine;rom[p+1]=(uint8_t)(sine>>8);
     }
-    matrices();animations();callbacks_and_motion();drawing();pixel_contracts();backgrounds();
+    configuration();matrices();animations();callbacks_and_motion();drawing();pixel_contracts();backgrounds();
     free(rom);printf("%u native renderer checks passed.\n",checks);return 0;
 }

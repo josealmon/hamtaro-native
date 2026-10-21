@@ -38,6 +38,18 @@ void hn_render_flags(HNMemory *m,uint32_t index,uint8_t mask,uint8_t value)
     GameAddr p=hn_render_slot(m,index)+0x61;
     hn_write8(m,p,(uint8_t)((hn_read8(m,p)&~mask)|value));
 }
+bool hn_render_configure(HNMemory *m,uint8_t index,uint8_t field60,uint8_t field62,
+                         int32_t x,int32_t y,int32_t z,GameAddr animation)
+{
+    if(index>=hn_read8(m,HN_RENDER_INFO+0x10)||!hn_read32(m,HN_RENDER_SLOTS))return false;
+    if(index==hn_read8(m,0x03001F50))hn_write8(m,0x03002170,0);
+    hn_render_slot_reset(m,index);GameAddr slot=hn_render_slot(m,index);
+    hn_write8(m,slot+0x60,field60);hn_write8(m,slot+0x62,field62);hn_render_flags(m,index,12,8);
+    hn_write32(m,slot+0x18,((uint32_t)(uint16_t)x<<16)+0x8000);
+    hn_write32(m,slot+0x1C,((uint32_t)(uint16_t)y<<16)+0x8000);
+    hn_write32(m,slot+0x20,((uint32_t)(uint16_t)z<<16)+0x8000);
+    hn_render_set_animation(m,index,animation);return !m->fault;
+}
 void hn_render_physics(HNMemory *m,GameAddr slot)
 {
     for(unsigned i=0;i<3;i++){

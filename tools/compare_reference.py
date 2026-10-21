@@ -39,6 +39,7 @@ def main() -> None:
     parser.add_argument("--video-oracle", type=Path, help="Optional separate RGB555 mGBA PPU oracle")
     parser.add_argument("--oracle-runtime-dir", type=Path, help="Optional runtime DLL directory for the PPU oracle")
     parser.add_argument("--audio-only", action="store_true", help="Run just the audio function comparisons")
+    parser.add_argument("--scenes-only", action="store_true", help="Run just the scene-menu/input function comparisons")
     args = parser.parse_args()
     spec = json.loads((ROOT / "config/rom.json").read_text())
     rom = args.rom.read_bytes()
@@ -264,6 +265,109 @@ def main() -> None:
 
     def native(name: str, arguments=0, result=None):
         return bind(name, result, C.c_void_p, *([C.c_uint32] * arguments))
+
+    def scene_checks():
+        fresh()
+        both(0x03000820, rng.randbytes(26))
+        native("hn_input_initialize")(memory);call("InitializeKeys")
+        compare("guest input initialization", ((0x03000820, 26),))
+        held = [0x91]*110+[0]*12+[rng.randrange(1024) for _ in range(134)]
+        for case, buttons in enumerate(held):
+            if case == 100:
+                both(0x03000832, b"\xFF\xFF")
+            if case == 150:
+                native("hn_input_repeat", 2)(memory, 16, 8);call("SetKeyRepeatDelays", 16, 8)
+            both(0x04000130, struct.pack("<H", (~buttons)&1023))
+            equal(native("hn_input_update", 1, C.c_bool)(memory, buttons), True, f"guest input {case}")
+            call("ReadKeys");compare(f"input cache {case}", ((0x03000820, 26), (0x04000130, 2)))
+            for mode in range(4):
+                mask = rng.randrange(65536)
+                equal(native("hn_input_query", 2, C.c_uint16)(memory, mask, mode), call("QueryKeys", mask, mode),
+                      f"key query {case}/{mode}")
+        both(0x03000000, struct.pack("<3I", 0x3AC2, 0x4DF3, 24))
+        for case in range(128):
+            lower, upper = ((0, 6), (0, 0), (5, 2), (65535, 65535), (0, 65535), (32768, 65535))[case%6]
+            equal(native("hn_random_range", 2, C.c_uint16)(memory, lower, upper), call("RandomRange", lower, upper),
+                  f"guest random range {case}")
+            compare("guest random seeds", ((0x03000000, 12),))
+        equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, "scene audio init")
+        call("InitializeAudioDriver", limit=2000000)
+        both(0x03002D98, struct.pack("<I", 0x02010000))
+        both(0x03002E08, struct.pack("<I", 0x02018000))
+        both(0x03002DC0, bytes([32]))
+        both(0x03002C80, bytes([9]))
+        both(0x02010000, rng.randbytes(32*104))
+        both(0x02018000, rng.randbytes(9*80))
+        both(0x03001F50, bytes([27]))
+        both(0x03000000, struct.pack("<3I", 0x3AC2, 0x4DF3, 24))
+        ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x03007FF0, 4), (0x04000060, 0x74), (0x04000100, 4))
+        def invoke(name, payload=b""):
+            both(0x02030000, struct.pack("<I", symbols[name] | 1) + payload + bytes(8))
+            equal(command(memory, 0x1C, 0x02030000), 1, f"native scene {name}")
+            call("MainScriptInvokeCallback", 0x02030000, limit=2000000)
+            compare(name, ranges)
+        configure = native("hn_render_configure", 7, C.c_bool)
+        for case in range(60):
+            index = case % 32
+            x, y, z = (rng.getrandbits(32) for _ in range(3))
+            values = (index, rng.randrange(256), rng.randrange(256), x, y, z, 0x02031000)
+            both(0x03002170, b"\xFF")
+            both(0x03002182, bytes([rng.randrange(256)]))
+            equal(configure(memory, *values), True, f"configure word-choice slot {case}")
+            call("ConfigureWordChoiceRenderSlot", *values)
+            compare(f"word-choice render {case}", ranges[:2])
+        for selected in range(5):
+            for mode in range(2):
+                both(0x0200453E, bytes([selected]));both(0x0200460C, bytes([mode]))
+                invoke("ScriptCallbackRenderSceneRecordMenu")
+                invoke("ScriptCallbackShowSceneRecordMenuOption")
+                for keys in (0, 0x40, 0x80, 0xC0):
+                    both(0x0200453E, bytes([selected]));both(0x03000822, struct.pack("<H", keys))
+                    invoke("ScriptCallbackMoveSceneRecordMenu")
+        for enabled in (15, 3, 5, 1):
+            for language in range(5):
+                for selected in range(6):
+                    both(0x0200453B, bytes([enabled]));both(0x0200460B, bytes([language]))
+                    both(0x02004539, bytes([selected]))
+                    invoke("ScriptCallbackRefreshSceneMenu")
+                    invoke("ScriptCallbackShowSceneMenuOption")
+                    invoke("ScriptCallbackReadSceneMenuSelection")
+                    for keys in (0x40, 0x80, 0xC0):
+                        both(0x02004539, bytes([selected]));both(0x03000822, struct.pack("<H", keys))
+                        invoke("ScriptCallbackMoveSceneMenu")
+        for case in range(32):
+            both(0x03002180, rng.randbytes(64))
+            both(0x02004539, bytes([0 if case & 1 else 3]));both(0x0200460B, bytes([case % 5]))
+            invoke("ScriptCallbackInitializeSceneMenu")
+            invoke("ScriptCallbackSaveSceneRecordLanguage")
+            both(0x0200460B, rng.randbytes(2));invoke("ScriptCallbackRestoreSceneRecordLanguage")
+            invoke("ScriptCallbackSetSceneRecordKeyRepeat")
+            both(0x0200453F, bytes([255 if case % 3 == 0 else case]))
+            both(0x03004ED4, struct.pack("<I", 0x80000000 if case & 1 else 0))
+            invoke("ScriptCallbackPollSceneMenuAudio")
+            both(0x0200453D, bytes([case % 5]));both(0x0200460B, bytes([case % 8]))
+            invoke("ScriptCallbackSetSceneMenuStatusBackground")
+            both(0x03003730, bytes(96))
+            for i in range(6):
+                if case & 1 << i:
+                    both(0x03003730+i*16, bytes([i+1]))
+            invoke("ScriptCallbackChooseSceneSaveRecord")
+        for case in range(256):
+            both(0x03000820, rng.randbytes(8));both(0x03001F64, struct.pack("<H", rng.randrange(1024)))
+            both(0x03002180, rng.randbytes(2));both(0x020046C1, bytes([case]))
+            for name in ("ScriptCallbackReadPressedKeyMask", "ScriptCallbackReadRepeatKeyMask",
+                         "ScriptCallbackReadDirectionalHeldAndPressedKeyMask", "ScriptCallbackReadSceneRecordDialogInput"):
+                invoke(name)
+        for case in range(48):
+            payload = struct.pack("<B3H", case & 1, case % 32, case % 7, case % 13)
+            both(0x02030000, payload)
+            equal(command(memory, 0x50, 0x02030000), 1, f"native random script {case}")
+            call("MainScriptStoreRandomRange", 0x02030000);compare("random script", ranges)
+            both(0x02030000, struct.pack("<H", rng.randrange(65536)))
+            equal(command(memory, 0x5B, 0x02030000), 1, "native choice flags")
+            call("MainScriptSetWordChoiceOptionFlags", 0x02030000);compare("choice flags", ranges)
+        equal(command(memory, 0x5A, 0x02030000), 1, "native script core reset")
+        call("MainScriptResetCoreState", 0x02030000);compare("script core reset", ranges)
 
     def audio_checks():
         audio_ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x03007FF0, 4),
@@ -572,6 +676,10 @@ def main() -> None:
             audio_checks()
             print(f"{checks} private audio comparisons passed; hardware output and gameplay remain unverified.")
             return
+        if args.scenes_only:
+            scene_checks()
+            print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
+            return
         heap_init(memory)
         call("InitializeHeap", 0)
         active = []
@@ -599,13 +707,16 @@ def main() -> None:
             equal(tuple(native_random.seed), struct.unpack("<III", bytes(cpu.mem_read(0x03000000, 12))), f"random state {i}")
         keys = Keys()
         keys_init(C.byref(keys))
-        cpu.mem_write(0x03000820, bytes(26))
+        both(0x03000820, bytes(26))
+        native("hn_input_initialize")(memory)
         call("InitializeKeys")
         sequence = [1] * 180 + [0] * 20 + [0x50] * 100 + [rng.randrange(1024) for _ in range(200)]
         for i, buttons in enumerate(sequence):
             keys_step(C.byref(keys), buttons)
             cpu.mem_write(0x04000130, struct.pack("<H", (~buttons) & 1023))
             call("ReadKeys")
+            equal(native("hn_input_update", 1, C.c_bool)(memory, buttons), True, f"guest input success {i}")
+            compare(f"guest input layout {i}", ((0x03000820, 26), (0x04000130, 2)))
             original = struct.unpack("<12H", bytes(cpu.mem_read(0x03000820, 24)))
             equal((keys.held, keys.pressed, keys.repeat, keys.released,
                    keys.first_delay, keys.next_delay, keys.counter, keys.held_frames),
@@ -1019,6 +1130,7 @@ def main() -> None:
             if with_audio:
                 equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, "coupled audio initialization")
                 call("InitializeAudioDriver", limit=2000000)
+            native("hn_input_initialize")(memory);call("InitializeKeys")
             native("hn_mosaic_init")(memory)
             call("InitializeMosaic")
             native("hn_task_contexts_init")(memory)
@@ -1447,15 +1559,17 @@ def main() -> None:
             oracle_context = nullcontext(None)
         video_frames, nonuniform, active_graphics_iterations = 0, 0, 0
         with oracle_context as video_oracle:
-            for index in range(549):
+            for index in range(1098):
                 if index == 180:
                     print(f"180 idle script/render iterations matched; graphics scripts active in {active_graphics_iterations}.")
                     prepare_core(True)
                     active_graphics_iterations = 0
-                if index >= 180:
-                    # Direct register injection is a script probe, not the complete input/task loop.
-                    keys = 1 if (index - 180) % 120 == 100 else 0
-                    both(0x03000820, struct.pack("<HH", keys, keys))
+                # Original input state/repeat adapter, still a component schedule
+                # without the complete task loop or real IRQ instruction cadence.
+                keys = 1 if index>=180 and (index-180)%120==100 else 0
+                both(0x04000130, struct.pack("<H", (~keys)&1023))
+                equal(native("hn_input_update", 1, C.c_bool)(memory, keys), True, f"coupled input {index}")
+                call("ReadKeys")
                 native("hn_audio_dma_vblank")(memory)
                 call("SyncAudioDmaAtVblankAsm")
                 equal(frame(memory, 4096, report), 1, f"coupled Main {index}")
@@ -1486,7 +1600,7 @@ def main() -> None:
                 compare(f"coupled Main/background/render/graphics {index}", save_ranges + ((0x05000000, 0x400),
                     (0x06000000, 0x18000), (0x07000000, 0x400), (0x04000000, 0x58),
                     (0x03007FF0, 4), (0x04000060, 0x74), (0x04000100, 4)))
-                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179):
+                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179, 580, 780, 980):
                     pixels = (C.c_uint32 * (240 * 160))()
                     video_render(memory, pixels)
                     parts = [native_bytes(address, size) for address, size in
@@ -1496,8 +1610,9 @@ def main() -> None:
                     nonuniform += len(set(pixels)) > 1
         if args.video_oracle:
             print(f"{video_frames} private ROM PPU snapshots matched; {nonuniform} contained multiple colors.")
-        print(f"369 input-injected script/render/audio iterations matched; graphics scripts active in {active_graphics_iterations}.")
+        print(f"918 input-driven script/render/audio iterations matched; graphics scripts active in {active_graphics_iterations}.")
         audio_checks()
+        scene_checks()
     finally:
         destroy(memory)
     print(f"{checks} private native/reference checks passed (heap, input, scripts, expressions, rendering, maps, saves, audio).")

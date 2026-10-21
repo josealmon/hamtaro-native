@@ -7,10 +7,12 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   original button transitions/repeat, PRNG arithmetic, heap and Main script control.
 - game: repeated DMA working addresses, byte register writes, transfer queue wrap,
   video shadows, synthetic ROM map changes, preserved render fields, expression
-  cursor/recursion boundaries and SRAM checksum/backup recovery.
+  cursor/recursion boundaries, SRAM checksum/backup recovery, guest input caching
+  and repeat, menu/dialog boundaries and explicit missing-resource failures.
 - render: animation repeat/call/delay flow, typed callback guards, physics,
   affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
-  PPU regressions for tile mapping, transparency, mosaic/window phase and effects.
+  PPU regressions for tile mapping, transparency, mosaic/window phase and effects;
+  word-choice slot setup, coordinate truncation, class gates and priority flags.
 - graphics: palette interpolation/source wrapping, scripted repeat/call/delay
   flow, alpha/mosaic transitions, compressed palette frames, paused states and
   explicit faults for cyclic or unsupported commands.
@@ -56,15 +58,15 @@ and drawing, all 61 background handlers, 37 graphics handlers, palette transitio
 map/core initialization and SRAM initialization/repair/read/write behavior. It also
 compares Main save-load commands with successful and failed records. The ROM
 schedules cover 88 Main-only iterations, 180 coupled idle iterations and a separate
-369 iterations with directly injected A-button registers. The latter schedules call
+918 iterations using the guest input adapter and matching ReadKeys calls. The latter schedules call
 background/object/graphics/mosaic updates, video transfers and audio service with
-driver initialization and VBlank-counter synchronization. Graphics slots
-are inactive during those ROM schedules; synthetic per-command/update tests provide
-the graphics evidence. Task/actor updates, CPU-transfer flushing, real input/IRQ
+driver initialization and VBlank-counter synchronization. Graphics slots are active
+in two input-schedule iterations; synthetic per-command/update tests provide the
+remaining graphics evidence. Task/actor updates, CPU-transfer flushing, real IRQ
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. Without the PPU oracle, this checkpoint passes 117,557 comparisons.
+GBA machine. The complete run with the optional PPU oracle passes 144,478 comparisons.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 
 The audio part can be run independently with the same private ROM and reference:
@@ -99,8 +101,19 @@ architecture.md; this is not a claim of complete hardware conformance.
 
 Add --video-oracle PATH_TO_ORACLE and, if needed,
 --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to compare_reference.py to compare
-seven static snapshots from its private ROM schedule. This passes 117,564 checks;
-five snapshots contain multiple colors. No snapshots or ROM data are saved.
+ten static snapshots from its private ROM schedule; eight contain multiple colors.
+No snapshots or ROM data are saved.
+
+Scene/input and supporting Main commands can be checked separately:
+
+    python -B tools/compare_reference.py --scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+This passes 14,980 private comparisons, including guest key-cache initialization,
+repeat/direction/query behavior, PRNG ranges, render-slot setup, menu movement,
+language snapshots, dialog inputs, record selection, random script values, core
+reset and choice-option flags. Menu resources are read from the caller's ROM;
+no captures or extracted tables are written. The coupled schedule now stops at
+ScriptCallbackResetBothSceneTexts, before name/text preparation is adapted.
 
 The same separate project can build the ROM-free hardware audio oracle:
 

@@ -8,6 +8,8 @@
 #include "game/save.h"
 #include "game/render.h"
 #include "game/audio.h"
+#include "game/scene.h"
+#include "game/random.h"
 #include "gba/bios.h"
 #include <string.h>
 enum {
@@ -61,13 +63,8 @@ static uint32_t read_key_mask(HNMemory *m,GameAddr args)
     hn_write16(m,0x0201DC40,keys);
     hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));return 0;
 }
-static uint32_t read_scene_save_result(HNMemory *m,GameAddr args)
-{
-    hn_write8(m,0x02004528,hn_read8(m,0x03002168+hn_read8(m,args)));return 1;
-}
 static const HNMainCallback builtins[]={
-    {0x0801C708,set_key_mask},{0x0801C72C,read_key_mask},{0x0801D398,reset_visuals},
-    {0x080C0128,read_scene_save_result}
+    {0x0801C708,set_key_mask},{0x0801C72C,read_key_mask},{0x0801D398,reset_visuals}
 };
 bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
 {
@@ -237,8 +234,14 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         }
         if(!function)for(size_t i=0;i<sizeof(builtins)/sizeof(*builtins);i++)
             if(builtins[i].address==(address&~1u)){function=builtins[i].function;break;}
-        if(!function)return fail(s,HN_SCRIPT_CALLBACK,op,address);
-        uint32_t consumed=function(m,args+4);advance(m,consumed+4);break;
+        uint32_t consumed=0;
+        if(function)consumed=function(m,args+4);
+        else{
+            HNSceneResult result=hn_scene_callback(m,address,args+4,&consumed);
+            if(result==HN_SCENE_UNKNOWN)return fail(s,HN_SCRIPT_CALLBACK,op,address);
+            if(result==HN_SCENE_RESOURCE)return fail(s,HN_SCRIPT_RESOURCE,op,address);
+        }
+        advance(m,consumed+4);break;
     }
     case 0x1D: {
         unsigned result=hn_read16(m,RESULT),count=hn_read8(m,args);
@@ -421,6 +424,13 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
     }
     case 0x4D:
         scratch(m,args+1,0,4);hn_write32(m,0x030021F0+hn_read8(m,args)*4,resolve_variable(m,0));advance(m,5);break;
+    case 0x50:{
+        for(unsigned i=1;i<=7;i++)hn_write8(m,SCRATCH+i,hn_read8(m,args+i-1));
+        unsigned destination=hn_read16(m,SCRATCH+2);
+        uint16_t value=hn_random_range(m,hn_read16(m,SCRATCH+4),hn_read16(m,SCRATCH+6));
+        if(hn_read8(m,SCRATCH+1))hn_write16(m,CLASSES+destination*2,value);
+        else hn_write8(m,CONTROLS+destination,(uint8_t)value);advance(m,7);break;
+    }
     case 0x52:
         hn_video_forced_blank(m,hn_read8(m,args));hn_write8(m,YIELDED,1);advance(m,1);break;
     case 0x53:
@@ -481,6 +491,10 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         else hn_write8(m,YIELDED,1);
         hn_write32(m,CONSUMED,3);break;
     }
+    case 0x5A:
+        if(!hn_audio_ready(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        hn_audio_dma_pause(m);hn_core_reset(m);hn_audio_dma_resume(m);advance(m,0);break;
+    case 0x5B:hn_write16(m,0x030021E4,hn_read16(m,args));advance(m,2);break;
     case 0x5F:
         if(!hn_save_write_groups(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
         advance(m,0);break;
