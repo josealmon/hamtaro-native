@@ -24,7 +24,7 @@ void Input::refresh()
     SDL_free(ids);
     if(!active()) active_=pads_.empty()?0:SDL_GetGamepadID(pads_[0]);
 }
-void Input::clear() { down_.fill(false); }
+void Input::clear() { down_.fill(false);pressed_.fill(false);pad_pressed_=0; }
 void Input::select(SDL_JoystickID id)
 { active_=id; clear(); }
 void Input::event(const SDL_Event &e)
@@ -36,28 +36,38 @@ void Input::event(const SDL_Event &e)
         if(e.gdevice.which==active_) { clear(); pause_requested=true; }
         refresh();
     }
+    if(e.type==SDL_EVENT_GAMEPAD_BUTTON_DOWN&&focused_&&e.gbutton.which==active_&&e.gbutton.button<SDL_GAMEPAD_BUTTON_COUNT)
+        pad_pressed_|=1u<<e.gbutton.button;
     if(e.type==SDL_EVENT_KEY_DOWN || e.type==SDL_EVENT_KEY_UP) {
         auto key=e.key.scancode;
-        if(key>SDL_SCANCODE_UNKNOWN && key<SDL_SCANCODE_COUNT)
+        if(key>SDL_SCANCODE_UNKNOWN && key<SDL_SCANCODE_COUNT) {
             down_[key]=focused_ && e.type==SDL_EVENT_KEY_DOWN;
+            if(down_[key]&&!e.key.repeat)pressed_[key]=true;
+        }
     }
 }
 std::uint16_t Input::buttons(const Settings &s) const
+{return read_buttons(s,false);}
+std::uint16_t Input::sample(const Settings &s)
+{
+    auto result=read_buttons(s,true);pressed_.fill(false);pad_pressed_=0;return result;
+}
+std::uint16_t Input::read_buttons(const Settings &s,bool include_taps) const
 {
     if(!focused_) return 0;
     std::uint16_t result=0;
     auto *pad=active();
     for(std::size_t i=0;i<10;i++) {
-        bool key=s.keys[i]>0&&s.keys[i]<SDL_SCANCODE_COUNT&&down_[s.keys[i]];
+        bool key=s.keys[i]>0&&s.keys[i]<SDL_SCANCODE_COUNT&&(down_[s.keys[i]]||(include_taps&&pressed_[s.keys[i]]));
         bool button=pad&&s.buttons[i]>=0&&s.buttons[i]<SDL_GAMEPAD_BUTTON_COUNT&&
-                    SDL_GetGamepadButton(pad,static_cast<SDL_GamepadButton>(s.buttons[i]));
+                    (SDL_GetGamepadButton(pad,static_cast<SDL_GamepadButton>(s.buttons[i]))||(include_taps&&(pad_pressed_&(1u<<s.buttons[i]))));
         if(key||button) result|=static_cast<std::uint16_t>(1u<<i);
     }
     if(s.wasd) {
-        if(down_[SDL_SCANCODE_W]) result|=HN_UP;
-        if(down_[SDL_SCANCODE_A]) result|=HN_LEFT;
-        if(down_[SDL_SCANCODE_S]) result|=HN_DOWN;
-        if(down_[SDL_SCANCODE_D]) result|=HN_RIGHT;
+        if(down_[SDL_SCANCODE_W]||(include_taps&&pressed_[SDL_SCANCODE_W])) result|=HN_UP;
+        if(down_[SDL_SCANCODE_A]||(include_taps&&pressed_[SDL_SCANCODE_A])) result|=HN_LEFT;
+        if(down_[SDL_SCANCODE_S]||(include_taps&&pressed_[SDL_SCANCODE_S])) result|=HN_DOWN;
+        if(down_[SDL_SCANCODE_D]||(include_taps&&pressed_[SDL_SCANCODE_D])) result|=HN_RIGHT;
     }
     if(pad) {
         int x=SDL_GetGamepadAxis(pad,SDL_GAMEPAD_AXIS_LEFTX);

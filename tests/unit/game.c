@@ -16,6 +16,7 @@
 #include "game/task.h"
 #include "game/choice.h"
 #include "game/collision.h"
+#include "game/runtime.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -801,9 +802,31 @@ static void collision_contract(void)
     CHECK(hn_read8(&memory,0x03000018)==1&&!(hn_read8(&memory,0x030021E0)&4));
     CHECK(!memory.fault);free(rom);reset();
 }
+static void runtime_contract(void)
+{
+    HNGame *game=malloc(sizeof(*game));CHECK(game!=NULL);
+    CHECK(!hn_game_initialize(game,NULL,0,NULL));CHECK(game->fault==HN_GAME_INITIALIZATION&&!game->initialized);
+    CHECK(!hn_game_frame(game,HN_A)&&!game->frames);
+    uint8_t *rom=calloc(1,0x1000000);CHECK(rom!=NULL);
+    for(unsigned i=0;i<2048;i++)rom[0xFC+i]=(uint8_t)(i*17+3);
+    hn_memory_init(&game->memory,rom,0x1000000);
+    CHECK(hn_game_hardware_initialize(&game->memory));
+    CHECK(!memcmp(game->memory.iwram+0x2280,rom+0xFC,2048));
+    CHECK(hn_read32(&game->memory,0x03007FFC)==0x03002280);
+    CHECK(!hn_game_initialize(game,rom,0x1000000,NULL));
+    CHECK(game->fault!=HN_GAME_OK&&!game->initialized&&!game->frames);
+    CHECK(!hn_game_frame(game,0));
+    /* A pending unsupported IRQ fails before running Main, and remains sticky. */
+    game->memory.fault=false;game->fault=HN_GAME_OK;game->initialized=true;
+    hn_write16(&game->memory,0x04000200,4);hn_write16(&game->memory,0x04000208,1);
+    game->memory.io[0x202]=4;
+    CHECK(!hn_game_frame(game,0));CHECK(game->fault==HN_GAME_IRQ&&game->opcode==4);
+    CHECK(!game->frames&&!hn_game_frame(game,HN_START));
+    free(rom);free(game);
+}
 int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
-    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();
+    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();runtime_contract();
     printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

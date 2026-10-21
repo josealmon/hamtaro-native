@@ -21,24 +21,24 @@ The isolated angular BIOS helpers are native C adapted from mGBA under MPL 2.0;
 their source and license are identified in NOTICE.md. No BIOS image is needed.
 
 The frontend uses C++20, SDL3 and Dear ImGui. Its menus support keyboard and
-gamepad navigation. The platform layer accepts 32768 Hz stereo PCM through SDL;
-connecting it to the native game loop remains pending. SDL converts submitted
-PCM to the output device's format.
+gamepad navigation. The native game loop drives a nearest-filtered 240x160 texture
+and 32768 Hz stereo PCM. SDL converts PCM to the output device's format. The game
+clock runs at 16777216/280896 Hz independently of the display refresh.
 
 ## Current coverage
 
 | Area | Status | Evidence or remaining work |
 | --- | --- | --- |
-| Windows x64 shell | Implemented | Compiled and smoke-tested; real-window review |
+| Windows x64 application | Implemented | Native game view, Play/pause/resume/restart/menu, settings and save management; smoke-tested and real-window review |
 | ROM import | Implemented | Identity and full hash, invalid imports preserve existing data |
 | Settings and bindings | Implemented | Persistence, bounds, defaults, Unicode paths |
-| Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, deadzone, remapping, disconnect; physical models not tested |
+| Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, brief taps retained for one game update, deadzone, remapping, disconnect; physical models not tested |
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division, ObjAffine and native angular math; 37,009 angular cases compared with mGBA, hardware conformance remains unverified |
 | Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 30 private ROM snapshots compared, including directional movement; raster timing still pending |
-| Video timing and IRQ | Foundation | Scanline/VBlank/HBlank, four timers, cascades, IRQ flags and FIFO DMA tested independently; real game IRQ cadence and DMA bus contention remain pending |
-| Native game helpers | Adapted | Original guest input layout, directions/repeat/query semantics and integer PRNG/ranges compared; host-to-game loop connection remains pending |
+| Video timing and IRQ | Foundation | Scanline/VBlank/HBlank, timers, IRQ flags, FIFO DMA and native VBlank service connected; 9,000 clocked native updates completed; full-machine cadence and DMA bus contention remain unverified |
+| Native game helpers | Adapted | Original guest input layout, directions/repeat/query semantics and integer PRNG/ranges compared; host controls and per-frame PRNG connected |
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |
 | Video state and transfer queues | Adapted | Original video shadows, mosaic/blend/fade updates, DMA queue wrap/fill/flush; private function comparisons |
 | Map and core initialization | Adapted | Runtime tables read from ROM, task sentinel, render slots/order, background state and all 11 map banks tested at index 0 |
@@ -54,21 +54,36 @@ PCM to the output device's format.
 | Word-choice dialogs | Adapted | Nine text contexts, expression-filtered options, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; later scene callbacks remain incomplete |
-| Native boot/title | Pending | 88 Main-only, 180 idle and 9,000 input-driven script/movement/actor/text/render/audio iterations compared; connected desktop game loop, full dialog integration, real IRQ cadence and hardware audio output remain incomplete |
-| New game, movement, in-game save/load | Pending | Requires the connected native game loop |
-| Music and effects | Partial | Sequencer, original PCM mixer, PSG register service, four native PSG generators, script controls and Direct Sound/PWM tested as components; final game output, filtering, trigger quirks and host delivery remain pending |
+| Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
+| New game, movement, in-game save/load | Partial | Native loop connected; function-level movement/save comparisons and atomic host persistence verified; actual story and in-game save/reload playthrough remain pending |
+| Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
 | Public release | Pending | Native gameplay, complete coverage and source-provenance review |
 
-The current application intentionally offers preparation/settings/save management
-rather than a Play button backed by an incomplete or emulated game. Loading a ROM
-or rendering synthetic pixels is not evidence of a native title screen.
+Play runs compiled C game logic with native video/audio devices. A missing callback,
+unsupported CPU-transfer queue, communication update or IRQ target stops execution
+and opens the menu with a private runtime-error.log diagnostic. It never switches
+to guest instruction execution. The language selector and menu music establish a
+native desktop boot milestone, not a completed title/story/playthrough.
+
+The runtime follows the source's VBlank service, input, Main, follower motion,
+actors, tasks, background/object/graphics scripts, mosaic and PRNG update order.
+CPU instruction costs and timed CPU transfers are not modeled. Source-level and
+clocked native schedules are separate evidence; neither proves full-machine parity.
+
+Scanline object culling preserves OAM order, transparent priority effects, mosaic
+bounds and raster register changes between lines. On the local test machine it
+reduced mean native update time from 18.174 ms to 0.953 ms over 1,200 idle updates.
+The complete pixel and PCM sequences retained identical SHA-256 digests. The PPU's
+64 synthetic frames also continue to match the independent oracle. Audio starts
+with 2,048 silent stereo frames (62.5 ms) to absorb device scheduling jitter; pause
+preserves queued samples. There is no sample dropping or game-clock speed change.
 
 ## Storage and lifetime
 
 The user profile's .hamtaro-native directory contains game.gba, settings.ini,
-game.sav and at most one game.sav.bak. Updates replace the executable, not this
+game.sav, at most one game.sav.bak, and an error diagnostic if needed. Updates replace the executable, not this
 directory. --data-dir selects an independent profile for testing. The import
 source is never modified. A running profile is exclusively locked.
 
@@ -80,6 +95,10 @@ The app does not overwrite an unreadable/newer settings file automatically.
 All file dialogs are asynchronous and hand selected paths back to the main
 thread. The dialog callback owns its result state even if the application exits.
 Save tests use private temporary directories, never the player's profile.
+The host captures SRAM only after successful initialization or a complete native
+update. A failed update cannot overwrite the last committed snapshot. File errors
+pause the game and retain the completed pending snapshot for retry before another
+update. ROM/save replacement is disabled during a running or paused game session.
 
 ## Function-level reference checks
 
@@ -105,6 +124,8 @@ comparisons and synthetic updates cover the remaining implemented behavior. Thir
 static PPU snapshots across the schedules match a separate mGBA renderer; twenty-seven
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
+The complete function run, including three hardware-initialization cases, passes
+494,314 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -234,7 +255,8 @@ eight-bit DMA planes, before hardware FIFO/DAC mixing. Synthetic cases cover
 interpolation, loop/end boundaries, packed byte addition, reverb and PSG envelopes.
 Main and animation sound controls call this native driver through typed adapters.
 The frequency setter's VCOUNT wait is represented by an explicit boundary model
-in the CPU oracle. Connecting that phase to the real game loop remains pending.
+in the CPU oracle. The clocked native runtime initializes the driver at its initial
+clock boundary; original busy-wait instruction costs remain unmodeled.
 
 The native clock also drives four 16-bit timers, prescalers, overflow reloads,
 cascades and IRQ flags. A separate Direct Sound model receives timer 0/1 edges,
@@ -287,11 +309,11 @@ inactive digital zero and inverted wave polarity for the mix component test;
 stock mGBA's final PSG DAC waveform is not asserted equal. No source/library
 from that oracle is linked into the native hardware model.
 
-Game-loop/host delivery, analog filtering, real trigger/retrigger timing,
-pre-device game-output comparisons and listening evidence remain pending. The
-hardware checks and game-driver comparisons are separate; they do not prove
-that the game currently produces correct final sound. Hardware captures are
-still needed to resolve the startup and model-specific uncertainties.
+Game-loop/host delivery now runs in the native window, with clear menu playback
+confirmed by the user. Analog filtering, real trigger/retrigger timing and complete
+pre-device game-output comparisons remain pending. The hardware checks and driver
+comparisons do not establish correct sound throughout the game. Hardware captures
+are still needed to resolve the startup and model-specific uncertainties.
 
 The optional mGBA 0.10.5 software PPU oracle is a separate test build; its code and
 runtime never enter the application or package. Static synthetic comparisons

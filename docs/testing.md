@@ -46,7 +46,11 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
 - storage: SHA-256 known vectors, strict ROM rejection, atomic SRAM recovery,
   independent profile locking, settings validation and Unicode paths.
 - input: injected keyboard events and a local SDL virtual gamepad. Covers hotplug,
-  deadzone, diagonals, opposite-direction cancellation, remapping and disconnect.
+  deadzone, diagonals, opposite-direction cancellation, remapping, disconnect and
+  one-update delivery of taps pressed/released between game updates.
+- session: invalid-ROM rejection without file writes. With a private ROM argument,
+  verifies initialization persistence, failed-write retry, retained backups and
+  rejection of partially modified SRAM after a native runtime fault.
 - app-smoke: creates an isolated temporary profile, initializes the actual
   SDL renderer and menus for six frames, closes cleanly and removes that profile.
   No graphics, settings, ROM or save files are written in the checkout.
@@ -57,6 +61,19 @@ The optional private ROM check is:
 
 It verifies a positive import and a modified-ROM rejection while preserving a
 synthetic save. It uses a temporary profile and does not modify the source ROM.
+
+Additional private session and real audio-device checks use:
+
+    build/Release/hn_session_tests.exe PATH_TO_YOUR_AH3P_ROM
+    build/Release/hn_session_tests.exe PATH_TO_YOUR_AH3P_ROM --audio
+
+The first passes 24 checks. The second passes 1,233 checks, including 600 updates
+paced at the original game rate and submitted to the actual SDL audio device with
+zero requests short of samples. It plays the generated game sound and requires an
+audio device. Both own a temporary profile, preserve the source ROM, and remove
+their temporary data on exit. Neither writes captures in the checkout. User
+listening also confirmed the corrected menu playback; complete game-output parity
+and physical controller coverage remain separate work.
 
 The executable also accepts:
 
@@ -70,8 +87,10 @@ and the test-only hn_reference_probe.dll built by BUILD_TESTING:
 
     python -B tools/compare_reference.py --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
 
-The reference must contain build/function-symbols.json. This check writes no
-ROM or captured state, and does not alter the reference checkout. It compares
+The reference must contain build/function-symbols.json. Hardware initialization
+is compared at three VCOUNT values, including IRQ dispatcher data and video/IO
+state. This check writes no ROM or captured state, and does not alter the reference
+checkout. It compares
 heap RAM, PRNG, input, expressions, video state, transfer queues, object animation
 and drawing, all 61 background handlers, all 48 graphics handlers, palette transitions,
 map/core initialization and SRAM initialization/repair/read/write behavior. It also
@@ -86,12 +105,12 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 494,299 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 494,314 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
 directional movement. Word-choice handlers use opcodes 0x24 (await) and 0x45
-(configure). The connected desktop game loop and complete playthrough remain pending.
+(configure). The desktop loop is now connected; complete playthrough remains pending.
 
 The audio part can be run independently with the same private ROM and reference:
 
@@ -105,8 +124,9 @@ register images. Of those snapshots, 349 contain nonzero PCM. Synthetic cases co
 PSG envelopes, PCM loop/end/interpolation boundaries and reverberation; Main and
 animation audio commands are compared separately. The CPU oracle supplies only
 the frequency initializer's VCOUNT boundary. It does not model elapsed audio time,
-FIFO/DAC mixing or PSG waveform generation. Final stereo output, audible playback,
-real game integration and complete-song duration remain unverified.
+FIFO/DAC mixing or PSG waveform generation. Native menu playback and SDL delivery
+have separate session/listening evidence; full stereo parity and complete-song
+duration remain unverified.
 
 An independent static PPU comparison uses an existing mGBA 0.10.5 source checkout
 and a compatible C compiler. It is a separate test project, not an application
@@ -225,7 +245,8 @@ polarity and complete mixed-output partition invariance. architecture.md records
 the controlled noise seed, steady wave alignment, inactive-counter exclusions
 and digital DAC input normalization in this component oracle. Its final stock
 PSG waveform is not the reference for these checks; trigger quirks, analog
-filtering, listening evidence and actual game-output parity remain unverified.
+filtering and actual game-output parity remain unverified. Menu listening evidence
+is recorded separately above.
 
 Manual UI checks cover import/cancellation, persisted rebinding, keyboard menu
 navigation, constrained window sizes, fullscreen, and save import/export.

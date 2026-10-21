@@ -17,6 +17,9 @@ int main()
             hn::Input input;auto settings=hn::Settings::defaults();
             key(input,SDL_SCANCODE_Z,true);CHECK(input.buttons(settings)&HN_A);
             key(input,SDL_SCANCODE_Z,false);CHECK(!(input.buttons(settings)&HN_A));
+            CHECK(input.sample(settings)&HN_A);CHECK(!input.sample(settings));
+            key(input,SDL_SCANCODE_Z,true);CHECK(input.sample(settings)&HN_A);CHECK(input.sample(settings)&HN_A);
+            key(input,SDL_SCANCODE_Z,false);CHECK(!input.sample(settings));
             key(input,SDL_SCANCODE_W,true);key(input,SDL_SCANCODE_D,true);
             CHECK((input.buttons(settings)&(HN_UP|HN_RIGHT))==(HN_UP|HN_RIGHT));
             key(input,SDL_SCANCODE_S,true);CHECK(!(input.buttons(settings)&(HN_UP|HN_DOWN)));
@@ -24,6 +27,7 @@ int main()
             CHECK(input.buttons(settings)==0 && input.pause_requested);
             focus.type=SDL_EVENT_WINDOW_FOCUS_GAINED;input.event(focus);
             CHECK(input.buttons(settings)==0);
+            CHECK(!input.sample(settings));
             SDL_VirtualJoystickDesc desc{};SDL_INIT_INTERFACE(&desc);
             desc.type=SDL_JOYSTICK_TYPE_GAMEPAD;desc.naxes=SDL_GAMEPAD_AXIS_COUNT;
             desc.nbuttons=SDL_GAMEPAD_BUTTON_COUNT;desc.name="Hamtaro synthetic test gamepad";
@@ -35,6 +39,10 @@ int main()
             CHECK(SDL_SetJoystickVirtualButton(joystick,SDL_GAMEPAD_BUTTON_SOUTH,true));
             pump(input);CHECK(input.buttons(settings)&HN_A);
             CHECK(SDL_SetJoystickVirtualButton(joystick,SDL_GAMEPAD_BUTTON_SOUTH,false));
+            pump(input);CHECK(input.sample(settings)&HN_A);CHECK(!input.sample(settings));
+            CHECK(SDL_SetJoystickVirtualButton(joystick,SDL_GAMEPAD_BUTTON_SOUTH,true));pump(input);
+            CHECK(SDL_SetJoystickVirtualButton(joystick,SDL_GAMEPAD_BUTTON_SOUTH,false));pump(input);
+            CHECK(!input.buttons(settings)&&(input.sample(settings)&HN_A));CHECK(!input.sample(settings));
             CHECK(SDL_SetJoystickVirtualAxis(joystick,SDL_GAMEPAD_AXIS_LEFTX,1000));
             pump(input);CHECK(input.buttons(settings)==0);
             CHECK(SDL_SetJoystickVirtualAxis(joystick,SDL_GAMEPAD_AXIS_LEFTX,30000));

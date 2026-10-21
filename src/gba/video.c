@@ -151,6 +151,28 @@ static bool above(Pixel a,Pixel b)
     if(b.layer==4 && a.layer!=4) return false;
     return a.layer<b.layer;
 }
+/* Keep OAM order, including transparent priority effects, but reject objects
+   outside this scanline before the per-pixel loop. Registers are stable while
+   a line is rendered; raster effects are applied between lines by the clock. */
+static unsigned line_objects(const HNMemory *m,unsigned y,unsigned indices[128])
+{
+    static const uint8_t widths[3][4]={{8,16,32,64},{16,32,32,64},{8,8,16,32}};
+    static const uint8_t heights[3][4]={{8,16,32,64},{8,8,16,32},{16,32,32,64}};
+    unsigned count=0,mh=((reg16(m,0x4C)>>8)&15)+1;
+    for(unsigned n=0;n<128;n++) {
+        const uint8_t *o=m->oam+n*8;unsigned a=u16(o),b=u16(o+2),shape=a>>14,size=b>>14;
+        bool affine=(a&0x100)!=0;
+        if(shape==3||(!affine&&(a&0x200))||((a>>10)&3)==3)continue;
+        int w=widths[shape][size],h=heights[shape][size],ox=b&511,oy=a&255;
+        if(affine&&(a&0x200)){w*=2;h*=2;}
+        if(ox>=256)ox-=512;if(oy>=160)oy-=256;
+        int right=ox+w;
+        if((a&0x1000)&&right%(int)mh)right+=(int)mh-right%(int)mh;
+        if((int)y<oy||(int)y>=oy+h||ox>=HN_WIDTH||right<=0)continue;
+        indices[count++]=n;
+    }
+    return count;
+}
 static uint16_t blend(uint16_t a,uint16_t b,unsigned ea,unsigned eb)
 {
     uint16_t out=0;
@@ -166,10 +188,12 @@ void hn_video_render_line(const HNMemory *m,unsigned y,uint32_t *out)
 {
     if(y>=HN_HEIGHT) return;
     unsigned display=reg16(m,0),mode=display&7;
+    if(display&0x80){for(unsigned x=0;x<HN_WIDTH;x++)out[x]=0xFFFFFFFFu;return;}
+    unsigned indices[128],object_count=(display&0x1000)?line_objects(m,y,indices):0;
     for(unsigned x=0;x<HN_WIDTH;x++) {
-        if(display&0x80) { out[x]=0xFFFFFFFFu; continue; }
         Pixel obj=empty(); bool objwindow=false;
-        if(display&0x1000) for(unsigned n=0;n<128;n++) {
+        for(unsigned index=0;index<object_count;index++) {
+            unsigned n=indices[index];
             Pixel p=object(m,n,(int)x,(int)y,display,mode);
             if(p.layer!=4)continue;
             if(((u16(m->oam+n*8)>>10)&3)==2){if(p.opaque)objwindow=true;continue;}

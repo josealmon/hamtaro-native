@@ -9,9 +9,24 @@
 #include "game/actor.h"
 #include "game/task.h"
 #include "game/motion.h"
+#include "game/runtime.h"
 #include <stdlib.h>
 #include <string.h>
 /* Optional private oracle bridge. Never installed or shipped with the app. */
+HNGame *hn_probe_game_create(const uint8_t *rom,size_t size,const uint8_t *sram)
+{
+    HNGame *g=malloc(sizeof(*g));if(g)hn_game_initialize(g,rom,size,sram);return g;
+}
+void hn_probe_game_destroy(HNGame *g){free(g);}
+int hn_probe_game_frame(HNGame *g,uint16_t buttons){return hn_game_frame(g,buttons);}
+HNMemory *hn_probe_game_memory(HNGame *g){return &g->memory;}
+const uint32_t *hn_probe_game_pixels(const HNGame *g){return g->pixels;}
+const int16_t *hn_probe_game_samples(const HNGame *g){return g->samples;}
+void hn_probe_game_report(const HNGame *g,uint32_t out[7])
+{
+    out[0]=g->fault;out[1]=g->detail;out[2]=g->opcode;out[3]=g->address;
+    out[4]=(uint32_t)g->frames;out[5]=g->sample_frames;out[6]=g->initialized;
+}
 HNMemory *hn_probe_create(const uint8_t *rom,size_t size)
 {
     HNMemory *m=malloc(sizeof(*m));

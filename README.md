@@ -3,9 +3,11 @@
 Windows x64 native-port work for Hamtaro: Ham-Ham Heartbreak (European AH3P revision 0).
 You must provide your own compatible .gba file. No game assets or ROM are included.
 
-The desktop shell imports and validates a ROM, configures keyboard/gamepad input,
-and manages compatible saves. Native gameplay is being adapted; this build is not
-yet a playable replacement for the original game. See docs/architecture.md for coverage.
+The application imports and validates a ROM, runs the adapted native game loop,
+configures keyboard/gamepad input, and manages compatible saves. The native window
+reaches the language selector with music. This development build still stops at
+unfinished functions; complete story and minigame coverage remain unverified.
+See docs/architecture.md for coverage.
 
 ## Build
 
@@ -24,6 +26,7 @@ under HAMTARO_NATIVE_WORK (default: the user profile's .hamtaro-native-dev folde
 An Internet connection is needed for the first dependency download, not for normal use.
 
 Run build/Release/hamtaro-native.exe. Import a compatible ROM through the application.
+Choose Play to start; Escape or right-stick click opens the pause/settings menu.
 ROM, settings and saves live in the profile's .hamtaro-native directory, independently
 of the program folder. Use --data-dir PATH for a separate test profile.
 

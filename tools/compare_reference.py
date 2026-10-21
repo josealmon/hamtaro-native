@@ -1466,7 +1466,13 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        heap_init(memory)
+        for line in (0,159,227):
+            fresh();both(0x04000006,struct.pack("<H",line))
+            equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")
+            call("InitializeHardware")
+            compare(f"hardware initialization {line}",((0x02000000,0x40000),(0x03000000,0x7B00),
+                                                       (0x03007FFC,4),(0x04000000,0x400)))
+        fresh();heap_init(memory)
         call("InitializeHeap", 0)
         active = []
         for i in range(180):
