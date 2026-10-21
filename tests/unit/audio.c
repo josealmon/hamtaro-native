@@ -1,5 +1,6 @@
 #include "game/audio.h"
 #include "game/state.h"
+#include "game/script.h"
 #include <stdio.h>
 #include <stdlib.h>
 static HNMemory memory;
@@ -125,6 +126,72 @@ static void notes_and_player(void)
     CHECK(!hn_audio_sequence_command(&audio,player,track,0xB1));CHECK(audio.fault==HN_AUDIO_BUDGET);
     CHECK(!memory.fault);
 }
+static void mix_fixture(void)
+{
+    reset();GameAddr core=HN_AUDIO_CORE,c=core+0x50,w=0x02024000;
+    hn_write32(&memory,core+0x20,0);hn_write32(&memory,core+0x28,0x080EC0B5);
+    hn_write32(&memory,core+0x10,16);hn_write32(&memory,core+0x18,1);
+    hn_write8(&memory,core+4,0);hn_write8(&memory,core+5,0);hn_write8(&memory,core+6,1);hn_write8(&memory,core+7,15);
+    hn_write8(&memory,core+11,99);hn_write8(&memory,c,128);hn_write8(&memory,c+1,8);
+    hn_write8(&memory,c+2,255);hn_write8(&memory,c+3,255);hn_write8(&memory,c+4,255);
+    hn_write8(&memory,c+5,255);hn_write8(&memory,c+6,255);hn_write8(&memory,c+7,255);
+    hn_write32(&memory,c+0x24,w);hn_write32(&memory,w+12,4);hn_write32(&memory,w+16,0xC040807F);
+}
+static void mixing(void)
+{
+    mix_fixture();HNAudio audio;hn_audio_init(&audio,&memory);GameAddr c=HN_AUDIO_CORE+0x50,out=HN_AUDIO_CORE+0x350;
+    hn_write8(&memory,c+3,128);CHECK(hn_audio_mix(&audio,128));
+    CHECK(hn_read32(&memory,out)==0xC03F817E);CHECK(hn_read32(&memory,out+0x630)==0xE01FC03F);
+    CHECK(hn_read32(&memory,out+4)==0&&hn_read8(&memory,c)==0);
+    CHECK(hn_read32(&memory,c+0x18)==4&&hn_read32(&memory,c+0x28)==0x02024010);
+    /* Interpolation wraps the original wave, without clipping its byte sum. */
+    mix_fixture();hn_audio_init(&audio,&memory);hn_write8(&memory,c+1,0);
+    hn_write32(&memory,c+0x20,0x400000);hn_write32(&memory,0x02024000,0x40000000);
+    hn_write32(&memory,0x0202400C,2);hn_write16(&memory,0x02024010,64);
+    CHECK(hn_audio_mix(&audio,128));
+    CHECK(hn_read32(&memory,out)==0x1F001F3F&&hn_read32(&memory,out+12)==0x1F001F3F);
+    CHECK(hn_read32(&memory,c+0x18)==2&&hn_read32(&memory,c+0x28)==0x02024010);
+    CHECK(hn_read32(&memory,c+0x1C)==0&&(hn_read8(&memory,c)&16));
+    /* Reverb includes both planes and the next DMA bank, with signed rounding. */
+    mix_fixture();hn_audio_init(&audio,&memory);hn_write8(&memory,c,0);hn_write8(&memory,HN_AUDIO_CORE+5,64);
+    for(unsigned i=0;i<16;i++){
+        hn_write8(&memory,out+i,32);hn_write8(&memory,out+0x630+i,32);
+        hn_write8(&memory,out+16+i,64);hn_write8(&memory,out+0x640+i,64);
+    }
+    CHECK(hn_audio_mix(&audio,128));CHECK(hn_read8(&memory,out)==24&&hn_read8(&memory,out+0x630)==24);
+    for(unsigned i=0;i<16;i++){
+        hn_write8(&memory,out+i,224);hn_write8(&memory,out+0x630+i,224);
+        hn_write8(&memory,out+16+i,192);hn_write8(&memory,out+0x640+i,192);
+    }
+    CHECK(hn_audio_mix(&audio,128));CHECK(hn_read8(&memory,out)==233);
+    hn_write32(&memory,HN_AUDIO_CORE+0x10,0);CHECK(!hn_audio_mix(&audio,128));CHECK(audio.fault==HN_AUDIO_RESOURCE);
+    CHECK(!memory.fault);
+}
+static void psg_and_scripts(void)
+{
+    reset();HNAudio audio;hn_audio_init(&audio,&memory);GameAddr c=HN_AUDIO_PSG+128;
+    hn_write8(&memory,c,128);hn_write8(&memory,c+1,3);hn_write8(&memory,c+2,128);hn_write8(&memory,c+3,128);
+    hn_write8(&memory,c+4,1);hn_write8(&memory,c+5,1);hn_write8(&memory,c+6,8);
+    hn_write32(&memory,c+0x20,0x0420);hn_write32(&memory,c+0x24,0x02024000);
+    for(unsigned i=0;i<4;i++)hn_write32(&memory,0x02024000+i*4,0x12345678+i);
+    CHECK(hn_audio_psg_update(&audio));CHECK(hn_read32(&memory,0x04000090)==0x12345678);
+    CHECK(hn_read32(&memory,0x0400009C)==0x1234567B&&hn_read32(&memory,c+0x28)==0x02024000);
+    CHECK(hn_read8(&memory,0x04000070)==128&&hn_read8(&memory,c+0x1D)==0);
+    reset();HNScript script;hn_script_init(&script,&memory,NULL,0);GameAddr player=0x03006000;
+    hn_write8(&memory,0x02020000,1);hn_write32(&memory,0x02020004,0x02022000);
+    hn_write32(&memory,0x02020008,0x02023000);hn_write16(&memory,0x02021000,1);hn_write8(&memory,0x02021002,0);
+    CHECK(hn_main_command(&script,0x0A,0x02021000));CHECK(hn_read16(&memory,HN_AUDIO_SONG_IDS)==1);
+    hn_write8(&memory,0x02021002,2);CHECK(hn_main_command(&script,0x0B,0x02021000));
+    CHECK(hn_read8(&memory,HN_AUDIO_FADE_BYTES)==2&&hn_read16(&memory,player+0x28)==0x101);
+    CHECK(hn_main_command(&script,0x0A,0x02021000));
+    CHECK(hn_read8(&memory,HN_AUDIO_FADE_BYTES)==0&&hn_read16(&memory,player+0x28)==2);
+    hn_write8(&memory,0x03000010,0x5E);hn_write8(&memory,0x02021002,1);
+    CHECK(hn_main_command(&script,0x5E,0x02021000));CHECK(hn_read8(&memory,0x0300001D)==1&&hn_read8(&memory,0x03000010)==0x5E);
+    CHECK(hn_audio_player_stop(&memory,player));hn_write8(&memory,0x0300001D,0);
+    CHECK(hn_main_command(&script,0x5E,0x02021000));CHECK(hn_read8(&memory,0x03000010)==0&&hn_read32(&memory,0x03000014)==3);
+    hn_memory_init(&memory,rom,0x800000);hn_script_init(&script,&memory,NULL,0);
+    CHECK(!hn_main_command(&script,0x0A,0x02021000));CHECK(script.fault==HN_SCRIPT_RESOURCE&&!memory.fault);
+}
 int main(void)
 {
     rom=calloc(1,0x800000);CHECK(rom!=NULL);
@@ -140,6 +207,6 @@ int main(void)
         rom_word(HN_AUDIO_PLAYER_RECORDS+i*12+8,2,4);
     }
     rom_word(HN_AUDIO_SONG_RECORDS+8,0x02020000,4);
-    initialization();player_and_parameters();channels();commands();notes_and_player();free(rom);
+    initialization();player_and_parameters();channels();commands();notes_and_player();mixing();psg_and_scripts();free(rom);
     printf("%u native audio checks passed.\n",checks);return 0;
 }

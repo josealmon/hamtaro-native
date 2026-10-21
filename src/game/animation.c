@@ -1,6 +1,7 @@
 #include "game/render.h"
 #include "game/state.h"
 #include "game/transfer.h"
+#include "game/audio.h"
 #include "gba/bios.h"
 static bool fail(HNRender *r,HNRenderFault fault,unsigned op,GameAddr address)
 {r->fault=fault;r->fault_opcode=op;r->fault_address=address;return false;}
@@ -208,7 +209,10 @@ bool hn_animation_command(HNRender *r,GameAddr slot,unsigned op,GameAddr *cursor
         advance(m,slot,cursor,3);*yield=hn_read8(m,slot+0x63)!=0;break;
     }
     case 0xD0:case 0xD1:
-        if(!(hn_read8(m,0x03002182)&64)&&!(hn_read8(m,slot+0x61)&64))return fail(r,HN_RENDER_RESOURCE,op,data);
+        if(!(hn_read8(m,0x03002182)&64)&&!(hn_read8(m,slot+0x61)&64)){
+            if(!hn_audio_ready(m)||!hn_audio_song(m,hn_read16(m,data+1),op==0xD0?HN_SONG_START:HN_SONG_STOP))
+                return fail(r,m->fault?HN_RENDER_MEMORY:HN_RENDER_RESOURCE,op,m->fault?m->fault_address:data);
+        }
         advance(m,slot,cursor,3);break;
     default:return fail(r,HN_RENDER_OPCODE,op,data);
     }

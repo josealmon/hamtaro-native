@@ -7,6 +7,11 @@ static void clear(HNMemory *m,GameAddr address,unsigned bytes)
 static bool identified(HNMemory *m,GameAddr p){return hn_read32(m,p+0x34)==HN_AUDIO_IDENT;}
 void hn_audio_init(HNAudio *a,HNMemory *m)
 {a->memory=m;a->fault=HN_AUDIO_OK;a->fault_opcode=0;a->fault_address=0;}
+bool hn_audio_ready(HNMemory *m)
+{
+    GameAddr p=core(m);if(!p)return false;uint32_t difference=hn_read32(m,p)-HN_AUDIO_IDENT;
+    return !m->fault&&(difference<=1||difference==10||difference==11);
+}
 void hn_audio_dma_pause(HNMemory *m)
 {
     GameAddr p=core(m);uint32_t id=hn_read32(m,p);

@@ -39,15 +39,15 @@ SDL's device conversion happens after game PCM generation.
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |
 | Video state and transfer queues | Adapted | Original video shadows, mosaic/blend/fade updates, DMA queue wrap/fill/flush; private function comparisons |
 | Map and core initialization | Adapted | Runtime tables read from ROM, task sentinel, render slots/order, background state and all 11 map banks tested at index 0 |
-| Objects and animation scripts | Partial | Physics, screen positions, original priority ordering, affine matrix reuse, OAM emission and animation commands compared; animation callbacks and unsuppressed sound remain pending |
+| Objects and animation scripts | Partial | Physics, positions, priority ordering, affine reuse, OAM and animation/sound commands compared; animation callback bindings remain incomplete |
 | Background scripts and transforms | Adapted | All 61 command handlers, repeat/call flow, motion, clamping, affine layers and tilemap copies compared; invalid stacks/resources fail explicitly |
 | Graphics scripts and palette effects | Partial | 37 of 48 handlers compared: palette interpolation, delay/call/repeat flow, blend/fade, mosaic and windows; 11 raster-effect handlers remain unsupported |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, fades and typed callbacks; unsupported opcodes fail explicitly |
-| Native boot/title | Pending | 88 Main-only, 180 idle and 360 input-injected script/render iterations compared; task/actor updates, real IRQ cadence and audio are not connected |
+| Native boot/title | Pending | 88 Main-only, 180 idle and 369 input-injected script/render/audio iterations compared; scene-menu callbacks, task/actor updates, real IRQ cadence and hardware audio output remain incomplete |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
-| Music and effects | Partial | Native driver/player state, sequence commands, note allocation, priority and modulation compared; PCM mixing, PSG synthesis and delivery to the host stream remain pending |
+| Music and effects | Partial | Sequencer, original PCM mixer, PSG register service and script sound controls compared; timer/FIFO cadence, PSG synthesis, final output mixing and host delivery remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
 | Public release | Pending | Native gameplay, complete coverage and source-provenance review |
@@ -83,14 +83,18 @@ by these functions; it does not provide a complete machine/timing oracle.
 Heap layouts, input, PRNG, expressions, video, transfers, object/background
 rendering, maps, core initialization and save operations are compared. Synthetic
 fixtures exercise resource commands without embedding a game resource. Tests
-also run 88 Main-only iterations, 180 idle iterations and a separate 360-iteration
+also run 88 Main-only iterations, 180 idle iterations and a separate 369-iteration
 schedule with injected A-button registers. Those schedules call Main, background,
-object, graphics and mosaic updates, then OAM transfer, video commit and DMA flush.
+object, graphics and mosaic updates, OAM transfer, video commit, DMA flush and
+audio service. They initialize the audio driver and synchronize its VBlank counter.
 Graphics slots are inactive in both ROM schedules; their implementation evidence
 comes from separate command comparisons and synthetic update-loop tests. Seven
 idle-schedule static PPU snapshots match a separate mGBA renderer; five contain
-multiple colors. These schedules omit task/actor systems, real input/IRQ cadence
-and audio. They are not a verified native boot, title screen or playthrough.
+multiple colors. These schedules omit task/actor systems, CPU-transfer flushing,
+the complete IRQ/input cadence and hardware audio output. Transient DMA3 register
+values that refer to the reference's stack are excluded; destination memory and
+sound DMA1/2 register images are compared. These are not a verified native boot,
+title screen or playthrough.
 The source checkout's docs/testing.md records the command and current check count.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
@@ -100,8 +104,8 @@ commands/callbacks and invalid stacks return a fault with the guest address;
 a per-frame command budget also reports an explicit fault instead of hanging.
 
 Object animations retain original 32-bit resource references and explicit typed
-callback dispatch. Missing callback bindings and sound requests fail visibly;
-only the original sound-suppressed command path is currently supported. OAM
+callback dispatch. Missing callback bindings fail visibly. Sound commands require
+an initialized native audio driver and retain the original suppression rules. OAM
 sorting preserves the original algorithm's distinct priority/key/index exits,
 including its order for equal keys. Background scripts retain separate local
 and committed cursors, original wait/repeat behavior and shared queued-write
@@ -128,13 +132,16 @@ Native audio comparisons cover driver setup, sample-frequency parameters,
 player/song controls, fades, volume/pitch/pan, 30 sequence opcodes, memory and
 extended commands, PCM/PSG note allocation and the player tick loop. Tests
 compare 300 song-control selections and 120 sequencer updates for each of 12
-private ROM sequences. The latter deliberately omit the mixer and PSG register
-service, so they verify sequence/channel state rather than audible playback.
+private ROM sequences. Separate tests run the complete original mixer and PSG
+register service for 120 calls on each of those 12 sequences. All 1,440 buffer/state
+snapshots match; 349 contain nonzero PCM. The PCM comparison is of the original
+eight-bit DMA planes, before hardware FIFO/DAC mixing. Synthetic cases cover
+interpolation, loop/end boundaries, packed byte addition, reverb and PSG envelopes.
+Main and animation sound controls call this native driver through typed adapters.
 The frequency setter's VCOUNT wait is represented by an explicit boundary model
-in the CPU oracle. Real timer/FIFO cadence, PCM generation, PSG synthesis and
-delivery to the host stream remain pending. Main/animation sound commands stay
-unsupported until that path is connected; a successful state comparison never
-substitutes for pre-device PCM or listening evidence.
+in the CPU oracle. Real timer/FIFO cadence, PSG waveform synthesis, final stereo
+mixing and delivery to the host stream remain pending. These checks do not replace
+pre-device output validation or listening evidence.
 
 The optional mGBA 0.10.5 software PPU oracle is a separate test build; its code and
 runtime never enter the application or package. Static synthetic comparisons

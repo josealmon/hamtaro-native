@@ -7,6 +7,7 @@
 #include "game/expression.h"
 #include "game/save.h"
 #include "game/render.h"
+#include "game/audio.h"
 #include "gba/bios.h"
 #include <string.h>
 enum {
@@ -28,6 +29,11 @@ static uint32_t resolve_variable(HNMemory *m,unsigned offset)
     uint32_t value=hn_read32(m,SCRATCH+offset);
     if(value<=15){value=hn_read32(m,VARIABLES+value*4);hn_write32(m,SCRATCH+offset,value);}
     return value;
+}
+static GameAddr audio_player(HNMemory *m,uint16_t song,unsigned *index)
+{
+    *index=hn_read16(m,HN_AUDIO_SONG_RECORDS+song*8+4);
+    return *index<HN_AUDIO_PLAYERS?hn_read32(m,HN_AUDIO_PLAYER_RECORDS+*index*12):0;
 }
 static void advance(HNMemory *m,unsigned bytes)
 {hn_write32(m,CONSUMED,bytes);hn_write8(m,OPCODE,0);}
@@ -75,6 +81,25 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         break;
     }
     case 1:hn_write8(m,RUNNING,0);hn_write8(m,YIELDED,1);break;
+    case 0x0A:case 0x0B: {
+        if(!hn_audio_ready(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        scratch(m,args,0,3);uint16_t song=hn_read16(m,SCRATCH);unsigned mode=hn_read8(m,SCRATCH+2),index;
+        if(op==0x0B&&!song){if(!hn_audio_all(m,false))return fail(s,HN_SCRIPT_RESOURCE,op,args);}
+        else{
+            GameAddr player=audio_player(m,song,&index);if(!player)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+            if(op==0x0A){
+                if(song>=200&&song<=299)hn_write16(m,CLASSES+0x1E,song);if(mode>2)mode=2;
+                unsigned fade=hn_read8(m,HN_AUDIO_FADE_BYTES+index);
+                if(!fade||mode<=1){if(!hn_audio_song(m,song,(HNSongAction)mode))return fail(s,HN_SCRIPT_RESOURCE,op,args);}
+                else if(song!=hn_read16(m,HN_AUDIO_SONG_IDS+index*2)){
+                    if(!hn_audio_song(m,song,HN_SONG_START))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+                }else hn_audio_fade(m,player,(uint16_t)fade,2);
+                hn_write16(m,HN_AUDIO_SONG_IDS+index*2,hn_read16(m,SCRATCH));hn_write8(m,HN_AUDIO_FADE_BYTES+index,0);
+            }else if(mode){hn_write8(m,HN_AUDIO_FADE_BYTES+index,(uint8_t)mode);hn_audio_fade(m,player,(uint16_t)mode,1);}
+            else if(!hn_audio_song(m,song,HN_SONG_STOP))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        }
+        advance(m,3);break;
+    }
     case 2:
         if(!hn_read8(m,INITIALIZED)){
             hn_write16(m,WAIT,hn_read16(m,args));hn_write8(m,INITIALIZED,1);hn_write32(m,CONSUMED,2);
@@ -402,15 +427,59 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         scratch(m,args,2,6);hn_write32(m,VARIABLES+hn_read16(m,SCRATCH+2)*4,hn_read32(m,SCRATCH+4));advance(m,6);break;
     case 0x55:
         hn_write8(m,0x03002170,1);hn_write8(m,0x03001FB8,hn_read8(m,args));advance(m,1);break;
+    case 0x56: {
+        if(!hn_audio_ready(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        scratch(m,args,0,4);uint16_t song=hn_read16(m,SCRATCH);unsigned mode=hn_read8(m,SCRATCH+2),fade=hn_read8(m,SCRATCH+3);
+        GameAddr p0=hn_read32(m,HN_AUDIO_PLAYER_POINTERS),p1=hn_read32(m,HN_AUDIO_PLAYER_POINTERS+4);
+        if(!p0||!p1)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        bool ok=true;
+        if(mode){
+            if(fade)hn_audio_fade(m,p0,(uint16_t)fade,0);else ok=hn_audio_player_stop(m,p0);
+            if(song)ok=ok&&hn_audio_song(m,song,HN_SONG_CONTINUE);
+            else if(fade&&!(hn_read8(m,0x03002180)&8)&&hn_read8(m,HN_AUDIO_FADE_BYTES+1))hn_audio_fade(m,p1,(uint16_t)fade,2);
+            else ok=ok&&hn_audio_song(m,hn_read16(m,CLASSES+0x1E),HN_SONG_CONTINUE);
+            hn_write8(m,HN_AUDIO_FADE_BYTES+1,0);
+        }else if(fade){hn_audio_fade(m,p1,(uint16_t)fade,1);ok=hn_audio_song(m,song,HN_SONG_START);hn_write8(m,HN_AUDIO_FADE_BYTES+1,1);}
+        else ok=hn_audio_player_stop(m,p1)&&hn_audio_song(m,song,HN_SONG_START);
+        if(!ok)return fail(s,HN_SCRIPT_RESOURCE,op,args);advance(m,4);break;
+    }
+    case 0x57: {
+        if(!hn_audio_ready(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        unsigned mode=hn_read8(m,args),mask=hn_read8(m,args+1);if(mode>1)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        if(mask==255){if(!hn_audio_all(m,!mode))return fail(s,HN_SCRIPT_RESOURCE,op,args);}
+        else for(unsigned i=0;i<HN_AUDIO_PLAYERS;i++)if(mask&(1u<<i)){
+            GameAddr player=hn_read32(m,HN_AUDIO_PLAYER_POINTERS+i*4);if(!player)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+            if(!mode)hn_audio_player_resume(m,player);else if(!hn_audio_player_stop(m,player))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        }
+        advance(m,2);break;
+    }
     case 0x58:
         if(!hn_save_write_record(m,hn_read8(m,args),hn_read8(m,args+1)))return fail(s,HN_SCRIPT_RESOURCE,op,args);
         advance(m,2);break;
     case 0x59:
         hn_write8(m,0x03002C0C,hn_read8(m,args));hn_write8(m,0x03001F50,hn_read8(m,args+1));
         hn_write8(m,0x03002C04,hn_read8(m,args+2));hn_write8(m,0x03002C00,hn_read8(m,args+3));advance(m,4);break;
+    case 0x5C: {
+        if(!hn_audio_ready(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        scratch(m,args,0,8);uint16_t song=hn_read16(m,SCRATCH),mask=hn_read16(m,SCRATCH+2),volume=hn_read16(m,SCRATCH+4),tempo=hn_read16(m,SCRATCH+6);
+        scratch(m,args+8,0,3);unsigned index;GameAddr player=audio_player(m,song,&index);if(!player)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        hn_audio_tempo(m,player,tempo);hn_audio_track_parameter(m,player,mask,volume,0);
+        hn_audio_track_parameter(m,player,mask,(uint32_t)(int16_t)hn_read16(m,SCRATCH),1);
+        hn_audio_track_parameter(m,player,mask,(uint32_t)(int8_t)hn_read8(m,SCRATCH+2),2);advance(m,11);break;
+    }
     case 0x5D: {
         unsigned value=hn_read8(m,0x030021E0),mask=hn_read8(m,args);
         hn_write8(m,0x030021E0,(uint8_t)(hn_read8(m,args+1)?value|mask:value&~mask));advance(m,2);break;
+    }
+    case 0x5E: {
+        if(!hn_audio_ready(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        scratch(m,args,0,3);uint16_t song=hn_read16(m,SCRATCH);unsigned condition=hn_read8(m,SCRATCH+2),index;
+        GameAddr player=audio_player(m,song,&index);if(!player)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        uint32_t state=hn_read32(m,player+4);
+        if(condition)condition=state&0x80000000u;else if((state&0x8000FFFFu)==0x80000000u)condition=1;
+        if(condition||hn_read32(m,HN_AUDIO_SONG_RECORDS+song*8)!=hn_read32(m,player))hn_write8(m,OPCODE,0);
+        else hn_write8(m,YIELDED,1);
+        hn_write32(m,CONSUMED,3);break;
     }
     case 0x5F:
         if(!hn_save_write_groups(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);

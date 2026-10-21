@@ -13,6 +13,7 @@ typedef struct {
 typedef enum {HN_SONG_START,HN_SONG_CHANGE,HN_SONG_CONTINUE,HN_SONG_STOP,HN_SONG_RESUME} HNSongAction;
 void hn_audio_init(HNAudio *,HNMemory *);
 bool hn_audio_driver_init(HNMemory *);
+bool hn_audio_ready(HNMemory *);
 bool hn_audio_core_init(HNMemory *,GameAddr core);
 bool hn_audio_psg_init(HNMemory *,GameAddr channels);
 bool hn_audio_mode(HNMemory *,uint32_t mode);
@@ -45,6 +46,8 @@ void hn_audio_channel_volume(HNMemory *,GameAddr channel,GameAddr track);
 bool hn_audio_note(HNAudio *,GameAddr player,GameAddr track,unsigned clock_selector);
 bool hn_audio_player_update(HNAudio *,GameAddr player,unsigned command_budget);
 bool hn_audio_update_players(HNAudio *,unsigned command_budget);
+bool hn_audio_psg_update(HNAudio *);
+bool hn_audio_mix(HNAudio *,unsigned command_budget);
 #ifdef __cplusplus
 }
 #endif

@@ -112,3 +112,13 @@ int hn_probe_audio_player(HNMemory *m,GameAddr player,unsigned command_budget,ui
     HNAudio audio;hn_audio_init(&audio,m);bool ok=hn_audio_player_update(&audio,player,command_budget);
     report[0]=audio.fault;report[1]=audio.fault_opcode;report[2]=audio.fault_address;return ok;
 }
+int hn_probe_audio_mix(HNMemory *m,unsigned command_budget,uint32_t report[3])
+{
+    HNAudio audio;hn_audio_init(&audio,m);bool ok=hn_audio_mix(&audio,command_budget);
+    report[0]=audio.fault;report[1]=audio.fault_opcode;report[2]=audio.fault_address;return ok;
+}
+int hn_probe_audio_psg(HNMemory *m,uint32_t report[3])
+{
+    HNAudio audio;hn_audio_init(&audio,m);bool ok=hn_audio_psg_update(&audio);
+    report[0]=audio.fault;report[1]=audio.fault_opcode;report[2]=audio.fault_address;return ok;
+}

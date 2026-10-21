@@ -16,7 +16,8 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   explicit faults for cyclic or unsupported commands.
 - audio: synthetic driver/player setup, parameters and fades, linked-channel
   release, typed sequence dispatch, note allocation, complete synthetic track
-  progression and independent command/channel-cycle budgets.
+  progression, PCM interpolation/end/reverb behavior, PSG wave-register writes,
+  script sound/wait controls and independent command/channel-cycle budgets.
 - storage: SHA-256 known vectors, strict ROM rejection, atomic SRAM recovery,
   independent profile locking, settings validation and Unicode paths.
 - input: injected keyboard events and a local SDL virtual gamepad. Covers hotplug,
@@ -51,25 +52,31 @@ and drawing, all 61 background handlers, 37 graphics handlers, palette transitio
 map/core initialization and SRAM initialization/repair/read/write behavior. It also
 compares Main save-load commands with successful and failed records. The ROM
 schedules cover 88 Main-only iterations, 180 coupled idle iterations and a separate
-360 iterations with directly injected A-button registers. The latter schedules call
-the background/object/graphics/mosaic updates and video transfers. Graphics slots
+369 iterations with directly injected A-button registers. The latter schedules call
+background/object/graphics/mosaic updates, video transfers and audio service with
+driver initialization and VBlank-counter synchronization. Graphics slots
 are inactive during those ROM schedules; synthetic per-command/update tests provide
-the graphics evidence. Task/actor updates, real input/IRQ cadence and audio are
-omitted. The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a
-complete GBA machine. Without the PPU oracle, this checkpoint passes 97,405 comparisons.
+the graphics evidence. Task/actor updates, CPU-transfer flushing, real input/IRQ
+cadence and hardware audio output are omitted. DMA3 stack-local source registers
+are excluded, while transferred data and sound DMA1/2 register images are compared.
+The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
+GBA machine. Without the PPU oracle, this checkpoint passes 117,557 comparisons.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 
 The audio part can be run independently with the same private ROM and reference:
 
     python -B tools/compare_reference.py --audio-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-It passes 40,151 function/state comparisons, including 300 song-control selections,
+It passes 57,988 function/state comparisons, including 300 song-control selections,
 240 synthetic note-allocation cases and 120 player updates for each of 12 actual
-ROM sequences. It compares persistent RAM and the relevant sound/timer register
-images. The CPU oracle supplies only the frequency initializer's VCOUNT boundary;
-it does not model elapsed audio time, FIFO playback or PSG sound generation.
-Those sequence checks omit the mixer and PSG service. They do not verify PCM,
-audible playback, game integration or the full duration of a song.
+ROM sequences. It also compares 1,440 complete mixer/PSG-service calls over those
+12 sequences, including the eight-bit PCM DMA planes and relevant sound/timer
+register images. Of those snapshots, 349 contain nonzero PCM. Synthetic cases cover
+PSG envelopes, PCM loop/end/interpolation boundaries and reverberation; Main and
+animation audio commands are compared separately. The CPU oracle supplies only
+the frequency initializer's VCOUNT boundary. It does not model elapsed audio time,
+FIFO/DAC mixing or PSG waveform generation. Final stereo output, audible playback,
+real game integration and complete-song duration remain unverified.
 
 An independent static PPU comparison uses an existing mGBA 0.10.5 source checkout
 and a compatible C compiler. It is a separate test project, not an application
@@ -88,7 +95,7 @@ architecture.md; this is not a claim of complete hardware conformance.
 
 Add --video-oracle PATH_TO_ORACLE and, if needed,
 --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to compare_reference.py to compare
-seven static snapshots from its private ROM schedule. This passes 97,412 checks;
+seven static snapshots from its private ROM schedule. This passes 117,564 checks;
 five snapshots contain multiple colors. No snapshots or ROM data are saved.
 
 Manual UI checks cover import/cancellation, persisted rebinding, keyboard menu

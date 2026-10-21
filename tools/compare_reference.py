@@ -451,11 +451,126 @@ def main() -> None:
                       f"native audio player {song} {frame_index}: {list(report_audio)}")
                 call("ProcessAudioPlayerAsm", player, limit=1000000)
                 compare(f"audio player {song} {frame_index}", audio_ranges)
+        psg_step = bind("hn_probe_audio_psg", C.c_int, C.c_void_p, C.POINTER(C.c_uint32))
+        mix = bind("hn_probe_audio_mix", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
+        fresh()
+        equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, "PSG service driver")
+        call("InitializeAudioDriver", limit=2000000)
+        for case in range(240):
+            both(0x03003EEA, bytes([case % 16]))
+            both(0x04000060, rng.randbytes(64))
+            both(0x02020000, rng.randbytes(16))
+            for i in range(4):
+                channel = 0x03004FA0 + i * 64
+                both(channel, rng.randbytes(64))
+                both(channel, bytes([(0, 0x80, 3, 2, 1, 0x43, 4, 0xC0)[(case + i) % 8]]))
+                both(channel + 0x24, struct.pack("<II", 0x02020000, 0 if case & 1 else 0x02020000))
+                both(channel + 4, bytes([case % 8, (case // 2) % 8, case % 16, (case // 3) % 8]))
+                both(channel + 0x1C, bytes([0x11 << i]))
+            for frame_index in range(5):
+                equal(psg_step(memory, report_audio), 1, f"native PSG service {case} {frame_index}")
+                call("UpdateAudioPsgChannels", limit=1000000)
+                compare(f"PSG service {case} {frame_index}", audio_ranges)
+        for case in range(160):
+            fresh()
+            equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, "PCM driver")
+            call("InitializeAudioDriver", limit=2000000)
+            core = 0x03003EE0
+            both(core + 0x20, bytes(4))
+            both(core + 0x28, struct.pack("<I", 0x080EC0B5))
+            samples = (16, 20, 28, 32, 64, 132, 264)[case % 7]
+            period = 1584 // samples
+            both(core + 4, bytes([case % (period + 1), case * 7 % 128, case % 9, case % 16]))
+            both(core + 11, bytes([period]))
+            both(core + 0x10, struct.pack("<I", samples))
+            both(core + 0x18, struct.pack("<I", 1))
+            both(core + 0x350, rng.randbytes(3168))
+            for i in range(12):
+                channel, wave = core + 0x50 + i * 64, 0x02024000 + i * 1024
+                both(channel, rng.randbytes(64))
+                status = (0, 0x80, 0x83, 0x82, 0x81, 0x43, 0x44, 0x84, 0xC0, 0x13, 0x12, 0x14)[(case + i) % 12]
+                both(channel, bytes([status, 8 if (case + i) & 1 else 0]))
+                length = (1, 2, 3, 4, 5, 7, 8, 11, 16, 32, 64, 255)[(case + i) % 12]
+                offset = 0 if case % 3 == 0 else length // 2
+                loop_start = length if case % 19 == 0 else length // 2
+                both(wave, struct.pack("<IIII", 0x40000000 if case & 2 else 0, 0, loop_start, length) + rng.randbytes(256))
+                both(channel + 13, bytes([case % 4]))
+                both(channel + 0x18, struct.pack("<II", length - offset, rng.randrange(1 << 23)))
+                step = (0, 0x200000, 0x800000, 0xC00000, 0x1000000, 0x3000000, 0x8000000, 0x3F000000)[(case + i) % 8]
+                both(channel + 0x20, struct.pack("<III", step, wave, wave + 16 + offset))
+            equal(mix(memory, 4096, report_audio), 1, f"native PCM mix {case}: {list(report_audio)}")
+            call("RunAudioMixerAsm", limit=2000000)
+            compare(f"PCM mix {case}", audio_ranges)
+        pcm_frames, nonzero_pcm_frames = 0, 0
+        for song in (1, 10, 40, 67, 128, 199, 200, 205, 220, 250, 270, 299):
+            fresh()
+            equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, f"audio mixer driver {song}")
+            call("InitializeAudioDriver", limit=2000000)
+            equal(native("hn_audio_song", 2, C.c_bool)(memory, song, 0), True, f"audio mixer song {song}")
+            call("StartSong", song)
+            for frame_index in range(120):
+                native("hn_audio_dma_vblank")(memory)
+                call("SyncAudioDmaAtVblankAsm")
+                equal(mix(memory, 4096, report_audio), 1,
+                      f"native audio mixer {song} {frame_index}: {list(report_audio)}")
+                call("RunAudioMixerAsm", limit=2000000)
+                compare(f"audio mixer {song} {frame_index}", audio_ranges)
+                core = 0x03003EE0
+                samples = struct.unpack("<I", native_bytes(core + 0x10, 4))[0]
+                counter, period = native_bytes(core + 4, 1)[0], native_bytes(core + 11, 1)[0]
+                output = core + 0x350 + (samples * (period - counter + 1) if counter > 1 else 0)
+                nonzero_pcm_frames += any(native_bytes(output, samples) + native_bytes(output + 0x630, samples))
+                pcm_frames += 1
+        print(f"{pcm_frames} private ROM mixer frames matched; {nonzero_pcm_frames} contained nonzero PCM.")
+        for case in range(18):
+            fresh()
+            equal(native("hn_runtime_tables_init", result=C.c_bool)(memory), True, "audio Main runtime table")
+            cpu.mem_write(0x02000000, rom[0x8FE018:0x900EC8])
+            equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, "audio Main driver")
+            call("InitializeAudioDriver", limit=2000000)
+            song = (67, 200, 205, 250)[case % 4]
+            index = struct.unpack_from("<H", rom, 0x6EAE34 + song * 8 + 4)[0]
+            player = struct.unpack_from("<I", rom, 0x6EADEC + index * 12)[0]
+            both(0x03000040 + index, bytes([case % 3]))
+            both(0x03000020 + index * 2, struct.pack("<H", song if case & 1 else 0))
+            both(0x0201DC5E, struct.pack("<H", 200))
+            both(0x03002180, bytes([8 if case & 1 else 0]))
+            cases = (
+                (0x0A, "MainScriptStartSong", struct.pack("<HB", song, case % 4)),
+                (0x0B, "MainScriptStopSong", struct.pack("<HB", song if case % 3 else 0, case % 4)),
+                (0x56, "MainScriptChangeAudioPlayer", struct.pack("<HBB", song if case % 3 else 0, case & 1, case % 3)),
+                (0x57, "MainScriptSelectAudioPlayers", bytes([case & 1, (0, 1, 5, 63, 255)[case % 5]])),
+                (0x5C, "MainScriptSetAudioParameters", struct.pack("<HHHHHB", song, 0xFF, case * 2345,
+                                                                 case * 3456, case * 3333, case * 13)),
+                (0x5E, "MainScriptWaitForSong", struct.pack("<HB", song, case & 1)))
+            for opcode, original, payload in cases:
+                both(0x02020000, payload)
+                both(0x03000010, bytes([opcode]))
+                both(0x0300001D, bytes(1))
+                if opcode == 0x5E:
+                    both(player + 4, struct.pack("<I", (0x80000000, 0x80000001, 1)[case % 3]))
+                equal(command(memory, opcode, 0x02020000), 1, f"native Main audio {opcode:02X} {case}")
+                call(original, 0x02020000)
+                compare(f"Main audio {opcode:02X} {case}", audio_ranges)
+        animation_audio = bind("hn_probe_animation", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32,
+                               C.c_uint32, C.POINTER(C.c_uint32))
+        report_animation = (C.c_uint32 * 4)()
+        for case in range(12):
+            for opcode, original in ((0xD0, "AnimationStartSong"), (0xD1, "AnimationStopSong")):
+                slot = 0x02010000
+                both(slot, rng.randbytes(104))
+                both(slot + 0x61, bytes([64 if case & 2 else 0]))
+                both(0x03002182, bytes([64 if case & 4 else 0]))
+                both(0x02020000, struct.pack("<BH", opcode, (0, 67, 200)[case % 3]))
+                both(0x03007010, struct.pack("<I", 0x02020000))
+                equal(animation_audio(memory, slot, opcode, 0x03007010, report_animation), 1, f"native animation audio {case} {opcode}")
+                equal(report_animation[3], call(original, slot, 0x03007010), f"animation audio yield {case} {opcode}")
+                compare(f"animation audio {case} {opcode}", audio_ranges)
 
     try:
         if args.audio_only:
             audio_checks()
-            print(f"{checks} private audio function comparisons passed; PCM and gameplay remain unverified.")
+            print(f"{checks} private audio comparisons passed; hardware output and gameplay remain unverified.")
             return
         heap_init(memory)
         call("InitializeHeap", 0)
@@ -897,10 +1012,13 @@ def main() -> None:
             equal(native("hn_save_load_groups", result=C.c_bool)(memory), True, f"native load triplet {case}")
             call("LoadSaveDataGroups1To3")
             compare(f"load triplet {case}", save_ranges)
-        def prepare_core():
+        def prepare_core(with_audio=False):
             prepare_save()
             native("hn_video_state_init")(memory)
             call("InitializeVideoState")
+            if with_audio:
+                equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, "coupled audio initialization")
+                call("InitializeAudioDriver", limit=2000000)
             native("hn_mosaic_init")(memory)
             call("InitializeMosaic")
             native("hn_task_contexts_init")(memory)
@@ -1318,8 +1436,9 @@ def main() -> None:
                 call("UpdatePaletteGroup", first, count)
                 compare(f"update palette {case} {step}", background_ranges[:3])
 
-        prepare_core()
+        prepare_core(True)
         memory_copy = bind("hn_memory_copy", C.c_bool, C.c_void_p, C.c_uint32, C.c_uint32, C.c_size_t)
+        mix_frame = bind("hn_probe_audio_mix", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
         video_render = bind("hn_video_render", None, C.c_void_p, C.c_void_p)
         if args.video_oracle:
             from compare_video import VideoOracle
@@ -1328,15 +1447,17 @@ def main() -> None:
             oracle_context = nullcontext(None)
         video_frames, nonuniform, active_graphics_iterations = 0, 0, 0
         with oracle_context as video_oracle:
-            for index in range(540):
+            for index in range(549):
                 if index == 180:
                     print(f"180 idle script/render iterations matched; graphics scripts active in {active_graphics_iterations}.")
-                    prepare_core()
+                    prepare_core(True)
                     active_graphics_iterations = 0
                 if index >= 180:
                     # Direct register injection is a script probe, not the complete input/task loop.
                     keys = 1 if (index - 180) % 120 == 100 else 0
                     both(0x03000820, struct.pack("<HH", keys, keys))
+                native("hn_audio_dma_vblank")(memory)
+                call("SyncAudioDmaAtVblankAsm")
                 equal(frame(memory, 4096, report), 1, f"coupled Main {index}")
                 call("RunMainScriptFrame")
                 equal(background(memory, 4096, report3), 1, f"coupled native background {index}: {list(report3)}")
@@ -1358,8 +1479,13 @@ def main() -> None:
                 call("CommitVideoRegisters")
                 native("hn_transfer_flush")(memory)
                 call("FlushDmaTransfers")
+                equal(mix_frame(memory, 4096, report3), 1, f"coupled audio mix {index}: {list(report3)}")
+                call("RunAudioMixerAsm", limit=2000000)
+                # DMA3 can retain the reference's transient stack-local source
+                # addresses; compare transferred data and sound DMA1/2 instead.
                 compare(f"coupled Main/background/render/graphics {index}", save_ranges + ((0x05000000, 0x400),
-                    (0x06000000, 0x18000), (0x07000000, 0x400), (0x04000000, 0x58)))
+                    (0x06000000, 0x18000), (0x07000000, 0x400), (0x04000000, 0x58),
+                    (0x03007FF0, 4), (0x04000060, 0x74), (0x04000100, 4)))
                 if video_oracle and index in (0, 24, 32, 64, 87, 120, 179):
                     pixels = (C.c_uint32 * (240 * 160))()
                     video_render(memory, pixels)
@@ -1370,7 +1496,7 @@ def main() -> None:
                     nonuniform += len(set(pixels)) > 1
         if args.video_oracle:
             print(f"{video_frames} private ROM PPU snapshots matched; {nonuniform} contained multiple colors.")
-        print(f"360 input-injected script/render iterations matched; graphics scripts active in {active_graphics_iterations}.")
+        print(f"369 input-injected script/render/audio iterations matched; graphics scripts active in {active_graphics_iterations}.")
         audio_checks()
     finally:
         destroy(memory)
