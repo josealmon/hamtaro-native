@@ -2,6 +2,7 @@
 #include "game/state.h"
 #include "game/video.h"
 #include "game/render.h"
+#include "game/raster.h"
 #include "gba/bios.h"
 static bool fail(HNGraphics *g,HNGraphicsFault fault,unsigned op,GameAddr address)
 {g->fault=fault;g->fault_opcode=op;g->fault_address=address;return false;}
@@ -237,6 +238,8 @@ bool hn_graphics_command(HNGraphics *g,GameAddr s,unsigned op,GameAddr p,uint32_
         hn_write16(m,s+0x26,(uint16_t)((end_x-x)/(int)remaining));hn_write16(m,s+0x28,(uint16_t)((end_y-y)/(int)remaining));
         cursor(m,s,p,8);*running=0;break;
     }
+    case 0xA1:case 0xA2:case 0xA3:case 0xA4:case 0xA5:case 0xA6:case 0xA7:case 0xA8:case 0xA9:case 0xAD:case 0xAE:
+        if(!hn_raster_command(m,s,op,p,running))return fail(g,HN_GRAPHICS_RESOURCE,op,p);break;
     case 0xAA: {
         unsigned enabled=hn_read8(m,p)&1,mask=hn_read8(m,p+1),value=hn_read8(m,HN_DISPLAY_SHADOW+1);
         for(unsigned i=0;i<3;i++)if(mask&(1u<<i))value=(value&~(1u<<(5+i)))|(enabled<<(5+i));

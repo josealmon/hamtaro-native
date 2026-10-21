@@ -2,6 +2,8 @@
 #include "game/state.h"
 #include "game/video.h"
 #include "game/render.h"
+#include "game/heap.h"
+#include "game/raster.h"
 #include <stdio.h>
 #include <stdlib.h>
 static HNMemory memory;
@@ -53,8 +55,74 @@ static void flows(void)
     CHECK(hn_graphics_configure(&memory,0,0x02020000));
     hn_write8(&memory,0x02020000,0x82);hn_write32(&memory,0x02020001,0x02020000);
     CHECK(!hn_graphics_update(&graphics,16));CHECK(graphics.fault==HN_GRAPHICS_BUDGET);
-    hn_graphics_init(&graphics,&memory);hn_write8(&memory,0x02020000,0xA2);
+    hn_graphics_init(&graphics,&memory);hn_write8(&memory,0x02020000,0xB0);
     CHECK(!hn_graphics_update(&graphics,16));CHECK(graphics.fault==HN_GRAPHICS_OPCODE);
+}
+static void raster_effects(void)
+{
+    reset();hn_heap_init(&memory);HNGraphics graphics;hn_graphics_init(&graphics,&memory);
+    GameAddr state=0x02018000,data=0x02020000;uint32_t running=99;
+    const unsigned sizes[]={0,8,8,12,12,260,8,12,8};
+    for(unsigned kind=1;kind<=8;kind++){
+        hn_write8(&memory,data,(uint8_t)kind);
+        CHECK(hn_graphics_command(&graphics,state,0xA7,data,&running));
+        GameAddr effect=hn_read32(&memory,HN_RASTER_EFFECT);CHECK(effect!=0&&running==1);
+        CHECK(hn_read32(&memory,effect-12)==sizes[kind]);
+        for(unsigned i=0;i<sizes[kind];i++)CHECK(hn_read8(&memory,effect+i)==0);
+        hn_write8(&memory,effect,0xA5); /* Reallocation must clear reused storage. */
+    }
+    hn_write8(&memory,data,0);CHECK(!hn_graphics_command(&graphics,state,0xA7,data,&running));
+    CHECK(graphics.fault==HN_GRAPHICS_RESOURCE&&hn_read32(&memory,HN_RASTER_EFFECT)==0);
+    hn_graphics_init(&graphics,&memory);CHECK(!hn_graphics_command(&graphics,state,0xA2,data,&running));
+    CHECK(graphics.fault==HN_GRAPHICS_RESOURCE&&!memory.fault);
+
+    reset();hn_heap_init(&memory);hn_graphics_init(&graphics,&memory);
+    const uint8_t sweep[]={0xA7,8,0xA1,1,0x3F,0,0x11,0x20,0x11,1,0xA8,40,0,0xA2,0x80};
+    program(data,sweep,sizeof(sweep));CHECK(hn_graphics_configure(&memory,0,data));
+    CHECK(hn_graphics_update(&graphics,64));CHECK(hn_read8(&memory,state)==0xAE);
+    CHECK(hn_read16(&memory,HN_RASTER_SCANLINE)==0x50A0);
+    CHECK(hn_read32(&memory,0x040000B4)==0x04000042&&hn_read32(&memory,0x040000B8)==0x93400001);
+    CHECK((hn_read8(&memory,HN_DISPLAY_SHADOW+1)&0x5F)==0x5F&&hn_read8(&memory,HN_HBLANK_SELECTOR)==0);
+    CHECK(hn_graphics_update(&graphics,64));CHECK(hn_read16(&memory,HN_RASTER_SCANLINE)==0x28C8);
+    CHECK(hn_graphics_update(&graphics,64));CHECK(hn_read16(&memory,HN_RASTER_SCANLINE)==0x00F0);
+    CHECK(hn_read32(&memory,HN_RASTER_EFFECT)==0&&hn_read32(&memory,0x040000B0)==0);
+    CHECK(hn_read32(&memory,0x040000B4)==0&&hn_read32(&memory,0x040000B8)==0);
+    CHECK(hn_read8(&memory,HN_DISPLAY_SHADOW+1)==0x11&&hn_read8(&memory,HN_SCENE_CONTROLS+0x60)==1);
+    CHECK(hn_graphics_update(&graphics,64));CHECK(hn_read8(&memory,state)==0);
+
+    hn_write8(&memory,data,5);CHECK(hn_graphics_command(&graphics,state,0xA7,data,&running));
+    GameAddr effect=hn_read32(&memory,HN_RASTER_EFFECT);hn_write16(&memory,effect+5,2);
+    CHECK(hn_raster_profile(&memory));CHECK(hn_read8(&memory,effect+17)==1);
+    CHECK(hn_read8(&memory,effect+18)==2&&hn_read8(&memory,effect+19)==2);
+    hn_write16(&memory,effect+5,239);hn_write8(&memory,effect+9,2);
+    CHECK(hn_raster_profile(&memory)&&hn_read16(&memory,effect+5)==240);
+    CHECK(hn_read8(&memory,effect+258)==0); /* Positive-radius clamp preserves the rounded allocation tail. */
+    /* A negative increment uses the signed comparison before the profile is generated. */
+    hn_write16(&memory,effect+5,10);hn_write8(&memory,effect+9,255);hn_write16(&memory,effect+13,0x0500);
+    CHECK(hn_raster_profile(&memory)&&hn_read16(&memory,effect+5)==14);
+    hn_write8(&memory,effect,1);hn_video_hblank(&memory,16);
+    CHECK(hn_graphics_command(&graphics,state,0xA6,data,&running));
+    CHECK(hn_read32(&memory,HN_RASTER_EFFECT)==0&&hn_read8(&memory,HN_HBLANK_SELECTOR)==0);
+    CHECK((hn_read8(&memory,HN_DISPLAY_STATUS)&0xD0)==0x40&&!memory.fault);
+
+    hn_write8(&memory,data,5);CHECK(hn_graphics_command(&graphics,state,0xA7,data,&running));
+    effect=hn_read32(&memory,HN_RASTER_EFFECT);hn_write8(&memory,effect+3,120);hn_write8(&memory,effect+4,80);
+    hn_write16(&memory,effect+5,20);hn_write8(&memory,effect+7,22);hn_write8(&memory,effect+9,1);
+    hn_write32(&memory,0x02000040,0x0800F4FD); /* Callback identity metadata. */
+    CHECK(hn_graphics_command(&graphics,state,0xA2,data,&running));
+    CHECK(hn_read8(&memory,HN_HBLANK_SELECTOR)==16&&hn_read16(&memory,effect+5)==21);
+    memory.io[6]=158;CHECK(hn_raster_hblank(&memory));
+    CHECK(hn_read16(&memory,HN_RASTER_SCANLINE)==0&&hn_read8(&memory,effect+12)==1);
+    memory.io[6]=0;hn_write8(&memory,effect+12,80);CHECK(hn_raster_hblank(&memory));
+    CHECK(hn_read16(&memory,HN_RASTER_SCANLINE)==0x638D&&hn_read8(&memory,effect+12)==81);
+    memory.io[6]=160;CHECK(hn_raster_hblank(&memory));
+    CHECK(hn_read16(&memory,effect+5)==22&&hn_read32(&memory,HN_RASTER_EFFECT)==effect);
+    CHECK(hn_raster_hblank(&memory));CHECK(hn_read32(&memory,HN_RASTER_EFFECT)==0);
+    CHECK(hn_read8(&memory,HN_HBLANK_SELECTOR)==0&&hn_read8(&memory,HN_SCENE_CONTROLS+0x60)==1);
+    memory.io[4]=0x17;CHECK(hn_raster_hblank(&memory));CHECK(memory.io[4]==7);
+    hn_write8(&memory,HN_HBLANK_SELECTOR,255);CHECK(!hn_raster_hblank(&memory));
+    hn_write8(&memory,HN_HBLANK_SELECTOR,16);hn_write32(&memory,0x02000040,0x08012345);
+    CHECK(!hn_raster_hblank(&memory)&&!memory.fault);
 }
 static void transitions(void)
 {
@@ -86,6 +154,6 @@ int main(void)
 {
     rom=calloc(1,0x600000);CHECK(rom!=NULL);
     for(unsigned i=1;i<8;i++)rom[HN_PALETTE_GROUP_SIZES-HN_ROM_BASE+i]=(uint8_t)(1u<<i);
-    palettes();flows();transitions();free(rom);
+    palettes();flows();transitions();raster_effects();free(rom);
     printf("%u native graphics checks passed.\n",checks);return 0;
 }

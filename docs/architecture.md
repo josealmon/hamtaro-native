@@ -34,7 +34,7 @@ PCM to the output device's format.
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division semantics and modeled ObjAffine; hardware matrix rounding remains unverified |
-| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; ten private ROM snapshots compared; raster timing still pending |
+| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 13 private ROM snapshots compared; raster timing still pending |
 | Video timing and IRQ | Foundation | Scanline/VBlank/HBlank, four timers, cascades, IRQ flags and FIFO DMA tested independently; real game IRQ cadence and DMA bus contention remain pending |
 | Native game helpers | Adapted | Original guest input layout, directions/repeat/query semantics and integer PRNG/ranges compared; host-to-game loop connection remains pending |
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |
@@ -42,12 +42,12 @@ PCM to the output device's format.
 | Map and core initialization | Adapted | Runtime tables read from ROM, task sentinel, render slots/order, background state and all 11 map banks tested at index 0 |
 | Objects and animation scripts | Partial | Physics, positions, priority ordering, affine reuse, OAM and animation/sound commands compared; animation callback bindings remain incomplete |
 | Background scripts and transforms | Adapted | All 61 command handlers, repeat/call flow, motion, clamping, affine layers and tilemap copies compared; invalid stacks/resources fail explicitly |
-| Graphics scripts and palette effects | Partial | 37 of 48 handlers compared: palette interpolation, delay/call/repeat flow, blend/fade, mosaic and windows; 11 raster-effect handlers remain unsupported |
+| Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular HBlank callback compared, remaining scanline callbacks and timed DMA/PPU integration pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
-| Scene menus | Partial | Menu/record selection, cursor setup, language snapshots, input dialogs and save-record selection compared; scene text/name rendering and other scene callbacks remain incomplete |
-| Native boot/title | Pending | 88 Main-only, 180 idle and 918 input-driven script/render/audio iterations compared; scene text, task/actor updates, real IRQ cadence and hardware audio output remain incomplete |
+| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; later scene callbacks remain incomplete |
+| Native boot/title | Pending | 88 Main-only, 180 idle and 2,329 input-driven script/render/audio iterations compared; task/actor updates, real IRQ cadence and hardware audio output remain incomplete |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
 | Music and effects | Partial | Sequencer, original PCM mixer, PSG register service, four native PSG generators, script controls and Direct Sound/PWM tested as components; final game output, filtering, trigger quirks and host delivery remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
@@ -85,15 +85,18 @@ by these functions; it does not provide a complete machine/timing oracle.
 Heap layouts, input, PRNG, expressions, video, transfers, object/background
 rendering, maps, core initialization and save operations are compared. Synthetic
 fixtures exercise resource commands without embedding a game resource. Tests
-also run 88 Main-only iterations, 180 idle iterations and a separate 918-iteration
-schedule with scripted A-button input through the original guest input adapter.
+also run 88 Main-only iterations, 180 idle iterations and a separate 2,329-iteration
+schedule with scripted input through the original guest input adapter. The latter
+enters and confirms both name fields and completes a circular menu transition.
 Those schedules call Main, background,
 object, graphics and mosaic updates, OAM transfer, video commit, DMA flush and
 audio service. They initialize the audio driver and synchronize its VBlank counter.
-Graphics slots are active in two iterations of the input schedule; command
-comparisons and synthetic updates cover the remaining implemented behavior. Ten
-static PPU snapshots across the schedules match a separate mGBA renderer; eight
-contain multiple colors. These schedules omit task/actor systems, CPU-transfer
+Graphics slots are active in 161 iterations of the input schedule; command
+comparisons and synthetic updates cover the remaining implemented behavior. Thirteen
+static PPU snapshots across the schedules match a separate mGBA renderer; eleven
+contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
+explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
+These schedules omit task/actor systems, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
 sound DMA1/2 register images are compared. These are not a verified native boot,
@@ -105,11 +108,18 @@ read menu banks, option codes, background scripts and animations from the privat
 ROM. The reusable render-slot adapter preserves halfword coordinate truncation,
 priority flags and the class-slot boot gate. Menu movement retains original
 boundaries and sound triggers; guest input preserves direction caching, repeat
-delays, held-frame wrapping and key-mask side effects. Random save-record selection
+delays, held-frame wrapping, key-mask side effects and masked ordinal priority.
+Random save-record selection
 uses the original guest PRNG/range calculation with a bounded retry guard for
 degenerate state. No menu strings, glyphs or background data are embedded.
-The current component schedule stops at ScriptCallbackResetBothSceneTexts; name
-text preparation, glyph blitting and later task/actor integration are still required.
+Name entry reads the three keyboard grids, defaults, glyphs and advance widths
+from the private ROM. The glyph adapter converts packed 2bpp data to tiled 4bpp,
+preserving odd-pixel merging and clipping. The original name renderer fills 0x680
+guest bytes despite requesting a 0x280-byte shadow allocation; this behavior is
+preserved through guest bus writes and never overruns a host allocation. Panel
+entry/exit/depth callbacks preserve their per-language layouts and animation yields.
+The current component schedule stops before ScriptCallbackSetBackground2RightBottom1024;
+later scene callbacks and task/actor integration are still required.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
 in their original 32-bit memory views. Callback bindings accept a specific typed
@@ -132,7 +142,11 @@ and six-byte RGB accumulators; source colors wrap at 256 while destination index
 remain full width. Interpolation and scratch fields are compared with the original
 functions. Invalid palette extents fail instead of taking the original zero-count
 wraparound path. Fade, alpha and mosaic modes preserve their distinct delay and
-completion rules. Raster-effect commands remain explicit faults. Main save-load
+completion rules. Raster state retains guest heap ownership, DMA0 register setup,
+window/layer restoration, byte/phase wrapping and the signed radius-update condition.
+The typed HBlank dispatcher supports the circular effect and known no-op callbacks;
+other callback addresses fail explicitly. Static snapshots and sampled callback
+comparisons do not establish raster-image fidelity or the real IRQ cadence. Main save-load
 commands preserve the failure cursor/depth behavior and reload the saved map with
 a white palette on success; file persistence still needs the real game loop.
 
@@ -251,7 +265,7 @@ are rejected; the unused group-0 record write/load path is not exposed.
 
 ## Remaining integration order
 
-1. Add raster effects, task/actor systems and audio, then connect the verified
+1. Add remaining scanline callbacks and timed effects, task/actor systems and audio delivery, then connect the verified
    initialization, typed callbacks and script/render systems to the real game loop.
 2. Establish a deterministic title/new-game/movement/save-load scenario.
 3. Compare the native core against the reference's existing opening and first

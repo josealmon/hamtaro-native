@@ -10,6 +10,7 @@
 #include "game/audio.h"
 #include "game/scene.h"
 #include "game/random.h"
+#include "game/input.h"
 #include "gba/bios.h"
 #include <string.h>
 enum {
@@ -59,9 +60,7 @@ static uint32_t reset_visuals(HNMemory *m,GameAddr args)
 }
 static uint32_t read_key_mask(HNMemory *m,GameAddr args)
 {
-    (void)args;uint16_t keys=hn_read16(m,0x03000820)&hn_read16(m,0x03001F64);
-    hn_write16(m,0x0201DC40,keys);
-    hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));return 0;
+    (void)args;hn_input_script_mask(m,0);return 0;
 }
 static const HNMainCallback builtins[]={
     {0x0801C708,set_key_mask},{0x0801C72C,read_key_mask},{0x0801D398,reset_visuals}

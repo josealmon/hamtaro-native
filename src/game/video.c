@@ -37,6 +37,13 @@ void hn_video_forced_blank(HNMemory *m,int32_t blank)
     else{value&=~0x80u;hn_write16(m,HN_DISPLAY_SHADOW,value);hn_write16(m,0x04000000,value);}
 }
 void hn_video_mark_backgrounds(HNMemory *m,uint8_t mask){dirty(m,(mask&15u)<<2);}
+void hn_video_hblank(HNMemory *m,uint32_t selector)
+{
+    uint8_t enabled=(uint8_t)selector,status=hn_read8(m,HN_DISPLAY_STATUS);
+    hn_write8(m,HN_HBLANK_SELECTOR,enabled);
+    if(!enabled)hn_write8(m,HN_DISPLAY_STATUS,(uint8_t)((status&~0xD0u)|0x40));
+    else if(!(status&16))hn_write8(m,HN_DISPLAY_STATUS,(uint8_t)((status&~0xC0u)|0x50));
+}
 void hn_video_blend_effect(HNMemory *m,uint32_t effect)
 {
     hn_write8(m,HN_BLEND,(uint8_t)((hn_read8(m,HN_BLEND)&0x3F)|((effect&3)<<6)));dirty(m,2);

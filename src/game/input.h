@@ -16,6 +16,7 @@ void hn_input_initialize(HNMemory *);
 void hn_input_repeat(HNMemory *,uint16_t first,uint16_t next);
 bool hn_input_update(HNMemory *,uint16_t buttons);
 uint16_t hn_input_query(HNMemory *,uint16_t mask,uint8_t mode);
+uint16_t hn_input_script_mask(HNMemory *,uint8_t mode);
 #ifdef __cplusplus
 }
 #endif

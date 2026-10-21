@@ -47,3 +47,9 @@ bool hn_input_update(HNMemory *m,uint16_t buttons)
 }
 uint16_t hn_input_query(HNMemory *m,uint16_t mask,uint8_t mode)
 {return mode<4?(uint16_t)(hn_read16(m,HN_KEY_STATE+mode*2)&mask):0;}
+uint16_t hn_input_script_mask(HNMemory *m,uint8_t mode)
+{
+    uint16_t keys=hn_input_query(m,hn_read16(m,0x03001F64),mode);
+    hn_write16(m,0x0201DC40,keys);
+    hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));return keys;
+}

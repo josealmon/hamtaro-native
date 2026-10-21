@@ -39,7 +39,7 @@ def main() -> None:
     parser.add_argument("--video-oracle", type=Path, help="Optional separate RGB555 mGBA PPU oracle")
     parser.add_argument("--oracle-runtime-dir", type=Path, help="Optional runtime DLL directory for the PPU oracle")
     parser.add_argument("--audio-only", action="store_true", help="Run just the audio function comparisons")
-    parser.add_argument("--scenes-only", action="store_true", help="Run just the scene-menu/input function comparisons")
+    parser.add_argument("--scenes-only", action="store_true", help="Run scene menus, input, text and transition comparisons")
     args = parser.parse_args()
     spec = json.loads((ROOT / "config/rom.json").read_text())
     rom = args.rom.read_bytes()
@@ -358,6 +358,12 @@ def main() -> None:
             for name in ("ScriptCallbackReadPressedKeyMask", "ScriptCallbackReadRepeatKeyMask",
                          "ScriptCallbackReadDirectionalHeldAndPressedKeyMask", "ScriptCallbackReadSceneRecordDialogInput"):
                 invoke(name)
+        for case in range(512):
+            both(0x03000820, rng.randbytes(8))
+            payload = struct.pack("<H", rng.getrandbits(16) if case > 32 else (1 << (case % 10)))
+            for name in ("ScriptCallbackReadHeldKeyOrdinal", "ScriptCallbackReadPressedKeyOrdinal",
+                         "ScriptCallbackReadRepeatKeyOrdinal", "ScriptCallbackReadDirectionalHeldAndPressedKeyOrdinal"):
+                invoke(name, payload)
         for case in range(48):
             payload = struct.pack("<B3H", case & 1, case % 32, case % 7, case % 13)
             both(0x02030000, payload)
@@ -368,6 +374,166 @@ def main() -> None:
             call("MainScriptSetWordChoiceOptionFlags", 0x02030000);compare("choice flags", ranges)
         equal(command(memory, 0x5A, 0x02030000), 1, "native script core reset")
         call("MainScriptResetCoreState", 0x02030000);compare("script core reset", ranges)
+
+    def text_checks():
+        ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x06000000, 0x18000), (0x040000D4, 12))
+        blit = native("hn_text_blit_glyph", 5, C.c_bool)
+        offsets = (0,1,2,3,4,5,6,7,8,9,15,16,17,31,55,56,63,127,255,256,257,65535,65536,65537)
+        for width in (0,1,2,7,255,256,257):
+            for x in offsets:
+                fresh();heap_init(memory);call("InitializeHeap", 0)
+                shadow = allocate(memory, 0x4000, False)
+                equal(shadow, call("AllocateHeap", 0x4000), "glyph shadow allocation")
+                both(shadow, rng.randbytes(0x4000));both(0x02010000, rng.randbytes(64))
+                palette = rng.getrandbits(32)
+                equal(blit(memory, 0x02010000, shadow, width, x, palette), True, f"glyph success {width}/{x}")
+                call("BlitTaskGlyphToShadow", 0x02010000, shadow, width, x, palette)
+                compare(f"glyph bytes/heap {width}/{x}", ranges[:2])
+        fresh();heap_init(memory);call("InitializeHeap",0)
+        both(0x03002D98, struct.pack("<I", 0x02010000));both(0x03002DC0, bytes([40]))
+        both(0x03003070, struct.pack("<I",0x02018000));both(0x03002E10, bytes([8]))
+        both(0x02010000, rng.randbytes(40*104));both(0x02018000, rng.randbytes(8*44))
+        both(0x03001F50, bytes([29]));both(0x03001F64, struct.pack("<H",1023))
+        def invoke(name, payload=b""):
+            both(0x02030000,struct.pack("<I",symbols[name]|1)+payload+bytes(8))
+            equal(command(memory,0x1C,0x02030000),1,f"native text callback {name}")
+            call("MainScriptInvokeCallback",0x02030000,limit=2000000)
+            compare(name,ranges)
+        for language in range(5):
+            both(0x0200460B,bytes([language]));invoke("ScriptCallbackResetBothSceneTexts")
+        for mode in (0,1,2):
+            both(0x020046C2,bytes([mode]))
+            for position in range(8):
+                both(0x020046C4,bytes([position]));both(0x03002BA0,rng.randbytes(9));both(0x03001F70,rng.randbytes(9))
+                invoke("ScriptCallbackInitializeSceneTextFirst");invoke("ScriptCallbackInitializeSceneTextSecond")
+                invoke("ScriptCallbackRefreshSceneTextCaret");invoke("ScriptCallbackTrimSceneTextPadding")
+        for bank in range(3):
+            for index in range(77):
+                both(0x020046C3,bytes([index]));both(0x020046C5,bytes([bank]))
+                invoke("ScriptCallbackRefreshSceneTextGrid")
+                for direction in (0x10,0x20,0x40,0x80):
+                    both(0x020046C3,bytes([index]));both(0x0201DC40,struct.pack("<H",direction))
+                    invoke("ScriptCallbackMoveSceneTextGrid")
+        for case in range(64):
+            both(0x020046C2,bytes([1+case%2]));both(0x020046C3,bytes([case%77]))
+            both(0x020046C4,bytes([case%8]));both(0x020046C5,bytes([case%3]))
+            # Seven synthetic printable/spacer codes, with the original terminator.
+            data = bytes([1 if case%4==0 else rng.randrange(1,240) for _ in range(7)])+bytes(2)
+            both(0x03002BA0,data);both(0x03001F70,data)
+            both(0x03000822,struct.pack("<H",rng.randrange(1024)));both(0x03000824,struct.pack("<H",rng.randrange(1024)))
+            invoke("ScriptCallbackReadSceneTextInput")
+            invoke("ScriptCallbackSelectSceneTextCharacter")
+            invoke("ScriptCallbackEraseSceneTextCharacter")
+            invoke("ScriptCallbackConfirmSceneText")
+            invoke("ScriptCallbackAdvanceSceneTextPosition");invoke("ScriptCallbackRetreatSceneTextPosition")
+            invoke("ScriptCallbackNextSceneTextBank");invoke("ScriptCallbackPreviousSceneTextBank")
+            invoke("ScriptCallbackSelectSceneTextConfirm");invoke("ScriptCallbackSceneTextNoop")
+        animation = bind("hn_probe_animation", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
+        report_animation = (C.c_uint32*4)()
+        for language in range(5):
+            for variant in range(4):
+                both(0x0200460B,bytes([language]));invoke("ScriptCallbackInitializeScenePanelTransition",bytes([variant]))
+                row=language*92+variant*23
+                count=max(0,struct.unpack("<b",rom[0x6E6B32+row:0x6E6B33+row])[0])
+                def physics():
+                    for i in range(count):
+                        slot=0x02010000+i*104
+                        native("hn_render_physics",1)(memory,slot);call("UpdateRenderPhysics",slot)
+                for step in range(160):
+                    invoke("ScriptCallbackUpdateScenePanelEntry",bytes([variant]));physics()
+                    if native_bytes(0x020046C6,1)==b"\xFF":break
+                equal(native_bytes(0x020046C6,1),b"\xFF","panel entry terminates")
+                both(0x020046D9,bytes([variant]));both(0x020046D7,b"\x01\0")
+                slot=0x02010000+39*104
+                for step in range(96):
+                    both(0x02030000,b"\x8D"+struct.pack("<I",symbols["UpdateScenePanelDepth"]|1))
+                    both(0x03007010,struct.pack("<I",0x02030000))
+                    equal(animation(memory,slot,0x8D,0x03007010,report_animation),1,"native depth animation callback")
+                    equal(report_animation[3],call("AnimationInvokeCallback",slot,0x03007010),"depth animation yield")
+                    physics();compare("panel depth state",ranges+((0x03007010,4),))
+                invoke("ScriptCallbackScheduleScenePanelExit",bytes([variant]))
+                for step in range(160):
+                    invoke("ScriptCallbackUpdateScenePanelExit",bytes([variant]));physics()
+                    if native_bytes(0x020046C6,1)==b"\xFF":break
+                equal(native_bytes(0x020046C6,1),b"\xFF","panel exit terminates")
+
+    def raster_checks():
+        ranges = ((0x02000000,0x40000),(0x03000000,0x7000),(0x04000000,0x60),(0x040000B0,12))
+        graphics_command = bind("hn_probe_graphics_command", C.c_int, C.c_void_p, C.c_uint32,
+                                C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
+        state, data = 0x02018000, 0x02020000
+        report = (C.c_uint32*4)()
+        def invoke(opcode, name, payload=b""):
+            both(data,payload+bytes(8))
+            equal(graphics_command(memory,state,opcode,data,report),1,f"native raster command {name}")
+            equal(report[3],call(name,state,data,limit=1000000),f"raster continuation {name}")
+            compare(name,ranges)
+        fresh()
+        for selector in (0,1,17,255,256,257):
+            for status in range(256):
+                both(0x03002DD4,bytes([status]))
+                native("hn_video_hblank",1)(memory,selector);call("SetHblankIrqEnabled",selector)
+                compare("HBlank selector/pending bits",ranges[1:2])
+        for case in range(64):
+            fresh();heap_init(memory);call("InitializeHeap",0)
+            both(0x03002C90,rng.randbytes(0x108));both(0x03002DD4,rng.randbytes(4))
+            both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,bytes([16]))
+            both(0x02010000,rng.randbytes(16*104));both(0x0201DC40,rng.randbytes(128))
+            both(0x030021AB,bytes([8 if case&1 else 0]));both(0x03000820,struct.pack("<H",case&2))
+            both(state,rng.randbytes(44));both(state,bytes([1]))
+            kind=case%8+1
+            invoke(0xA7,"GraphicsAllocateRasterEffect",bytes([kind]))
+            effect=struct.unpack("<I",native_bytes(0x02000398,4))[0]
+            both(effect,rng.randbytes(258))
+            invoke(0xA1,"GraphicsConfigureRasterWindow",struct.pack("<BHHBB",case%3,rng.getrandbits(16),rng.getrandbits(16),case,case&1))
+            invoke(0xA8,"GraphicsSetRasterPosition",rng.randbytes(2))
+            invoke(0xAD,"GraphicsSetRasterPositionAD",rng.randbytes(2))
+            invoke(0xA9,"GraphicsSetRasterPositionAndByte5",rng.randbytes(3))
+            invoke(0xA4,"GraphicsSetRasterBytes5To8",rng.randbytes(4))
+            invoke(0xA5,"GraphicsSetRasterBytes9To11",rng.randbytes(3))
+            for source in (23,0xFD,0xFE,0xFF):
+                invoke(0xA3,"GraphicsSetRasterPositionFromSource",bytes([source,case]))
+            if kind==5:
+                both(effect+5,struct.pack("<H",8+case*3));both(effect+9,b"\x01\0\0")
+            elif kind==8:
+                both(effect+3,bytes([255 if case&16 else 3,case%3]))
+            invoke(0xA2,"GraphicsBeginRasterEffect")
+            if kind==8:
+                for step in range(256):
+                    invoke(0xAE,"GraphicsUpdateRasterSweep")
+                    if native_bytes(0x02000398,4)==bytes(4):break
+                equal(native_bytes(0x02000398,4),bytes(4),"raster sweep releases state")
+            else:
+                invoke(0xA6,"GraphicsReleaseRasterEffect")
+            invoke(0xA7,"GraphicsAllocateRasterEffect",bytes([kind]))
+            invoke(0xA7,"GraphicsAllocateRasterEffect",bytes([9-kind]))
+        for case in range(160):
+            fresh();heap_init(memory);call("InitializeHeap",0)
+            effect=allocate(memory,258,False)
+            equal(effect,call("AllocateHeap",258),"raster profile allocation")
+            both(0x02000398,struct.pack("<I",effect));both(effect,rng.randbytes(258))
+            both(effect+5,struct.pack("<H",4+case%200));both(effect+9,bytes([(0,1,2,255,254)[case%5]]))
+            equal(native("hn_raster_profile",result=C.c_bool)(memory),True,"native radius profile")
+            call("UpdateRasterRadiusProfile");compare(f"radius profile {case}",ranges[:2])
+        for case in range(24):
+            fresh();heap_init(memory);call("InitializeHeap",0)
+            both(0x02000040,struct.pack("<I",symbols["UpdateRasterCircleWindow"]|1))
+            both(0x03002C90,rng.randbytes(0x108));both(0x03002DD4,rng.randbytes(4))
+            invoke(0xA7,"GraphicsAllocateRasterEffect",b"\x05")
+            effect=struct.unpack("<I",native_bytes(0x02000398,4))[0]
+            radius=24+case*7
+            increment=255 if case&1 else 1
+            limit=radius-2 if case&1 else radius+2
+            both(effect,bytes([case%3,31,case&31,case*10,case*7,radius,0,limit,0,increment,0,0,0,0,0]))
+            invoke(0xA2,"GraphicsBeginRasterEffect")
+            for frame in range(4):
+                for line in range(228):
+                    both(0x04000006,struct.pack("<H",line))
+                    equal(native("hn_raster_hblank",result=C.c_bool)(memory),True,f"native circle HBlank {case}/{frame}/{line}")
+                    call("HandleHblankIrq");compare("circle IRQ state",ranges)
+                    if native_bytes(0x02000398,4)==bytes(4):break
+                if native_bytes(0x02000398,4)==bytes(4):break
+            equal(native_bytes(0x02000398,4),bytes(4),"circle IRQ releases state")
 
     def audio_checks():
         audio_ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x03007FF0, 4),
@@ -678,6 +844,8 @@ def main() -> None:
             return
         if args.scenes_only:
             scene_checks()
+            text_checks()
+            raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
         heap_init(memory)
@@ -1557,16 +1725,23 @@ def main() -> None:
             oracle_context = VideoOracle(args.video_oracle, args.oracle_runtime_dir)
         else:
             oracle_context = nullcontext(None)
-        video_frames, nonuniform, active_graphics_iterations = 0, 0, 0
+        video_frames, nonuniform, active_graphics_iterations, hblank_calls = 0, 0, 0, 0
+        input_iterations=2329
         with oracle_context as video_oracle:
-            for index in range(1098):
+            for index in range(180+input_iterations):
                 if index == 180:
                     print(f"180 idle script/render iterations matched; graphics scripts active in {active_graphics_iterations}.")
                     prepare_core(True)
                     active_graphics_iterations = 0
                 # Original input state/repeat adapter, still a component schedule
                 # without the complete task loop or real IRQ instruction cadence.
-                keys = 1 if index>=180 and (index-180)%120==100 else 0
+                relative=index-180
+                keys=0
+                if index>=180:
+                    if relative in (1460,2000):keys=0x10
+                    elif relative in (1120,1360,1800):keys=8
+                    elif (relative in (1140,1380,1600,1820,2100) or relative<1000 and relative%120==100
+                          or relative>2200 and relative%90==0):keys=1
                 both(0x04000130, struct.pack("<H", (~keys)&1023))
                 equal(native("hn_input_update", 1, C.c_bool)(memory, keys), True, f"coupled input {index}")
                 call("ReadKeys")
@@ -1593,6 +1768,14 @@ def main() -> None:
                 call("CommitVideoRegisters")
                 native("hn_transfer_flush")(memory)
                 call("FlushDmaTransfers")
+                # Selected IRQ callbacks over explicit scanline samples. Deferred
+                # DMA0/PPU timing and actual CPU/IRQ interleaving remain unmodeled.
+                for line in range(228):
+                    if native_bytes(0x03001F6C,1)==b"\0":break
+                    both(0x04000006,struct.pack("<H",line))
+                    equal(native("hn_raster_hblank",result=C.c_bool)(memory),True,"coupled HBlank callback")
+                    call("HandleHblankIrq");hblank_calls+=1
+                both(0x04000006,b"\xA0\0")
                 equal(mix_frame(memory, 4096, report3), 1, f"coupled audio mix {index}: {list(report3)}")
                 call("RunAudioMixerAsm", limit=2000000)
                 # DMA3 can retain the reference's transient stack-local source
@@ -1600,7 +1783,11 @@ def main() -> None:
                 compare(f"coupled Main/background/render/graphics {index}", save_ranges + ((0x05000000, 0x400),
                     (0x06000000, 0x18000), (0x07000000, 0x400), (0x04000000, 0x58),
                     (0x03007FF0, 4), (0x04000060, 0x74), (0x04000100, 4)))
-                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179, 580, 780, 980):
+                if index>=180 and relative in (1240,1900,2020):
+                    expected_mode,expected_choice={1240:(1,0),1900:(0,1),2020:(0,2)}[relative]
+                    equal(native_bytes(0x020046C2,1)[0],expected_mode,f"name scenario mode {relative}")
+                    equal(native_bytes(0x020046C1,1)[0],expected_choice,f"name scenario selection {relative}")
+                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179, 580, 780, 980, 1420, 1880, 2200):
                     pixels = (C.c_uint32 * (240 * 160))()
                     video_render(memory, pixels)
                     parts = [native_bytes(address, size) for address, size in
@@ -1610,9 +1797,12 @@ def main() -> None:
                     nonuniform += len(set(pixels)) > 1
         if args.video_oracle:
             print(f"{video_frames} private ROM PPU snapshots matched; {nonuniform} contained multiple colors.")
-        print(f"918 input-driven script/render/audio iterations matched; graphics scripts active in {active_graphics_iterations}.")
+        print(f"{input_iterations} input-driven script/render/audio iterations matched; graphics scripts active in {active_graphics_iterations}.")
+        print(f"{hblank_calls} sampled HBlank callbacks matched; scanline DMA/PPU timing remains unverified.")
         audio_checks()
         scene_checks()
+        text_checks()
+        raster_checks()
     finally:
         destroy(memory)
     print(f"{checks} private native/reference checks passed (heap, input, scripts, expressions, rendering, maps, saves, audio).")

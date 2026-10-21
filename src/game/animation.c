@@ -2,6 +2,7 @@
 #include "game/state.h"
 #include "game/transfer.h"
 #include "game/audio.h"
+#include "game/scene.h"
 #include "gba/bios.h"
 static bool fail(HNRender *r,HNRenderFault fault,unsigned op,GameAddr address)
 {r->fault=fault;r->fault_opcode=op;r->fault_address=address;return false;}
@@ -90,8 +91,14 @@ bool hn_animation_command(HNRender *r,GameAddr slot,unsigned op,GameAddr *cursor
     case 0x8D: {
         GameAddr address=hn_read32(m,data+1);HNAnimationFunction function=NULL;
         for(size_t i=0;i<r->callback_count;i++)if((r->callbacks[i].address&~1u)==(address&~1u)){function=r->callbacks[i].function;break;}
-        if(!function)return fail(r,HN_RENDER_CALLBACK,op,address);
-        unsigned bytes=function(m,slot,data+5,yield);advance(m,slot,cursor,5+bytes);break;
+        uint32_t bytes=0;
+        if(function)bytes=function(m,slot,data+5,yield);
+        else{
+            HNSceneResult result=hn_scene_animation_callback(m,address,slot,data+5,&bytes,yield);
+            if(result==HN_SCENE_UNKNOWN)return fail(r,HN_RENDER_CALLBACK,op,address);
+            if(result==HN_SCENE_RESOURCE)return fail(r,HN_RENDER_RESOURCE,op,address);
+        }
+        advance(m,slot,cursor,5+bytes);break;
     }
     case 0x8E:case 0x8F: {
         unsigned index=(uint8_t)hn_render_class(m,slot);
