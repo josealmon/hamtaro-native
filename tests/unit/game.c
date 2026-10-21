@@ -218,6 +218,18 @@ static void save_contract(void)
     CHECK(hn_save_load_groups(&memory));CHECK(hn_read8(&memory,0x03002169)==0);
     CHECK(hn_save_write_record(&memory,2,0));
     CHECK(hn_save_load_group(&memory,2));CHECK(hn_read8(&memory,0x0300216A)==1);
+    HNScript script;hn_script_init(&script,&memory,NULL,0);hn_write8(&memory,0x02000000,2);
+    CHECK(hn_main_command(&script,0x43,0x02000000));CHECK(hn_read32(&memory,0x03000014)==1);
+    /* A failed triplet load resumes the script without a map reload. */
+    hn_write8(&memory,0x0E0000EE,hn_read8(&memory,0x0E0000EE)^1);
+    hn_write8(&memory,0x0E0040EE,hn_read8(&memory,0x0E0040EE)^1);
+    hn_write32(&memory,0x03002BF0,3);hn_script_init(&script,&memory,NULL,0);
+    CHECK(hn_main_command(&script,0x60,0x02000000));CHECK(hn_read32(&memory,0x03002BF0)==0);
+    CHECK(hn_read32(&memory,0x03000014)==0&&hn_read8(&memory,0x03000010)==0);
+    hn_write32(&memory,0x02000000,0x080C0129);hn_write8(&memory,0x02000004,3);
+    hn_write8(&memory,0x0300216B,2);hn_script_init(&script,&memory,NULL,0);
+    CHECK(hn_main_command(&script,0x1C,0x02000000));CHECK(hn_read8(&memory,0x02004528)==2);
+    CHECK(hn_read32(&memory,0x03000014)==5);
     CHECK(!hn_save_write_record(&memory,0,0));CHECK(!hn_save_write_record(&memory,4,51));
     CHECK(!hn_save_load_group(&memory,5));CHECK(!hn_save_consume(&memory,5,0x02000000));
     CHECK(!memory.fault);

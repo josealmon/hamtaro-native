@@ -11,6 +11,9 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
 - render: animation repeat/call/delay flow, typed callback guards, physics,
   affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
   PPU regressions for tile mapping, transparency, mosaic/window phase and effects.
+- graphics: palette interpolation/source wrapping, scripted repeat/call/delay
+  flow, alpha/mosaic transitions, compressed palette frames, paused states and
+  explicit faults for cyclic or unsupported commands.
 - storage: SHA-256 known vectors, strict ROM rejection, atomic SRAM recovery,
   independent profile locking, settings validation and Unicode paths.
 - input: injected keyboard events and a local SDL virtual gamepad. Covers hotplug,
@@ -41,12 +44,16 @@ and the test-only hn_reference_probe.dll built by BUILD_TESTING:
 The reference must contain build/function-symbols.json. This check writes no
 ROM or captured state, and does not alter the reference checkout. It compares
 heap RAM, PRNG, input, expressions, video state, transfer queues, object animation
-and drawing, all 61 background command handlers, map/core initialization and SRAM
-initialization/repair/read/write behavior. It also compares 88 Main-only iterations
-and 180 coupled Main/background/object iterations from actual private ROM scripts.
-Graphics/task/actor systems, the real IRQ cadence and audio are omitted. The CPU
-oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete GBA
-machine. Without the optional PPU oracle, this checkpoint passes 43,054 comparisons.
+and drawing, all 61 background handlers, 37 graphics handlers, palette transitions,
+map/core initialization and SRAM initialization/repair/read/write behavior. It also
+compares Main save-load commands with successful and failed records. The ROM
+schedules cover 88 Main-only iterations, 180 coupled idle iterations and a separate
+360 iterations with directly injected A-button registers. The latter schedules call
+the background/object/graphics/mosaic updates and video transfers. Graphics slots
+are inactive during those ROM schedules; synthetic per-command/update tests provide
+the graphics evidence. Task/actor updates, real input/IRQ cadence and audio are
+omitted. The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a
+complete GBA machine. Without the PPU oracle, this checkpoint passes 57,254 comparisons.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 
 An independent static PPU comparison uses an existing mGBA 0.10.5 source checkout
@@ -66,7 +73,7 @@ architecture.md; this is not a claim of complete hardware conformance.
 
 Add --video-oracle PATH_TO_ORACLE and, if needed,
 --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to compare_reference.py to compare
-seven static snapshots from its private ROM schedule. This passes 43,061 checks;
+seven static snapshots from its private ROM schedule. This passes 57,261 checks;
 five snapshots contain multiple colors. No snapshots or ROM data are saved.
 
 Manual UI checks cover import/cancellation, persisted rebinding, keyboard menu

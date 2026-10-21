@@ -55,8 +55,13 @@ static uint32_t read_key_mask(HNMemory *m,GameAddr args)
     hn_write16(m,0x0201DC40,keys);
     hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));return 0;
 }
+static uint32_t read_scene_save_result(HNMemory *m,GameAddr args)
+{
+    hn_write8(m,0x02004528,hn_read8(m,0x03002168+hn_read8(m,args)));return 1;
+}
 static const HNMainCallback builtins[]={
-    {0x0801C708,set_key_mask},{0x0801C72C,read_key_mask},{0x0801D398,reset_visuals}
+    {0x0801C708,set_key_mask},{0x0801C72C,read_key_mask},{0x0801D398,reset_visuals},
+    {0x080C0128,read_scene_save_result}
 };
 bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
 {
@@ -356,6 +361,19 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
             if(value>255){hn_video_forced_blank(m,1);advance(m,1);break;}
         }
         hn_video_fade_phase(m,(uint8_t)value);hn_write8(m,YIELDED,1);break;
+    }
+    case 0x43:case 0x60: {
+        unsigned group=op==0x43?hn_read8(m,args):1;
+        bool ok=op==0x43?hn_save_load_group(m,group):hn_save_load_groups(m);
+        if(!ok)return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        if(group==1){
+            if(hn_read8(m,0x03002169)){
+                for(unsigned i=0;i<512;i++)hn_write16(m,0x05000000+i*2,0x7FFF);
+                if(!hn_map_initialize(m,hn_read8(m,HN_MAP_BANK),hn_read8(m,HN_MAP_INDEX)))
+                    return fail(s,HN_SCRIPT_RESOURCE,op,args);
+            }else{hn_write32(m,DEPTH,0);advance(m,op==0x43?1:0);}
+        }else advance(m,1);
+        break;
     }
     case 0x46: {
         scratch(m,args,0,3);unsigned flag=hn_read16(m,SCRATCH),bit=1u<<(flag&7);

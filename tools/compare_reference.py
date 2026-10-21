@@ -349,6 +349,7 @@ def main() -> None:
             (0x18, "MainScriptFillMemory", struct.pack("<BHHI", 1, 0xABCD, 14, 0x05000020)),
             (0x1C, "MainScriptInvokeCallback", struct.pack("<IH", 0x0801C709, 0xF5A5)),
             (0x1C, "MainScriptInvokeCallback", struct.pack("<I", 0x0801C72D)),
+            (0x1C, "MainScriptInvokeCallback", struct.pack("<IB", 0x080C0129, 3)),
             (0x1D, "MainScriptJumpByHalf1FBC", struct.pack("<BIIII", 4, 0x02021000, 0x02022000, 0x02023000, 0x02024000)),
             (0x22, "MainScriptConditionalCursor084C0", struct.pack("<II", 0x02023000, 3)),
             (0x23, "MainScriptInvoke086AC", struct.pack("<II", 0x02023000, 0x02024000)),
@@ -714,6 +715,20 @@ def main() -> None:
             call(name, 0x02020000)
             compare(f"map/save command {name}", save_ranges)
 
+        for saved in (False, True):
+            for opcode, group in ((0x43, 1), (0x43, 2), (0x43, 3), (0x43, 4), (0x60, 1)):
+                prepare_core()
+                if group == 4:
+                    both(0x03002BB0, struct.pack("<I", 0x02010000))
+                if saved:
+                    equal(native("hn_save_write_groups", result=C.c_bool)(memory), True, "native saved map fixture")
+                    call("WriteSaveDataGroups1To3")
+                both(0x02020000, bytes([group]))
+                equal(command(memory, opcode, 0x02020000), 1, f"native Main load {opcode:02X} {group} {saved}")
+                call("MainScriptLoadSaveDataGroup" if opcode==0x43 else "MainScriptLoadSaveDataGroups",
+                     0x02020000, limit=6000000)
+                compare(f"Main load {opcode:02X} {group} {saved}", save_ranges + ((0x05000000, 0x400),))
+
         # Opcode names are metadata. Every bytecode fixture below is synthetic.
         animation_names = (
             "Return SetScript Jump SetOffset BranchEqualByte BranchLessByte BranchGreaterByte BeginRepeat EndRepeat Call "
@@ -992,6 +1007,107 @@ def main() -> None:
             call("UpdateBackgroundMotion", state)
             compare(f"background motion {case}", background_ranges[:2])
 
+        graphics_command = bind("hn_probe_graphics_command", C.c_int, C.c_void_p, C.c_uint32,
+                                C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
+        graphics = bind("hn_probe_graphics", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
+        graphics_handlers = (
+            "Return", "Wait", "Jump", "WriteBytes", "PaletteAll", "PaletteStep", "PaletteFrom",
+            "CopyHalfwords", "DecompressWram", "PaletteRange", "BeginRepeat", "EndRepeat",
+            "WriteHalfwords", "WriteMirrorRows", "SetBlendParameters", "BeginBlendFade",
+            "BeginBlendFade", "BlendFadeStep", "BranchByte", "BranchByte", "BranchByte",
+            "DisableBlend", "BeginBlendAlpha", "BlendAlphaStep", "ResetMosaic", "SetMosaicRegisters",
+            "SetMosaicSizes", "EnableMosaic", "SetMosaicFlags", "EnableObjectMosaicRange",
+            "BeginMosaicTransition", "MosaicStep", "MosaicStep", None, None, None, None, None, None,
+            None, None, None, "SetWindowsEnabled", "SetWindowMasks", "SetWindowBounds", None, None, "Call")
+        def prepare_graphics(case):
+            prepare_background(case % 6)
+            both(0x03002F20, struct.pack("<I", 8))
+            both(0x02000394, struct.pack("<I", 0x05000000))
+            both(0x0201C720, rng.randbytes(512))
+            both(0x0201CC40, rng.randbytes(4096))
+            both(0x02003920, rng.randbytes(3072))
+            both(0x05000000, rng.randbytes(1024))
+            both(0x03003070, struct.pack("<I", state))
+            both(0x03002E10, b"\x02")
+            both(state, rng.randbytes(44))
+            both(state, bytes([0x9F if case & 1 else 0xA0, 4, 2]))
+            both(state + 0x1E, struct.pack("<HH", 4, 8))
+            counts = ((0, 0, 0, 0), (3, 0, 0, 0), (2, 1, 0, 0), (2, 2, 0, 0), (1, 1, 1, 1), (1, 3, 1, 0))
+            both(state + 3, bytes(counts[case % 6]))
+            for i in range(4):
+                both(state + 8 + i * 4, struct.pack("<I", 0x02021800 + i * 16))
+            both(state + 0x18, struct.pack("<I", 0x02021000))
+            both(0x03002D98, struct.pack("<I", 0x02017000))
+            both(0x03002DC0, b"\x08")
+            both(0x02017000, rng.randbytes(8 * 0x68))
+        for case in range(6):
+            for opcode, suffix in enumerate(graphics_handlers, 0x80):
+                if suffix is None:
+                    continue
+                prepare_graphics(case)
+                payload = bytes([2, 1, 0, 4, 8, 16, 0x80, 0xFF])
+                if opcode in (0x82, 0xAF):
+                    payload = struct.pack("<I", 0x02021800)
+                elif opcode in (0x83, 0x8C):
+                    payload = struct.pack("<BBI", 2, 7, 0x02025000) + rng.randbytes(7)
+                elif opcode in (0x84, 0x86, 0x89):
+                    payload = struct.pack("<BBH", 3, 2, 4)
+                    if opcode == 0x86:
+                        payload = bytes([1]) + payload
+                    elif opcode == 0x89:
+                        payload = bytes([8, 1]) + payload
+                elif opcode == 0x87:
+                    payload = struct.pack("<BBII", 2, 7, 0x06004000, 0x02022000)
+                elif opcode == 0x88:
+                    payload = struct.pack("<BII", 2, 0x0201C720, 0x02024000)
+                elif opcode == 0x8D:
+                    payload = struct.pack("<BBBI", 2, 5, 3, 0x02025000) + rng.randbytes(5)
+                elif opcode == 0x8E:
+                    payload = bytes([2, 255 if case & 1 else 1, 255, 15, 255, 8, 16])
+                elif opcode in (0x8F, 0x90):
+                    payload = bytes([2, 15, 3 | ((case & 1) << 4), 1, case * 2])
+                elif opcode in (0x92, 0x93, 0x94):
+                    both(0x02025000, bytes([127 + case % 3]))
+                    payload = struct.pack("<IBI", 0x02025000, 128, 0x02021800)
+                elif opcode == 0x96:
+                    payload = bytes([2, 15, 31, case, 16, 0, 0, 16])
+                elif opcode in (0x99, 0x9A):
+                    payload = bytes([case % 3, 255 - case, case * 13])
+                elif opcode == 0x9B:
+                    payload = bytes([1 << case])
+                elif opcode == 0x9D:
+                    payload = bytes([3, 255 if case & 1 else 7])
+                elif opcode == 0x9E:
+                    payload = bytes([0x9F if case & 1 else 0xA0, 2, case, case % 3, 12, 15, 0, 1])
+                elif opcode == 0xAA:
+                    payload = bytes([case, case + 1])
+                elif opcode == 0xAC:
+                    payload = struct.pack("<BHH", case & 1, 0x1830, 0x2040)
+                both(0x02021000, bytes([opcode]) + payload)
+                equal(graphics_command(memory, state, opcode, 0x02021001, report4), 1,
+                      f"native graphics command {opcode:02X} {case}: {list(report4)}")
+                equal(report4[3], call("Graphics" + suffix, state, 0x02021001, limit=1000000),
+                      f"graphics command continuation {opcode:02X} {case}")
+                compare(f"graphics command {opcode:02X} {case}", background_ranges)
+        for case in range(60):
+            prepare_graphics(case)
+            index = case & 1
+            equal(native("hn_graphics_configure", 2, C.c_bool)(memory, index, 0x02021000), True,
+                  f"native graphics initialization {case}")
+            call("InitializeGraphicsScript", index, 0x02021000)
+            compare(f"graphics initialization {case}", background_ranges[:2])
+            first, count = case * 7 % 480, 16
+            amount = case % 8
+            equal(native("hn_palette_prepare", 3, C.c_bool)(memory, amount, first, count), True,
+                  f"native prepare palette {case}")
+            call("PreparePaletteGroup", amount, first, count, limit=1000000)
+            compare(f"prepare palette {case}", background_ranges[:3])
+            for step in range(1 << amount):
+                equal(native("hn_palette_update", 2, C.c_bool)(memory, first, count), True,
+                      f"native update palette {case} {step}")
+                call("UpdatePaletteGroup", first, count)
+                compare(f"update palette {case} {step}", background_ranges[:3])
+
         prepare_core()
         memory_copy = bind("hn_memory_copy", C.c_bool, C.c_void_p, C.c_uint32, C.c_uint32, C.c_size_t)
         video_render = bind("hn_video_render", None, C.c_void_p, C.c_void_p)
@@ -1000,15 +1116,31 @@ def main() -> None:
             oracle_context = VideoOracle(args.video_oracle, args.oracle_runtime_dir)
         else:
             oracle_context = nullcontext(None)
-        video_frames, nonuniform = 0, 0
+        video_frames, nonuniform, active_graphics_iterations = 0, 0, 0
         with oracle_context as video_oracle:
-            for index in range(180):
+            for index in range(540):
+                if index == 180:
+                    print(f"180 idle script/render iterations matched; graphics scripts active in {active_graphics_iterations}.")
+                    prepare_core()
+                    active_graphics_iterations = 0
+                if index >= 180:
+                    # Direct register injection is a script probe, not the complete input/task loop.
+                    keys = 1 if (index - 180) % 120 == 100 else 0
+                    both(0x03000820, struct.pack("<HH", keys, keys))
                 equal(frame(memory, 4096, report), 1, f"coupled Main {index}")
                 call("RunMainScriptFrame")
                 equal(background(memory, 4096, report3), 1, f"coupled native background {index}: {list(report3)}")
                 call("UpdateBackgroundStates", limit=1000000)
                 equal(render(memory, 4096, 1, report3), 1, f"coupled native render {index}")
                 call("UpdateRenderSlots", limit=1000000)
+                graphics_base = struct.unpack("<I", native_bytes(0x03003070, 4))[0]
+                graphics_count = native_bytes(0x03002E10, 1)[0]
+                active_graphics_iterations += any(native_bytes(graphics_base + slot * 44, 1)[0] not in (0, 255)
+                                                 for slot in range(graphics_count))
+                equal(graphics(memory, 4096, report3), 1, f"coupled native graphics {index}: {list(report3)}")
+                call("UpdateGraphicsScripts", limit=1000000)
+                native("hn_mosaic_update")(memory)
+                call("UpdateMosaic")
                 both(0x04000006, b"\xA0\0")
                 equal(memory_copy(memory, 0x07000000, 0x03003080, 1024), True, "OAM shadow transfer")
                 cpu.mem_write(0x07000000, bytes(cpu.mem_read(0x03003080, 1024)))
@@ -1016,7 +1148,7 @@ def main() -> None:
                 call("CommitVideoRegisters")
                 native("hn_transfer_flush")(memory)
                 call("FlushDmaTransfers")
-                compare(f"coupled Main/background/render {index}", save_ranges + ((0x05000000, 0x400),
+                compare(f"coupled Main/background/render/graphics {index}", save_ranges + ((0x05000000, 0x400),
                     (0x06000000, 0x18000), (0x07000000, 0x400), (0x04000000, 0x58)))
                 if video_oracle and index in (0, 24, 32, 64, 87, 120, 179):
                     pixels = (C.c_uint32 * (240 * 160))()
@@ -1028,6 +1160,7 @@ def main() -> None:
                     nonuniform += len(set(pixels)) > 1
         if args.video_oracle:
             print(f"{video_frames} private ROM PPU snapshots matched; {nonuniform} contained multiple colors.")
+        print(f"360 input-injected script/render iterations matched; graphics scripts active in {active_graphics_iterations}.")
     finally:
         destroy(memory)
     print(f"{checks} private native/reference checks passed (heap, input, scripts, expressions, rendering, maps, saves).")

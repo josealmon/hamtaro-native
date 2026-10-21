@@ -41,10 +41,11 @@ SDL's device conversion happens after game PCM generation.
 | Map and core initialization | Adapted | Runtime tables read from ROM, task sentinel, render slots/order, background state and all 11 map banks tested at index 0 |
 | Objects and animation scripts | Partial | Physics, screen positions, original priority ordering, affine matrix reuse, OAM emission and animation commands compared; animation callbacks and unsuppressed sound remain pending |
 | Background scripts and transforms | Adapted | All 61 command handlers, repeat/call flow, motion, clamping, affine layers and tilemap copies compared; invalid stacks/resources fail explicitly |
+| Graphics scripts and palette effects | Partial | 37 of 48 handlers compared: palette interpolation, delay/call/repeat flow, blend/fade, mosaic and windows; 11 raster-effect handlers remain unsupported |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, fades and typed callbacks; unsupported opcodes fail explicitly |
-| Native boot/title | Pending | 88 Main-only and 180 coupled Main/background/object iterations compared; graphics/task/actor updates, real IRQ cadence and audio are not connected |
+| Native boot/title | Pending | 88 Main-only, 180 idle and 360 input-injected script/render iterations compared; task/actor updates, real IRQ cadence and audio are not connected |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
 | Music and effects | Pending | Native sequencer/mixer and PSG; the host stream is ready |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
@@ -82,11 +83,14 @@ by these functions; it does not provide a complete machine/timing oracle.
 Heap layouts, input, PRNG, expressions, video, transfers, object/background
 rendering, maps, core initialization and save operations are compared. Synthetic
 fixtures exercise resource commands without embedding a game resource. Tests
-also run 88 Main-only iterations and 180 coupled Main/background/object iterations
-using private ROM scripts, including OAM transfer, video commit and DMA flush.
-Seven resulting static PPU snapshots match a separate mGBA renderer; five contain
-multiple colors. This schedule omits graphics/task/actor systems, the real IRQ
-cadence and audio. It is not a verified native boot, title screen or playthrough.
+also run 88 Main-only iterations, 180 idle iterations and a separate 360-iteration
+schedule with injected A-button registers. Those schedules call Main, background,
+object, graphics and mosaic updates, then OAM transfer, video commit and DMA flush.
+Graphics slots are inactive in both ROM schedules; their implementation evidence
+comes from separate command comparisons and synthetic update-loop tests. Seven
+idle-schedule static PPU snapshots match a separate mGBA renderer; five contain
+multiple colors. These schedules omit task/actor systems, real input/IRQ cadence
+and audio. They are not a verified native boot, title screen or playthrough.
 The source checkout's docs/testing.md records the command and current check count.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
@@ -103,6 +107,16 @@ including its order for equal keys. Background scripts retain separate local
 and committed cursors, original wait/repeat behavior and shared queued-write
 storage. Their native adapters reject overflowing script stacks and invalid
 tilemap rectangles rather than letting malformed inputs overwrite adjacent state.
+
+Graphics scripts keep their original 44-byte state and shared four-level
+repeat/call resources. Palette transitions use separate eight-byte step entries
+and six-byte RGB accumulators; source colors wrap at 256 while destination indexes
+remain full width. Interpolation and scratch fields are compared with the original
+functions. Invalid palette extents fail instead of taking the original zero-count
+wraparound path. Fade, alpha and mosaic modes preserve their distinct delay and
+completion rules. Raster-effect commands remain explicit faults. Main save-load
+commands preserve the failure cursor/depth behavior and reload the saved map with
+a white palette on success; file persistence still needs the real game loop.
 
 The optional mGBA 0.10.5 software PPU oracle is a separate test build; its code and
 runtime never enter the application or package. Static synthetic comparisons
@@ -131,7 +145,7 @@ are rejected; the unused group-0 record write/load path is not exposed.
 
 ## Remaining integration order
 
-1. Add graphics/task/actor systems and audio, then connect the verified native
+1. Add raster effects, task/actor systems and audio, then connect the verified
    initialization, typed callbacks and script/render systems to the real game loop.
 2. Establish a deterministic title/new-game/movement/save-load scenario.
 3. Compare the native core against the reference's existing opening and first

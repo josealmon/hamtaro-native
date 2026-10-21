@@ -2,6 +2,7 @@
 #include "game/script.h"
 #include "game/render.h"
 #include "game/background.h"
+#include "game/graphics.h"
 #include <stdlib.h>
 #include <string.h>
 /* Optional private oracle bridge. Never installed or shipped with the app. */
@@ -83,4 +84,15 @@ int hn_probe_background(HNMemory *m,unsigned budget,uint32_t report[3])
 {
     HNBackground background;hn_background_init(&background,m);bool ok=hn_background_update(&background,budget);
     report[0]=background.fault;report[1]=background.fault_opcode;report[2]=background.fault_address;return ok;
+}
+int hn_probe_graphics_command(HNMemory *m,GameAddr state,unsigned op,GameAddr arguments,uint32_t report[4])
+{
+    HNGraphics graphics;hn_graphics_init(&graphics,m);uint32_t running=0;
+    bool ok=hn_graphics_command(&graphics,state,op,arguments,&running);
+    report[0]=graphics.fault;report[1]=graphics.fault_opcode;report[2]=graphics.fault_address;report[3]=running;return ok;
+}
+int hn_probe_graphics(HNMemory *m,unsigned budget,uint32_t report[3])
+{
+    HNGraphics graphics;hn_graphics_init(&graphics,m);bool ok=hn_graphics_update(&graphics,budget);
+    report[0]=graphics.fault;report[1]=graphics.fault_opcode;report[2]=graphics.fault_address;return ok;
 }
