@@ -41,7 +41,7 @@ bool hn_bios_cpu_fast_set(HNMemory *m, GameAddr s, GameAddr d, uint32_t c)
 bool hn_bios_lz77(HNMemory *m, GameAddr source, GameAddr dst, size_t capacity)
 {
     uint32_t header=hn_read32(m,source), size=header>>8, done=0;
-    if (m->fault || (header&255)!=0x10 || size>capacity || size>UINT32_MAX-dst) return false;
+    if (m->fault || (header&0xF0)!=0x10 || size>capacity || size>UINT32_MAX-dst) return false;
     source+=4;
     while(done<size && !m->fault) {
         uint8_t flags=hn_read8(m,source++);

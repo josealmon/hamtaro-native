@@ -11,6 +11,8 @@
 #include "game/scene.h"
 #include "game/random.h"
 #include "game/input.h"
+#include "game/actor.h"
+#include "game/motion.h"
 #include "gba/bios.h"
 #include <string.h>
 enum {
@@ -261,6 +263,17 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         depth--;hn_write8(m,DEPTH,(uint8_t)depth);
         hn_write32(m,CURSOR,hn_read32(m,RETURNS+depth*4));advance(m,4);break;
     }
+    case 0x20:{
+        unsigned leader=hn_read8(m,args),follower=hn_read8(m,args+1),control=hn_read8(m,args+2);
+        unsigned secondary=hn_read8(m,args+3),flags=hn_read8(m,args+4);
+        scratch(m,args+5,0,8);unsigned width=hn_read16(m,SCRATCH),height=hn_read16(m,SCRATCH+2);
+        GameAddr resource=resolve_variable(m,4);scratch(m,args+13,0,4);GameAddr parameters=resolve_variable(m,0);
+        if(!hn_motion_configure(m,leader,follower,control,secondary,flags&31,width,height,resource,parameters))
+            return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        if(!(flags&64))hn_write8(m,0x030021E0,0);
+        if(!(flags&128)&&!hn_motion_rebuild_route(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        advance(m,17);break;
+    }
     case 0x22:case 0x23: {
         scratch(m,args,0,8);GameAddr expression=resolve_variable(m,0);
         GameAddr target=op==0x22?resolve_variable(m,4):0;uint32_t value;
@@ -269,6 +282,14 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         else advance(m,op==0x22?8:4);
         break;
     }
+    case 0x25:
+        scratch(m,args+1,0,4);hn_write32(m,HN_MAP_WORDS+hn_read8(m,args)*4,resolve_variable(m,0));
+        advance(m,5);break;
+    case 0x26:
+        scratch(m,args+1,0,4);resolve_variable(m,0);
+        if(hn_read32(m,SCRATCH)==UINT32_MAX)hn_write32(m,SCRATCH,0);
+        if(!hn_actor_configure(m,hn_read8(m,args),hn_read32(m,SCRATCH)))return fail(s,HN_SCRIPT_RESOURCE,op,args);
+        advance(m,5);hn_write8(m,YIELDED,1);break;
     case 0x27:
         hn_write8(m,RUNNING,0);hn_write32(m,CURSOR,0);hn_write8(m,OPCODE,1);hn_write8(m,YIELDED,1);break;
     case 0x28:
@@ -359,6 +380,8 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         if(hn_read32(m,hn_render_slot(m,index)+4)==animation){hn_write32(m,CURSOR,target);advance(m,0);}
         else advance(m,9);break;
     }
+    case 0x3D:
+        if(!hn_motion_rebuild_route(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);advance(m,0);break;
     case 0x3E: {
         unsigned index=hn_read8(m,args),kind=hn_read8(m,args+1),shape=hn_read8(m,args+2),value=hn_read8(m,args+3);
         unsigned packed=((kind&3)<<6)|((shape&3)<<4);GameAddr slot=hn_render_slot(m,index);

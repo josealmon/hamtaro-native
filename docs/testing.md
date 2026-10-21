@@ -10,7 +10,10 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   cursor/recursion boundaries, SRAM checksum/backup recovery, guest input caching
   and repeat, key ordinal priority, menu/dialog boundaries, synthetic font decoding,
   name-buffer/default handling, VRAM copies, text allocation failure, panel transitions
-  and explicit missing-resource failures.
+  and explicit missing-resource failures. Actor checks cover Main-state restoration,
+  waits, same-frame activation, stop, padding and bounded/unsupported script failures.
+  Counter checks cover palette/template banks, signed digits and the low yield byte.
+  Motion checks cover route edges/obstacle order, collision setup and resource branches.
 - render: animation repeat/call/delay flow, typed callback guards, physics,
   affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
   PPU regressions for tile mapping, transparency, mosaic/window phase and effects;
@@ -62,17 +65,18 @@ and drawing, all 61 background handlers, all 48 graphics handlers, palette trans
 map/core initialization and SRAM initialization/repair/read/write behavior. It also
 compares Main save-load commands with successful and failed records. The ROM
 schedules cover 88 Main-only iterations, 180 coupled idle iterations and a separate
-2,329 iterations using the guest input adapter and matching ReadKeys calls. The latter schedules call
-background/object/graphics/mosaic updates, video transfers and audio service with
+4,917 iterations using the guest input adapter and matching ReadKeys calls. The latter schedules call
+actor scripts, background/object/graphics/mosaic updates, video transfers and audio service with
 driver initialization and VBlank-counter synchronization. Graphics slots are active
-in 161 input-schedule iterations; synthetic per-command/update tests provide the
+in 243 input-schedule iterations; synthetic per-command/update tests provide the
 remaining graphics evidence. It compares 3,581 sampled HBlank callbacks during
-the circular transition; deferred DMA0/PPU timing is not modeled. Task/actor updates, CPU-transfer flushing, real IRQ
+the circular transition; deferred DMA0/PPU timing is not modeled. Live motion, task contexts, CPU-transfer flushing, real IRQ
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with the optional PPU oracle passes 269,738 comparisons.
+GBA machine. The complete run with the optional PPU oracle passes 329,757 comparisons.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
+The coupled schedule stops before MainScriptSetTaskContextEnabled (0x19).
 
 The audio part can be run independently with the same private ROM and reference:
 
@@ -106,22 +110,32 @@ architecture.md; this is not a claim of complete hardware conformance.
 
 Add --video-oracle PATH_TO_ORACLE and, if needed,
 --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to compare_reference.py to compare
-13 static snapshots from its private ROM schedule; eleven contain multiple colors.
+19 static snapshots from its private ROM schedule; sixteen contain multiple colors.
 No snapshots or ROM data are saved.
 
 Scene/input and supporting Main commands can be checked separately:
 
     python -B tools/compare_reference.py --scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-This passes 111,252 private comparisons, including guest key-cache initialization,
+This passes 116,106 private comparisons, including guest key-cache initialization,
 repeat/direction/query behavior, masked key ordinals, PRNG ranges, render-slot setup,
 menu movement, language snapshots, name editing/confirmation, 168 glyph-blit boundary
 cases, keyboard grid navigation, panel entry/exit/depth, raster commands/profiles,
 24 circular HBlank scenarios, record selection, random script values, core reset and
-choice-option flags. Resources are read from the caller's ROM; no captures or extracted
-tables are written. The coupled schedule exits both name fields and completes the
-circular transition. Its next unbound callback is ScriptCallbackSetBackground2RightBottom1024;
-this is still component evidence, without the full game loop or task/actor execution.
+choice-option flags, three counter banks and indirect arithmetic/alias behavior.
+Resources are read from the caller's ROM; no captures or extracted tables are written.
+
+Actor scripts and motion setup can also be checked separately:
+
+    python -B tools/compare_reference.py --actors-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+This passes 3,478 private comparisons. Actor fixtures cover variable-resolved setup,
+the NULL sentinel, indirect callback storage, nested script calls, waits, Main-state
+restoration and same-frame activation. Motion fixtures cover 400 tile-route queries,
+120 route builds, 80 scene/resource configurations and 64 supporting Main command
+cases. The compressed branch uses a synthetic stream with a nonzero low header
+nibble; no collision map or game script is embedded. Live movement and the full
+task/text loop remain unverified.
 
 The same separate project can build the ROM-free hardware audio oracle:
 

@@ -73,6 +73,11 @@ static void dma_and_bios(void)
     CHECK(memcmp(memory.ewram,"ABCABCABC",9)==0);
     reset();CHECK(hn_bios_lz77(&memory,0x08000000,0x06000000,9));
     CHECK(memcmp(memory.vram,"ABCABCABC",9)==0);
+    for(unsigned tag=0x10;tag<=0x1F;tag++){
+        rom[0]=(uint8_t)tag;reset();CHECK(hn_bios_lz77(&memory,0x08000000,0x02000000,9));
+        CHECK(memcmp(memory.ewram,"ABCABCABC",9)==0);
+    }
+    rom[0]=0x20;reset();CHECK(!hn_bios_lz77(&memory,0x08000000,0x02000000,9));rom[0]=0x10;
     reset();CHECK(!hn_bios_lz77(&memory,0x08000000,0x02000000,8));
     rom[4]=0x80;reset();
     CHECK(!hn_bios_lz77(&memory,0x08000000,0x02000000,9));

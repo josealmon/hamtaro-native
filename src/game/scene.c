@@ -28,6 +28,36 @@ static bool menu_update(HNMemory *m,uint8_t selection)
 }
 static bool flag(HNMemory *m,unsigned index)
 {return ((hn_read8(m,0x03002180+(index>>3))>>(index&7))&1)!=0;}
+static void arithmetic_flag(HNMemory *m,uint8_t mask,bool enabled)
+{
+    uint8_t flags=hn_read8(m,0x03002182);
+    hn_write8(m,0x03002182,(uint8_t)(enabled?flags|mask:flags&~mask));
+}
+static bool indirect_arithmetic(HNMemory *m,GameAddr callback,GameAddr arguments,uint32_t *consumed)
+{
+    bool half=callback==0x0801C3B4||callback==0x0801C410,subtract=callback==0x0801C344||callback==0x0801C410;
+    unsigned offset=half?2:3,bytes=8-offset;GameAddr step=0x03001138+offset;
+    for(unsigned i=0;i<bytes;i++)hn_write8(m,step+i,hn_read8(m,arguments+i));
+    GameAddr target=hn_read32(m,0x0300113C);
+    if(half){
+        if(subtract){
+            arithmetic_flag(m,4,hn_read16(m,target)<hn_read16(m,step));
+            hn_write16(m,target,(uint16_t)(hn_read16(m,target)-hn_read16(m,step)));
+        }else{
+            uint16_t result=(uint16_t)(hn_read16(m,target)+hn_read16(m,step));hn_write16(m,target,result);
+            arithmetic_flag(m,4,result<hn_read16(m,step));
+        }
+        arithmetic_flag(m,2,hn_read16(m,target)==0);
+    }else{
+        uint8_t value=hn_read8(m,target),amount=hn_read8(m,step);
+        hn_write8(m,target,(uint8_t)(subtract?value-amount:value+amount));
+        /* Byte callbacks reload their global pointer after each write. */
+        arithmetic_flag(m,2,hn_read8(m,hn_read32(m,0x0300113C))==0);
+        value=hn_read8(m,hn_read32(m,0x0300113C));amount=hn_read8(m,step);
+        arithmetic_flag(m,4,subtract?value>amount:value<amount);hn_write32(m,0x03001134,5);
+    }
+    *consumed=bytes;return !m->fault;
+}
 static bool panel_layout(HNMemory *m,unsigned variant,unsigned *row,unsigned *count)
 {
     unsigned language=hn_read8(m,HN_SCENE_CONTROLS+0xEB);if(variant>=4||language>=5)return false;
@@ -89,6 +119,26 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x0801C2D4:case 0x0801C344:case 0x0801C3B4:case 0x0801C410:
+        if(!indirect_arithmetic(m,callback&~1u,arguments,consumed))return HN_SCENE_RESOURCE;break;
+    case 0x0801C474:{
+        unsigned index=hn_read8(m,arguments);if(index!=255)hn_write8(m,HN_RENDER_CLASS_LEADER,(uint8_t)index);
+        index=hn_read8(m,arguments+1);if(index!=255)hn_write8(m,HN_RENDER_CLASS_FOLLOWER,(uint8_t)index);
+        hn_write32(m,0x03001134,2);*consumed=2;break;
+    }
+    case 0x0801C4A4:{
+        hn_write32(m,0x03001134,0);unsigned a=hn_read8(m,HN_RENDER_CLASS_LEADER),b=hn_read8(m,HN_RENDER_CLASS_FOLLOWER);
+        if(a>=hn_read8(m,HN_RENDER_INFO+0x10)||b>=hn_read8(m,HN_RENDER_INFO+0x10))return HN_SCENE_RESOURCE;
+        hn_write8(m,HN_SCENE_CONTROLS,hn_read8(m,hn_render_slot(m,a)+0x60)&15);
+        hn_write8(m,HN_SCENE_CONTROLS+1,hn_read8(m,hn_render_slot(m,b)+0x60)&15);break;
+    }
+    case 0x0801C4F8:{
+        unsigned index=hn_read8(m,arguments);if(index>=hn_read8(m,HN_RENDER_INFO+0x10))return HN_SCENE_RESOURCE;
+        hn_write8(m,HN_SCENE_CONTROLS,hn_read8(m,hn_render_slot(m,index)+0x60)&15);*consumed=1;break;
+    }
+    case 0x080CB150:
+        hn_write16(m,HN_BACKGROUND_BOUNDS+2*12+2,1024);
+        hn_write16(m,HN_BACKGROUND_BOUNDS+2*12+6,1024);break;
     case 0x0801C864:case 0x0801C888:case 0x0801C8AC:case 0x0801C8D0:{
         uint16_t mask=hn_read16(m,arguments),keys;
         unsigned mode=((callback&~1u)-0x0801C864)/36;
@@ -213,7 +263,12 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
 HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr slot,GameAddr arguments,
                                          uint32_t *consumed,uint32_t *yield)
 {
-    (void)slot;(void)arguments;if((callback&~1u)!=0x080C12E4)return HN_SCENE_UNKNOWN;
+    (void)slot;(void)arguments;
+    if((callback&~1u)==0x0801E3E8){
+        if(!hn_text_counter(m,hn_read16(m,0x0201DC52),0))return HN_SCENE_RESOURCE;
+        *consumed=0;*yield=(*yield&0xFFFFFF00u)|1;return HN_SCENE_OK;
+    }
+    if((callback&~1u)!=0x080C12E4)return HN_SCENE_UNKNOWN;
     unsigned row,count;if(!panel_layout(m,hn_read8(m,HN_SCENE_CONTROLS+0x1B9),&row,&count))return HN_SCENE_RESOURCE;
     uint8_t remaining=(uint8_t)(hn_read8(m,HN_SCENE_CONTROLS+0x1B7)-1);hn_write8(m,HN_SCENE_CONTROLS+0x1B7,remaining);
     if(!remaining){

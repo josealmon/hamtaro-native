@@ -40,6 +40,7 @@ def main() -> None:
     parser.add_argument("--oracle-runtime-dir", type=Path, help="Optional runtime DLL directory for the PPU oracle")
     parser.add_argument("--audio-only", action="store_true", help="Run just the audio function comparisons")
     parser.add_argument("--scenes-only", action="store_true", help="Run scene menus, input, text and transition comparisons")
+    parser.add_argument("--actors-only", action="store_true", help="Run actor contexts, motion setup/routes and supporting Main commands")
     args = parser.parse_args()
     spec = json.loads((ROOT / "config/rom.json").read_text())
     rom = args.rom.read_bytes()
@@ -82,7 +83,7 @@ def main() -> None:
             source, destination = (uc.reg_read(r) for r in (UC_ARM_REG_R0, UC_ARM_REG_R1))
             header = struct.unpack("<I", bytes(uc.mem_read(source, 4)))[0]
             source += 4
-            if header & 255 != 0x10 or header >> 8 > 0x40000:
+            if header & 0xF0 != 0x10 or header >> 8 > 0x40000:
                 raise RuntimeError("Invalid private LZ77 fixture.")
             output = bytearray()
             while len(output) < header >> 8:
@@ -306,6 +307,8 @@ def main() -> None:
             equal(command(memory, 0x1C, 0x02030000), 1, f"native scene {name}")
             call("MainScriptInvokeCallback", 0x02030000, limit=2000000)
             compare(name, ranges)
+        both(0x030034B0,rng.randbytes(48))
+        invoke("ScriptCallbackSetBackground2RightBottom1024")
         configure = native("hn_render_configure", 7, C.c_bool)
         for case in range(60):
             index = case % 32
@@ -364,6 +367,20 @@ def main() -> None:
             for name in ("ScriptCallbackReadHeldKeyOrdinal", "ScriptCallbackReadPressedKeyOrdinal",
                          "ScriptCallbackReadRepeatKeyOrdinal", "ScriptCallbackReadDirectionalHeldAndPressedKeyOrdinal"):
                 invoke(name, payload)
+        for case in range(160):
+            for suffix,half in (("AddIndirectByte",False),("SubtractIndirectByte",False),
+                                ("AddIndirectHalfword",True),("SubtractIndirectHalfword",True)):
+                target=(0x02028000,0x03002182,0x0300113A if half else 0x0300113B,0x0300113C)[case%4]
+                both(0x03001134,rng.randbytes(12));both(0x03002182,bytes([rng.randrange(256)]))
+                if target==0x02028000:both(target,rng.randbytes(2))
+                amount=(0,1,2,127,128,254,255,256,32768,65535)[case%10]
+                payload=struct.pack("<HI",amount,target) if half else struct.pack("<BI",amount&255,target)
+                invoke("ScriptCallback"+suffix,payload)
+        for case in range(32):
+            both(0x03002C0C,bytes([case]));both(0x03001F50,bytes([31-case]))
+            invoke("ScriptCallbackSetPrimaryRenderSlots",bytes([255 if case&1 else case,255 if case&2 else 31-case]))
+            invoke("ScriptCallbackReadPrimaryRenderDirectionNibbles")
+            invoke("ScriptCallbackReadRenderDirectionNibble",bytes([case]))
         for case in range(48):
             payload = struct.pack("<B3H", case & 1, case % 32, case % 7, case % 13)
             both(0x02030000, payload)
@@ -456,6 +473,125 @@ def main() -> None:
                     invoke("ScriptCallbackUpdateScenePanelExit",bytes([variant]));physics()
                     if native_bytes(0x020046C6,1)==b"\xFF":break
                 equal(native_bytes(0x020046C6,1),b"\xFF","panel exit terminates")
+
+    def counter_checks():
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x05000000,0x400))
+        fresh()
+        for bank in range(3):
+            both(0x0201DC40,rng.randbytes(32))
+            for number in (0,4,5,9,10,99,100,459,500,999,1000,65535,-1,-123,-2147483648,2147483647):
+                equal(native("hn_text_counter",2,C.c_bool)(memory,number&0xFFFFFFFF,bank),True,"native counter bank")
+                call("RenderGameCounterBank"+str(bank),number&0xFFFFFFFF);compare("counter bank/digits",ranges)
+        animation=bind("hn_probe_animation",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        report=(C.c_uint32*4)()
+        fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,bytes([1]))
+        for case in range(40):
+            both(0x0201DC52,struct.pack("<H",rng.randrange(65536)))
+            both(0x02020000,b"\x8D"+struct.pack("<I",symbols["AnimationCallbackRenderGameCounterBank0"]|1))
+            both(0x03007010,struct.pack("<I",0x02020000))
+            equal(animation(memory,0x02010000,0x8D,0x03007010,report),1,"native counter animation")
+            equal(report[3],call("AnimationInvokeCallback",0x02010000,0x03007010),"counter animation yield")
+            compare("counter animation",ranges+((0x03007010,4),))
+
+    def actor_checks():
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000))
+        for index in range(17):
+            for pointer in (0,1,15,0x02010000,0xFFFFFFFF):
+                fresh();both(0x03000050,rng.randbytes(17*84))
+                both(0x03002BB0,struct.pack("<16I",*[0xFFFFFFFF if i&1 else 0x02010000+i*64 for i in range(16)]))
+                both(0x02020000,struct.pack("<BI",index,pointer))
+                equal(command(memory,0x26,0x02020000),1,"native actor context setup")
+                call("MainScriptSetActorContext",0x02020000);compare("actor context setup",ranges)
+        for index in (0,1,7,255):
+            for pointer in (0,15,0x08000101,0xFFFFFFFF):
+                fresh();both(0x03002BB0,rng.randbytes(64));both(0x02020000,struct.pack("<BI",index,pointer))
+                equal(command(memory,0x25,0x02020000),1,"native indirect callback storage")
+                call("MainScriptStoreIndirectCallback1FC0",0x02020000);compare("indirect callback storage",ranges)
+        actor_frames=bind("hn_probe_actor_frames",C.c_int,C.c_void_p,C.c_uint32,C.POINTER(C.c_uint32))
+        report=(C.c_uint32*3)()
+        for case in range(16):
+            fresh()
+            equal(native("hn_runtime_tables_init",result=C.c_bool)(memory),True,"actor runtime tables")
+            cpu.mem_write(0x02000000,rom[0x8FE018:0x900EC8])
+            both(0x03000010,rng.randbytes(16));both(0x03002C60,struct.pack("<I",0x02020000))
+            both(0x03002BF0,bytes([case]));both(0x03002C10,rng.randbytes(64));both(0x03001FBC,rng.randbytes(2))
+            both(0x03000050,rng.randbytes(17*84))
+            for index in range(17):both(0x03000050+index*84,bytes(4))
+            for index in range(1,17):
+                if case==0 or (index+case)%4==0:continue
+                base=0x02010000+index*64
+                program=b"\x2B"+struct.pack("<H",index)+b"\x2D"+struct.pack("<HB",0x100+index,index)
+                program+=b"\x1E"+struct.pack("<I",base+24)+b"\x02"+struct.pack("<H",1+case%4)+b"\x27"
+                both(base,program.ljust(24,b"\0")+b"\x2B"+struct.pack("<H",index^0xBEEF)+b"\x1F")
+                both(0x02020000,struct.pack("<BI",index,base))
+                equal(command(memory,0x26,0x02020000),1,"native actor fixture setup")
+                call("MainScriptSetActorContext",0x02020000)
+            for frame_index in range(8):
+                equal(actor_frames(memory,4096,report),1,f"native actor frames {case}/{frame_index}")
+                call("RunActorScriptFrames",limit=2000000);compare("actor frame context switch/restore",ranges)
+        fresh();equal(native("hn_runtime_tables_init",result=C.c_bool)(memory),True,"actor runtime tables")
+        cpu.mem_write(0x02000000,rom[0x8FE018:0x900EC8])
+        both(0x02010000,b"\x26\x10"+struct.pack("<I",0x02010100)+b"\x27")
+        both(0x02010100,b"\x2B\xEF\xBE\x27")
+        both(0x02020000,struct.pack("<BI",1,0x02010000))
+        equal(command(memory,0x26,0x02020000),1,"native first actor setup")
+        call("MainScriptSetActorContext",0x02020000)
+        for frame_index in range(3):
+            equal(actor_frames(memory,4096,report),1,"native same-frame actor activation")
+            call("RunActorScriptFrames",limit=2000000);compare("same-frame actor activation",ranges)
+
+    def motion_checks():
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000))
+        query=bind("hn_motion_route_obstacle",C.c_bool,C.c_void_p,*([C.c_uint32]*4),C.POINTER(C.c_uint32))
+        result=C.c_uint32()
+        def prepare(case):
+            fresh()
+            width,height=8+case%33,8+case%27
+            both(0x02000138,struct.pack("<HH",width,height));both(0x03002BFC,struct.pack("<I",0x02010000))
+            cells=[(0x1000 if rng.randrange(23)==0 else 0)|rng.randrange(4096) for _ in range(width*height)]
+            both(0x02010000,struct.pack(f"<{len(cells)}H",*cells))
+            both(0x03002D98,struct.pack("<I",0x02017000));both(0x03002DC0,bytes([32]))
+            both(0x02017000,rng.randbytes(32*104));both(0x03002C0C,b"\x0A");both(0x03001F50,b"\x0D")
+            both(0x03002A90,rng.randbytes(32))
+        for case in range(400):
+            prepare(case)
+            coordinates=[rng.randrange(256) if case%5 else rng.getrandbits(32) for _ in range(4)]
+            equal(query(memory,*coordinates,C.byref(result)),True,"native route obstacle query")
+            equal(result.value,call("HasRenderXZRouteObstacle",*coordinates),f"route obstacle {case}")
+            compare("route obstacle memory",ranges)
+        for case in range(120):
+            prepare(case)
+            coordinates=[((rng.randrange(-64,256)<<16)|rng.randrange(65536))&0xFFFFFFFF for _ in range(4)]
+            if case%4==0:coordinates[2]=coordinates[0]
+            if case%4==1:coordinates[3]=coordinates[1]
+            if case>=110:coordinates=[rng.getrandbits(32) for _ in range(4)]
+            for slot,values in ((10,coordinates[:2]),(13,coordinates[2:])):
+                both(0x02017000+slot*104+0x18,struct.pack("<I",values[0]))
+                both(0x02017000+slot*104+0x20,struct.pack("<I",values[1]))
+            equal(native("hn_motion_rebuild_route",result=C.c_bool)(memory),True,"native follower route rebuild")
+            call("RebuildFollowerRenderXZRoute");compare("follower route",ranges)
+        for case in range(80):
+            prepare(case)
+            both(0x030034B0,rng.randbytes(48));both(0x030021F0,rng.randbytes(128))
+            both(0x0201EE60,rng.randbytes(0x1200));both(0x02012000,rng.randbytes(128))
+            source=0x0201EE60 if case%3==0 else 0x02011000
+            if case%3==1:both(source,b"\x11\x10\0\0\0ABCDEFGH\0IJKLMNOP")
+            elif case%3==2:both(source,b"\0"+rng.randbytes(0x11FF))
+            parameters=0x02012000 if case&1 else 0
+            values=[rng.getrandbits(32) for _ in range(7)]+[source,parameters]
+            equal(native("hn_motion_configure",9,C.c_bool)(memory,*values),True,"native collision scene setup")
+            call("ConfigureRenderXZCollisionScene",*values,limit=1000000);compare("collision scene setup",ranges)
+        for case in range(64):
+            prepare(case)
+            both(0x0201EE60,bytes(0x1200));both(0x02012000,rng.randbytes(128))
+            both(0x03002BB0,struct.pack("<16I",0x0201EE60,0x02012000,*([0]*14)))
+            flags=(case*37)&255
+            payload=bytes([10,13,case,255-case,flags])+struct.pack("<HHII",256,512,0 if case&1 else 0x0201EE60,1 if case&2 else 0x02012000)
+            both(0x02020000,payload)
+            equal(command(memory,0x20,0x02020000),1,"native Main collision configuration")
+            call("MainScriptConfigure065D8",0x02020000,limit=1000000);compare("Main collision configuration",ranges)
+            equal(command(memory,0x3D,0x02020000),1,"native Main follower route")
+            call("MainScriptRebuildFollowerRoute",0x02020000);compare("Main follower route",ranges)
 
     def raster_checks():
         ranges = ((0x02000000,0x40000),(0x03000000,0x7000),(0x04000000,0x60),(0x040000B0,12))
@@ -838,6 +974,11 @@ def main() -> None:
                 compare(f"animation audio {case} {opcode}", audio_ranges)
 
     try:
+        if args.actors_only:
+            actor_checks()
+            motion_checks()
+            print(f"{checks} private actor/motion comparisons passed; live movement and gameplay remain unverified.")
+            return
         if args.audio_only:
             audio_checks()
             print(f"{checks} private audio comparisons passed; hardware output and gameplay remain unverified.")
@@ -845,6 +986,7 @@ def main() -> None:
         if args.scenes_only:
             scene_checks()
             text_checks()
+            counter_checks()
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
@@ -1719,6 +1861,7 @@ def main() -> None:
         prepare_core(True)
         memory_copy = bind("hn_memory_copy", C.c_bool, C.c_void_p, C.c_uint32, C.c_uint32, C.c_size_t)
         mix_frame = bind("hn_probe_audio_mix", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
+        actor_frames = bind("hn_probe_actor_frames", C.c_int, C.c_void_p, C.c_uint32, C.POINTER(C.c_uint32))
         video_render = bind("hn_video_render", None, C.c_void_p, C.c_void_p)
         if args.video_oracle:
             from compare_video import VideoOracle
@@ -1726,7 +1869,7 @@ def main() -> None:
         else:
             oracle_context = nullcontext(None)
         video_frames, nonuniform, active_graphics_iterations, hblank_calls = 0, 0, 0, 0
-        input_iterations=2329
+        input_iterations=4917
         with oracle_context as video_oracle:
             for index in range(180+input_iterations):
                 if index == 180:
@@ -1749,6 +1892,8 @@ def main() -> None:
                 call("SyncAudioDmaAtVblankAsm")
                 equal(frame(memory, 4096, report), 1, f"coupled Main {index}")
                 call("RunMainScriptFrame")
+                equal(actor_frames(memory,4096,report3),1,f"coupled native actor scripts {index}: {list(report3)}")
+                call("RunActorScriptFrames",limit=2000000)
                 equal(background(memory, 4096, report3), 1, f"coupled native background {index}: {list(report3)}")
                 call("UpdateBackgroundStates", limit=1000000)
                 equal(render(memory, 4096, 1, report3), 1, f"coupled native render {index}")
@@ -1787,7 +1932,7 @@ def main() -> None:
                     expected_mode,expected_choice={1240:(1,0),1900:(0,1),2020:(0,2)}[relative]
                     equal(native_bytes(0x020046C2,1)[0],expected_mode,f"name scenario mode {relative}")
                     equal(native_bytes(0x020046C1,1)[0],expected_choice,f"name scenario selection {relative}")
-                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179, 580, 780, 980, 1420, 1880, 2200):
+                if video_oracle and index in (0, 24, 32, 64, 87, 120, 179, 580, 780, 980, 1420, 1880, 2200, 2600, 3000, 3166, 3500, 4300, 5096):
                     pixels = (C.c_uint32 * (240 * 160))()
                     video_render(memory, pixels)
                     parts = [native_bytes(address, size) for address, size in
@@ -1802,6 +1947,9 @@ def main() -> None:
         audio_checks()
         scene_checks()
         text_checks()
+        counter_checks()
+        actor_checks()
+        motion_checks()
         raster_checks()
     finally:
         destroy(memory)

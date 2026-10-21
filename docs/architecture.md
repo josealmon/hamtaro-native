@@ -34,7 +34,7 @@ PCM to the output device's format.
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division semantics and modeled ObjAffine; hardware matrix rounding remains unverified |
-| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 13 private ROM snapshots compared; raster timing still pending |
+| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 19 private ROM snapshots compared; raster timing still pending |
 | Video timing and IRQ | Foundation | Scanline/VBlank/HBlank, four timers, cascades, IRQ flags and FIFO DMA tested independently; real game IRQ cadence and DMA bus contention remain pending |
 | Native game helpers | Adapted | Original guest input layout, directions/repeat/query semantics and integer PRNG/ranges compared; host-to-game loop connection remains pending |
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |
@@ -44,10 +44,13 @@ PCM to the output device's format.
 | Background scripts and transforms | Adapted | All 61 command handlers, repeat/call flow, motion, clamping, affine layers and tilemap copies compared; invalid stacks/resources fail explicitly |
 | Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular HBlank callback compared, remaining scanline callbacks and timed DMA/PPU integration pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
+| Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
+| Motion and collision setup | Partial | Scene/resource setup, conservative tile-route queries and two-segment follower routes compared; live leader/follower movement and record collision resolution pending |
+| Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases and typed animation callback compared; resources remain in the private ROM |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
-| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
+| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, actor/indirect setup, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; later scene callbacks remain incomplete |
-| Native boot/title | Pending | 88 Main-only, 180 idle and 2,329 input-driven script/render/audio iterations compared; task/actor updates, real IRQ cadence and hardware audio output remain incomplete |
+| Native boot/title | Pending | 88 Main-only, 180 idle and 4,917 input-driven script/actor/render/audio iterations compared; live motion, task contexts, real IRQ cadence and hardware audio output remain incomplete |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
 | Music and effects | Partial | Sequencer, original PCM mixer, PSG register service, four native PSG generators, script controls and Direct Sound/PWM tested as components; final game output, filtering, trigger quirks and host delivery remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
@@ -85,22 +88,24 @@ by these functions; it does not provide a complete machine/timing oracle.
 Heap layouts, input, PRNG, expressions, video, transfers, object/background
 rendering, maps, core initialization and save operations are compared. Synthetic
 fixtures exercise resource commands without embedding a game resource. Tests
-also run 88 Main-only iterations, 180 idle iterations and a separate 2,329-iteration
+also run 88 Main-only iterations, 180 idle iterations and a separate 4,917-iteration
 schedule with scripted input through the original guest input adapter. The latter
-enters and confirms both name fields and completes a circular menu transition.
-Those schedules call Main, background,
+enters and confirms both name fields, completes a circular menu transition and
+advances into the opening scene, including collision setup and counter drawing.
+Those schedules call Main, actor scripts, background,
 object, graphics and mosaic updates, OAM transfer, video commit, DMA flush and
 audio service. They initialize the audio driver and synchronize its VBlank counter.
-Graphics slots are active in 161 iterations of the input schedule; command
-comparisons and synthetic updates cover the remaining implemented behavior. Thirteen
-static PPU snapshots across the schedules match a separate mGBA renderer; eleven
+Graphics slots are active in 243 iterations of the input schedule; command
+comparisons and synthetic updates cover the remaining implemented behavior. Nineteen
+static PPU snapshots across the schedules match a separate mGBA renderer; sixteen
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
-These schedules omit task/actor systems, CPU-transfer
+These schedules omit live leader/follower motion, task contexts, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
 sound DMA1/2 register images are compared. These are not a verified native boot,
 title screen or playthrough.
+The next unsupported command is MainScriptSetTaskContextEnabled (0x19).
 See docs/testing.md in this repository for the commands and current check count.
 
 Scene callbacks use typed native dispatch with explicit resource failures. They
@@ -118,14 +123,33 @@ preserving odd-pixel merging and clipping. The original name renderer fills 0x68
 guest bytes despite requesting a 0x280-byte shadow allocation; this behavior is
 preserved through guest bus writes and never overruns a host allocation. Panel
 entry/exit/depth callbacks preserve their per-language layouts and animation yields.
-The current component schedule stops before ScriptCallbackSetBackground2RightBottom1024;
-later scene callbacks and task/actor integration are still required.
+Indirect arithmetic callbacks preserve the original scratch aliases and flag-update
+order, including byte subtraction's comparison after the write. Counter drawing
+reads three templates and palettes from the private ROM, retains class-value aliases
+and queues the original palette transfer. Its animation callback updates the low
+yield byte while preserving the rest of the word.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
 in their original 32-bit memory views. Callback bindings accept a specific typed
 Main signature, never a cast of a ROM address to a host function pointer. Unknown
 commands/callbacks and invalid stacks return a fault with the guest address;
 a per-frame command budget also reports an explicit fault instead of hanging.
+
+Actor scripts reuse the typed Main interpreter with sixteen separate 84-byte guest
+contexts. Context zero saves Main while each active actor runs, then restores its
+cursor, return stack, wait/result fields and execution flags. Actors activate in
+index order, including a new later actor started during the same frame. Script and
+budget faults retain the actor's diagnostic state and restore Main before returning.
+The three padding bytes are preserved. Native context setup rejects indexes above 16.
+
+Motion setup preserves the original class selectors, control bytes and optional
+128-byte parameter block. Collision data is read from the caller's resource,
+copied/decompressed into guest RAM, or retained when already in the default map.
+Selected background bounds are updated; unselected bounds are preserved. Route
+queries keep unsigned coordinate expansion and exclusive edges, testing tile bits
+12..15. The follower route chooses between X-first and Z-first paths using those
+queries and the original signed distance/tie rules. The native query rejects a
+map extent larger than guest RAM. Per-frame movement is still required.
 
 Object animations retain original 32-bit resource references and explicit typed
 callback dispatch. Missing callback bindings fail visibly. Sound commands require
@@ -255,6 +279,10 @@ same BIOS model does not establish the real BIOS's exact rounding. See the
 and [GBA video documentation](https://mgba-emu.github.io/gbatek/) for those external
 contracts; hardware-level conformance needs separate evidence.
 
+The bounded LZ77 model ignores the low header nibble used by the collision-stream
+selector. Synthetic tests cover these tags, overlapping copies, invalid backreferences
+and destination limits. Exact BIOS signature handling remains unverified on hardware.
+
 SRAM adapters retain the original guest callback images by reading them from the
 ROM into guest RAM as data. Save operations call typed native functions; the copied
 ARM bytes are never executed by the Windows application. Save compatibility checks
@@ -265,7 +293,8 @@ are rejected; the unused group-0 record write/load path is not exposed.
 
 ## Remaining integration order
 
-1. Add remaining scanline callbacks and timed effects, task/actor systems and audio delivery, then connect the verified
+1. Add live movement, task/text contexts, remaining scanline callbacks and timed
+   effects, and audio delivery, then connect the verified
    initialization, typed callbacks and script/render systems to the real game loop.
 2. Establish a deterministic title/new-game/movement/save-load scenario.
 3. Compare the native core against the reference's existing opening and first

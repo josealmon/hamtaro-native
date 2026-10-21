@@ -4,9 +4,27 @@
 #include "game/input.h"
 #include "game/render.h"
 #include "game/graphics.h"
+#include "game/transfer.h"
 
 enum { MODE=HN_SCENE_CONTROLS+0x1A2,INDEX=HN_SCENE_CONTROLS+0x1A3,
        POSITION=HN_SCENE_CONTROLS+0x1A4,BANK=HN_SCENE_CONTROLS+0x1A5,RESULT=0x03001FBC };
+
+bool hn_text_counter_digits(HNMemory *m,int32_t number)
+{
+    uint32_t bank=hn_read32(m,HN_COUNTER_BANK);if(bank>=3)return false;
+    if(!hn_memory_copy(m,HN_COUNTER_BUFFER,hn_read32(m,HN_COUNTER_TEMPLATES+bank*4),32))return false;
+    int32_t digits[]={number/100,(number%100)/10,number%10};
+    for(unsigned i=0;i<3;i++)hn_write16(m,HN_COUNTER_BUFFER+6+i*6,(uint16_t)(digits[i]+(digits[i]<=4?10:37)));
+    hn_transfer_queue(m,HN_COUNTER_PALETTES+bank*6,0x0500020A,6);return !m->fault;
+}
+bool hn_text_counter(HNMemory *m,int32_t number,uint8_t bank)
+{
+    if(bank>=3)return false;
+    const unsigned indexes[]={9,11,10};hn_write32(m,HN_COUNTER_BANK,bank);
+    hn_write16(m,0x0201DC4E,hn_read16(m,0x0201DC40+indexes[bank]*2));
+    for(unsigned i=0;i<3;i++)hn_write16(m,0x0500020A+i*2,hn_read16(m,HN_COUNTER_PALETTES+bank*6+i*2));
+    return hn_text_counter_digits(m,number);
+}
 
 bool hn_text_blit_glyph(HNMemory *m,GameAddr glyph,GameAddr shadow,uint32_t tile_width,
                         uint32_t horizontal_offset,uint32_t color_group)

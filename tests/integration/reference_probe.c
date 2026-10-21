@@ -6,6 +6,7 @@
 #include "game/background.h"
 #include "game/graphics.h"
 #include "game/audio.h"
+#include "game/actor.h"
 #include <stdlib.h>
 #include <string.h>
 /* Optional private oracle bridge. Never installed or shipped with the app. */
@@ -50,6 +51,11 @@ int hn_probe_main_frame(HNMemory *m,unsigned budget,uint32_t report[3])
     bool ok=hn_main_frame(&script,budget);
     report[0]=script.fault;report[1]=script.fault_opcode;report[2]=script.fault_address;
     return ok;
+}
+int hn_probe_actor_frames(HNMemory *m,unsigned budget,uint32_t report[3])
+{
+    HNScript script;hn_script_init(&script,m,NULL,0);bool ok=hn_actor_frames(&script,budget);
+    report[0]=script.fault;report[1]=script.fault_opcode;report[2]=script.fault_address;return ok;
 }
 int hn_probe_animation(HNMemory *m,GameAddr slot,unsigned op,GameAddr cursor_field,uint32_t report[4])
 {
