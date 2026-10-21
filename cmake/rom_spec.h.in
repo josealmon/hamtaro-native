@@ -1,0 +1,2 @@
+#pragma once
+#define HN_ROM_SHA256 "@HN_ROM_SHA256@"

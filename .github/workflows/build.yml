@@ -1,0 +1,19 @@
+name: Windows build and synthetic tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -B tools/check_repository.py
+      - run: cmake -S . -B build -A x64 -DBUILD_TESTING=ON
+      - run: cmake --build build --config Release --parallel 4
+      - run: ctest --test-dir build -C Release --output-on-failure
+      - run: cmake --install build --config Release --prefix build/package
+      - run: python -B tools/check_repository.py --package build/package
+      - run: git diff --check
