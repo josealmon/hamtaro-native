@@ -45,13 +45,14 @@ PCM to the output device's format.
 | Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular HBlank callback compared, remaining scanline callbacks and timed DMA/PPU integration pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
-| Motion and collision setup | Partial | Scene/resource setup, conservative tile-route queries and two-segment follower routes compared; live leader/follower movement and record collision resolution pending |
+| Motion and collision setup | Partial | Scene/resource setup, conservative tile-route queries, two-segment follower routes and leader/follower idle-animation selection compared; live movement and record collision resolution pending |
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases and typed animation callback compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
-| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, task/actor/indirect setup, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; word-choice dialogs and unsupported opcodes remain incomplete |
+| Word-choice dialogs | Adapted | Nine text contexts, expression-filtered options, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
+| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; later scene callbacks remain incomplete |
-| Native boot/title | Pending | 88 Main-only, 180 idle and 7,296 input-driven script/actor/text/render/audio iterations compared; live motion, word-choice dialogs, real IRQ cadence and hardware audio output remain incomplete |
+| Native boot/title | Pending | 88 Main-only, 180 idle and 7,296 input-driven script/actor/text/render/audio iterations compared; live motion, full dialog integration, real IRQ cadence and hardware audio output remain incomplete |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
 | Music and effects | Partial | Sequencer, original PCM mixer, PSG register service, four native PSG generators, script controls and Direct Sound/PWM tested as components; final game output, filtering, trigger quirks and host delivery remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
@@ -106,7 +107,9 @@ flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 reg
 values that refer to the reference's stack are excluded; destination memory and
 sound DMA1/2 register images are compared. These are not a verified native boot,
 title screen or playthrough.
-The next unsupported command is MainScriptAwaitWordChoice (0x21).
+The next unsupported command is MainScriptWaitForByte1FA8 (0x21), which requires
+the live leader/follower movement and collision update. Word-choice awaiting and
+configuration use opcodes 0x24 and 0x45, respectively.
 See docs/testing.md in this repository for the commands and current check count.
 
 Scene callbacks use typed native dispatch with explicit resource failures. They
@@ -154,6 +157,18 @@ callback dispatch supports the 27 slot-16 animation presets; other callback word
 fail explicitly. Glyphs, strings, icon animations and bundle tables remain in the
 user's ROM. Malformed resources, cyclic lists and exhausted command budgets fail
 without interpreting guest instructions.
+
+Word-choice dialogs retain nine twelve-byte records and allocate nine independent
+text tasks, including unused cells. Conditions advance the original expression
+cursor; labels select ROM language bundles or adjusted-initial buffers. Opening
+waits for background ownership, then initializes both cursor slots and tile palette
+highlights. Input preserves directional priority, vertical disabled-row skipping,
+the backward correction from empty cells, blocked cancellation and original songs.
+Requested selection can enter an eight-tick delayed close. Main preserves the
+selected result through the closing states and resumes only after the background
+releases the dialog. Display reset retains its distinct key-cache behavior. Native
+guards reject invalid grids and missing task/render resources. Idle-animation
+selection reads the original primary/secondary family tables from the user's ROM.
 
 Motion setup preserves the original class selectors, control bytes and optional
 128-byte parameter block. Collision data is read from the caller's resource,
@@ -306,7 +321,7 @@ are rejected; the unused group-0 record write/load path is not exposed.
 
 ## Remaining integration order
 
-1. Add word-choice dialogs, live movement, remaining scanline callbacks and timed
+1. Add live movement, remaining scanline callbacks and timed
    effects, and audio delivery, then connect the verified
    initialization, typed callbacks and script/render systems to the real game loop.
 2. Establish a deterministic title/new-game/movement/save-load scenario.

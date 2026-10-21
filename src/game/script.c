@@ -14,6 +14,7 @@
 #include "game/actor.h"
 #include "game/motion.h"
 #include "game/task.h"
+#include "game/choice.h"
 #include "gba/bios.h"
 #include <string.h>
 enum {
@@ -277,6 +278,8 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         if(!(flags&128)&&!hn_motion_rebuild_route(m))return fail(s,HN_SCRIPT_RESOURCE,op,args);
         advance(m,17);break;
     }
+    case 0x24:case 0x45:
+        if(!hn_choice_main_command(m,op,args))return fail(s,HN_SCRIPT_RESOURCE,op,args);break;
     case 0x22:case 0x23: {
         scratch(m,args,0,8);GameAddr expression=resolve_variable(m,0);
         GameAddr target=op==0x22?resolve_variable(m,4):0;uint32_t value;

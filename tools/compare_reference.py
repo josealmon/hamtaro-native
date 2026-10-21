@@ -42,6 +42,7 @@ def main() -> None:
     parser.add_argument("--scenes-only", action="store_true", help="Run scene menus, input, text and transition comparisons")
     parser.add_argument("--actors-only", action="store_true", help="Run actor contexts, motion setup/routes and supporting Main commands")
     parser.add_argument("--tasks-only", action="store_true", help="Run text-task lifecycle, graphics and script comparisons")
+    parser.add_argument("--choices-only", action="store_true", help="Run word-choice dialogs and supporting script comparisons")
     args = parser.parse_args()
     spec = json.loads((ROOT / "config/rom.json").read_text())
     rom = args.rom.read_bytes()
@@ -792,6 +793,101 @@ def main() -> None:
                 equal(tasks_update(memory,4096,report),1,f"native task update {case}/{frame} report {tuple(report)}")
                 call("UpdateTaskContexts",limit=4000000);compare(f"task update {case}/{frame}",ranges)
 
+    def choice_checks():
+        for opcode,name in ((0x21,"MainScriptWaitForByte1FA8"),(0x24,"MainScriptAwaitWordChoice"),(0x45,"MainScriptConfigureWordChoice")):
+            equal(struct.unpack_from("<I",rom,0x58E5D4+opcode*4)[0]&~1,symbols[name],f"original Main dispatch {opcode:02X}")
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x05000000,0x400),
+                (0x06000000,0x18000),(0x04000060,0x74),(0x040000D8,8))
+        dialog=bind("hn_choice_update",C.c_bool,C.c_void_p,C.c_uint32,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        task_frames=bind("hn_probe_tasks",C.c_int,C.c_void_p,C.c_uint32,C.POINTER(C.c_uint32))
+        task_report=(C.c_uint32*3)()
+        selected=C.c_uint32()
+        def fixture(case):
+            fresh();heap_init(memory);call("InitializeHeap",0)
+            native("hn_task_contexts_init")(memory);call("InitializeTaskContexts")
+            equal(native("hn_audio_driver_init",result=C.c_bool)(memory),True,"choice audio initialization")
+            call("InitializeAudioDriver",limit=2000000)
+            native("hn_input_initialize")(memory);call("InitializeKeys")
+            both(0x03002D98,struct.pack("<I",0x02017000));both(0x03002DC0,bytes([32]))
+            both(0x02017000,rng.randbytes(32*104))
+            both(0x03002E08,struct.pack("<I",0x02018000));both(0x03002C80,bytes([9]))
+            both(0x02018000,rng.randbytes(9*80));both(0x02018038,b"\0")
+            both(0x03003070,struct.pack("<I",0x02019000));both(0x03002E10,bytes([8]))
+            both(0x02019000,rng.randbytes(8*44));both(0x0200FF20,rng.randbytes(512))
+            both(0x0200460B,bytes([case%5]));both(0x03002160,b"\0")
+            both(0x03001F58,bytes([(0,8,32,40)[case%4]]));both(0x030007A4,struct.pack("<I",case%9+1))
+            both(0x03002C0C,b"\x0A");both(0x03001F50,b"\x0B")
+            both(0x02017000+10*104+0x60,bytes([case%8+1]));both(0x02017000+11*104+0x60,bytes([case%8+1]))
+            both(0x03001F60,bytes([case%2]));both(0x03001F90,bytes([case%2]));both(0x03002270,b"\x0C");both(0x03002274,b"\x0D")
+            both(0x02020000,bytes([(0,1,86,87,90)[case%5]])*9)
+            both(0x02021000,struct.pack("<9H",*([0xBE01]*9)))
+            both(0x030021E4,struct.pack("<H",case*71&511))
+        def update(count,label):
+            equal(dialog(memory,count,0x02020000,0x02021000,C.byref(selected)),True,f"native choice {label}")
+            equal(selected.value,call("UpdateWordChoiceDialog",count,0x02020000,0x02021000,limit=6000000),f"choice result {label}")
+            compare(f"choice dialog {label}",ranges)
+        for case in range(96):
+            fixture(case)
+            for follower,name in ((False,"SetLeaderIdleRenderAnimations"),(True,"RefreshWordChoiceAnimations")):
+                equal(native("hn_motion_idle_render",1,C.c_bool)(memory,follower),True,f"native idle animation {name}")
+                call(name);compare(name,ranges)
+                equal(native("hn_motion_idle_render",1,C.c_bool)(memory,follower),True,"native repeated idle")
+                call(name);compare("repeated idle animation",ranges)
+            descriptor=0x02022000;columns=(1,2,3)[case%3];rows=9//columns
+            both(descriptor,rng.randbytes(24));both(descriptor+12,struct.pack("<I",0x088A31FE))
+            both(descriptor+16,bytes([columns,rows,(8,10,12)[case%3],case%8,case,case*2&255]))
+            for index in range(9):both(0x030007B0+index*12,struct.pack("<2I",index+1,int(index==case%9)))
+            both(0x030007A4,struct.pack("<I",case%9+1));both(0x030007A8,b"\x09")
+            equal(native("hn_choice_initial_selection",1,C.c_bool)(memory,descriptor),True,"native initial word selection")
+            call("InitializeWordChoiceSelection",descriptor);compare("initial choice selection",ranges)
+            equal(native("hn_choice_display",1,C.c_bool)(memory,descriptor),True,"native choice display")
+            call("UpdateWordChoiceSelectionDisplay",descriptor);compare("choice selection display",ranges)
+            equal(native("hn_choice_select_identifier",2,C.c_bool)(memory,descriptor,case%9+1),True,"native requested choice display")
+            call("SetWordChoiceSelectionDisplay",descriptor,case%9+1);compare("requested choice display",ranges)
+
+        for case in range(45):
+            fixture(case);count=case%9+1
+            # Filter one noninitial option; retain at least one available entry.
+            if count>2:both(0x02021002,struct.pack("<H",0xBE00))
+            both(0x030007A4,struct.pack("<I",1));update(count+((case+1)<<16),f"initialize {case}")
+            both(0x02018038,b"\x88");update(count,f"opening wait {case}")
+            both(0x02018038,b"\0");update(count,f"opening {case}")
+            for tick in range(8):
+                equal(task_frames(memory,4096,task_report),1,f"native choice text {case}/{tick}: {list(task_report)}")
+                call("UpdateTaskContexts",limit=4000000);compare(f"choice text tasks {case}/{tick}",ranges)
+            for step,keys in enumerate((16,128,32,64,16|128,32|64,0,2 if case%3 else 1)):
+                both(0x03000822,struct.pack("<H",keys&3));both(0x03000824,struct.pack("<H",keys&240))
+                if step==7 and case%3==1:both(0x03001F58,bytes([native_bytes(0x03001F58,1)[0]|1]))
+                update(count,f"selection {case}/{step}")
+            if case%3==1:
+                native("hn_choice_request",1)(memory,1);call("RequestWordChoiceIdentifier",1);compare("requested choice",ranges)
+                both(0x03000822,b"\0\0");both(0x03000824,b"\0\0");update(count,f"request close {case}")
+            for step in range(10):
+                both(0x02018038,bytes([0x88 if step<8 else 0]));update(count,f"closing {case}/{step}")
+
+        for case in range(32):
+            fixture(case)
+            payload=bytes([case%4,case*7&255,case*5&255])+struct.pack("<H",(0,15,16,511,512,527,528,65535)[case%8])
+            both(0x02020000,payload)
+            equal(command(memory,0x45,0x02020000),1,"native Main choice configuration")
+            call("MainScriptConfigureWordChoice",0x02020000);compare("Main choice configuration",ranges)
+        for case in range(8):
+            fixture(case);count=case%5+1;both(0x030007A4,struct.pack("<I",1))
+            both(0x03002BB0,struct.pack("<2I",0x02020000,0x02021000))
+            both(0x02024000,bytes([count])+struct.pack("<2I",0,1))
+            for step in range(8):
+                both(0x02018038,bytes([0x88 if step in (1,4) else 0]))
+                both(0x03000822,struct.pack("<H",1 if step==3 else 0))
+                equal(command(memory,0x24,0x02024000),1,"native Main word choice")
+                call("MainScriptAwaitWordChoice",0x02024000,limit=6000000);compare("Main word-choice protocol",ranges)
+                if step==5:break
+        for state in range(7):
+            fixture(state)
+            update(3,"reset fixture initialization")
+            both(0x03001F94,struct.pack("<H",state))
+            equal(native("hn_choice_reset",result=C.c_bool)(memory),True,"native choice reset")
+            call("ScriptCallbackResetWordChoiceDisplay",0);compare(f"choice reset state {state}",ranges)
+
     def raster_checks():
         ranges = ((0x02000000,0x40000),(0x03000000,0x7000),(0x04000000,0x60),(0x040000B0,12))
         graphics_command = bind("hn_probe_graphics_command", C.c_int, C.c_void_p, C.c_uint32,
@@ -1173,6 +1269,10 @@ def main() -> None:
                 compare(f"animation audio {case} {opcode}", audio_ranges)
 
     try:
+        if args.choices_only:
+            choice_checks()
+            print(f"{checks} private word-choice comparisons passed; full gameplay remains unverified.")
+            return
         if args.tasks_only:
             task_checks()
             print(f"{checks} private text-task comparisons passed; full gameplay remains unverified.")
@@ -2157,6 +2257,7 @@ def main() -> None:
         actor_checks()
         motion_checks()
         task_checks()
+        choice_checks()
         raster_checks()
     finally:
         destroy(memory)

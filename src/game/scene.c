@@ -6,6 +6,7 @@
 #include "game/audio.h"
 #include "game/random.h"
 #include "game/text.h"
+#include "game/choice.h"
 
 static unsigned menu_kind(HNMemory *m)
 {
@@ -119,6 +120,7 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x08009318:if(!hn_choice_reset(m))return HN_SCENE_RESOURCE;break;
     case 0x0801C2D4:case 0x0801C344:case 0x0801C3B4:case 0x0801C410:
         if(!indirect_arithmetic(m,callback&~1u,arguments,consumed))return HN_SCENE_RESOURCE;break;
     case 0x0801C474:{

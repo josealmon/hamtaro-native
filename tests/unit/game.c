@@ -14,6 +14,7 @@
 #include "game/actor.h"
 #include "game/motion.h"
 #include "game/task.h"
+#include "game/choice.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -644,9 +645,67 @@ static void task_contract(void)
     CHECK(!hn_tasks_update(&tasks,8)&&tasks.fault==HN_TASK_MEMORY&&tasks.fault_address==0xDEADBEEF);
     free(rom);reset();
 }
+static void choice_contract(void)
+{
+    uint8_t *rom=calloc(1,0x900000);CHECK(rom!=NULL);hn_memory_init(&memory,rom,0x900000);
+    hn_heap_init(&memory);hn_task_contexts_init(&memory);
+    const GameAddr descriptor=0x02018000,family=0x02018100,states=0x02019000,slots=0x0201A000;
+    unsigned offset=HN_CHOICE_FAMILIES-HN_ROM_BASE;
+    for(unsigned byte=0;byte<4;byte++)rom[offset+byte]=(uint8_t)(family>>(byte*8));
+    for(unsigned i=0;i<9;i++)hn_write32(&memory,family+i*4,descriptor);
+    hn_write32(&memory,HN_RENDER_STATES,states);hn_write8(&memory,HN_BACKGROUND_COUNT,1);
+    hn_write32(&memory,HN_GRAPHICS_SCRIPTS,states+256);hn_write8(&memory,HN_GRAPHICS_COUNT,1);
+    hn_write32(&memory,HN_RENDER_SLOTS,slots);hn_write8(&memory,HN_RENDER_INFO+16,4);
+    hn_write8(&memory,descriptor+16,3);hn_write8(&memory,descriptor+17,3);hn_write8(&memory,descriptor+18,10);
+    hn_write8(&memory,descriptor+20,24);hn_write8(&memory,descriptor+21,48);hn_write32(&memory,descriptor+12,0x0201C000);
+    for(unsigned i=0;i<9;i++){
+        hn_write32(&memory,HN_CHOICE_RECORDS+i*12,i+1);
+        hn_write32(&memory,HN_CHOICE_RECORDS+i*12+8,hn_task_allocate(&memory));
+    }
+    hn_write8(&memory,HN_CHOICE_COUNT,9);hn_write32(&memory,HN_CHOICE_INITIAL,8);
+    CHECK(hn_choice_initial_selection(&memory,descriptor));
+    CHECK(hn_read8(&memory,HN_CHOICE_ROW)==2&&hn_read8(&memory,HN_CHOICE_COLUMN)==1);
+    hn_write16(&memory,HN_CHOICE_TILES,0xA08D);hn_write16(&memory,HN_CHOICE_TILES+2,0xB0A0);
+    hn_write16(&memory,HN_CHOICE_TILES+4,0xC0A1);hn_write16(&memory,HN_CHOICE_TILES+6,0xF000);
+    CHECK(hn_choice_display(&memory,descriptor));
+    CHECK(hn_read32(&memory,slots+0x18)==96u*65536&&hn_read32(&memory,slots+0x1C)==80u*65536);
+    CHECK(hn_read32(&memory,slots+104+4)==HN_CHOICE_CURSOR_10);
+    CHECK(hn_read16(&memory,HN_CHOICE_TILES)==0x108D&&hn_read16(&memory,HN_CHOICE_TILES+2)==0x10A0);
+    CHECK(hn_read16(&memory,HN_CHOICE_TILES+4)==0xA1&&hn_read16(&memory,HN_CHOICE_TILES+6)==0);
+    CHECK(hn_read32(&memory,states+0x14)==0x0201C000&&hn_read8(&memory,states+0x38)==8);
+    hn_write32(&memory,HN_CHOICE_RECORDS+7*12+4,1);
+    CHECK(hn_choice_select_identifier(&memory,descriptor,8));
+    CHECK(!hn_read8(&memory,HN_CHOICE_ROW)&&!hn_read8(&memory,HN_CHOICE_COLUMN));
+    hn_write32(&memory,HN_CHOICE_INITIAL,99);CHECK(hn_choice_initial_selection(&memory,descriptor));
+    CHECK(!hn_read8(&memory,HN_CHOICE_ROW)&&!hn_read8(&memory,HN_CHOICE_COLUMN));
+    hn_write8(&memory,descriptor+16,0);CHECK(!hn_choice_display(&memory,descriptor));hn_write8(&memory,descriptor+16,3);
+    HNScript script;hn_script_init(&script,&memory,NULL,0);const GameAddr arguments=0x0201D000;
+    hn_write8(&memory,arguments,2);hn_write8(&memory,arguments+1,9);hn_write8(&memory,arguments+2,7);
+    hn_write16(&memory,arguments+3,512);hn_write8(&memory,HN_SCENE_CONTROLS,5);
+    CHECK(hn_main_command(&script,0x45,arguments));
+    CHECK(hn_read8(&memory,HN_CHOICE_FAMILY)==2&&hn_read8(&memory,HN_CHOICE_FLAGS)==9);
+    CHECK(hn_read32(&memory,HN_CHOICE_INITIAL)==6&&hn_read32(&memory,HN_CHOICE_PENDING)==7);
+    CHECK(hn_read32(&memory,0x03000014)==5&&hn_read8(&memory,0x03000010)==0);
+    hn_choice_request(&memory,8);CHECK(hn_read8(&memory,HN_CHOICE_FLAGS)==25&&hn_read32(&memory,HN_CHOICE_PENDING)==8);
+    hn_write16(&memory,HN_CHOICE_STATE,1);CHECK(hn_choice_reset(&memory));
+    CHECK(hn_read8(&memory,HN_SCENE_CONTROLS+0x69)==0&&hn_read16(&memory,HN_CHOICE_STATE)==1);
+    hn_input_repeat(&memory,77,9);hn_write16(&memory,HN_CHOICE_STATE,2);uint32_t consumed=99;
+    CHECK(hn_scene_callback(&memory,0x08009319,0,&consumed)==HN_SCENE_OK&&consumed==0);
+    CHECK(hn_read16(&memory,HN_CHOICE_STATE)==0&&hn_read32(&memory,HN_TASK_HEAD)==HN_TASK_SENTINEL);
+    CHECK(hn_read8(&memory,HN_SCENE_CONTROLS+0x69)==1&&hn_read16(&memory,HN_KEY_STATE+12)==77);
+    CHECK(hn_read32(&memory,states+0x14)==HN_CHOICE_RESET_BACKGROUND);
+    for(unsigned i=0;i<9;i++)CHECK(!hn_read32(&memory,HN_CHOICE_RECORDS+i*12));
+    /* Closing preserves the script result until the background releases the dialog. */
+    hn_write8(&memory,HN_CHOICE_FAMILY,0);hn_write16(&memory,HN_CHOICE_STATE,3);hn_write16(&memory,0x03001FBC,4);
+    hn_write8(&memory,states+0x38,1);hn_write8(&memory,arguments,3);hn_write32(&memory,arguments+1,0x0201D100);hn_write32(&memory,arguments+5,0x0201D200);
+    CHECK(hn_main_command(&script,0x24,arguments));CHECK(hn_read16(&memory,HN_CHOICE_STATE)==3&&hn_read16(&memory,0x03001FBC)==4);
+    hn_write8(&memory,states+0x38,0);CHECK(hn_main_command(&script,0x24,arguments));
+    CHECK(hn_read16(&memory,HN_CHOICE_STATE)==0&&hn_read16(&memory,0x03001FBC)==4&&hn_read32(&memory,0x03000014)==9);
+    CHECK(!memory.fault);free(rom);reset();
+}
 int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
-    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();
+    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();
     printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

@@ -3,6 +3,25 @@
 #include "game/render.h"
 #include "gba/bios.h"
 
+bool hn_motion_idle_render(HNMemory *m,bool follower)
+{
+    unsigned index=hn_read8(m,follower?HN_RENDER_CLASS_FOLLOWER:HN_RENDER_CLASS_LEADER);
+    unsigned count=hn_read8(m,HN_RENDER_INFO+0x10);if(index>=count||!hn_read32(m,HN_RENDER_SLOTS))return false;
+    GameAddr slot=hn_render_slot(m,index);unsigned direction=(uint8_t)((hn_read8(m,slot+0x60)&15)-1);
+    unsigned primary=hn_read8(m,0x03001F60),secondary=hn_read8(m,0x03001F90);
+    if(!follower)hn_write32(m,0x03000778,0);
+    GameAddr family=hn_read32(m,0x0858BF68+((follower?(1^primary):primary)*2+1)*4);
+    GameAddr animation=hn_read32(m,family+direction*4);
+    if(hn_read32(m,slot+4)!=animation)hn_render_set_animation(m,index,animation);
+    family=hn_read32(m,0x0858BFB8+(secondary*2+(follower?1:0))*4);
+    animation=hn_read32(m,family+direction*8);index=hn_read8(m,follower?0x03002270:0x03002274);
+    if(index){
+        if(index>=count)return false;
+        if(hn_read32(m,hn_render_slot(m,index)+4)!=animation)hn_render_set_animation(m,index,animation);
+    }
+    return !m->fault;
+}
+
 bool hn_motion_route_obstacle(HNMemory *m,uint32_t x1,uint32_t z1,uint32_t x2,uint32_t z2,uint32_t *obstacle)
 {
     unsigned width=hn_read16(m,HN_COLLISION_DIMENSIONS),height=hn_read16(m,HN_COLLISION_DIMENSIONS+2);

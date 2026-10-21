@@ -17,6 +17,9 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   Task checks cover list removal/relinking, synthetic glyphs, independent contexts,
   delay/fast advance, name returns, tile-row scrolling, numeric text, unsupported
   callbacks, cyclic lists, memory faults and command budgets.
+  Word-choice checks cover initial/requested selection, grid/highlight boundaries,
+  configuration selectors, reset ownership, retained key-repeat settings and Main
+  result preservation during background-controlled closure.
 - render: animation repeat/call/delay flow, typed callback guards, physics,
   affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
   PPU regressions for tile mapping, transparency, mosaic/window phase and effects;
@@ -77,9 +80,10 @@ the circular transition; deferred DMA0/PPU timing is not modeled. Live motion, w
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with the optional PPU oracle passes 406,635 comparisons.
+GBA machine. The complete run with the optional PPU oracle passes 422,485 comparisons.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
-The coupled schedule stops before MainScriptAwaitWordChoice (0x21).
+The coupled schedule stops before MainScriptWaitForByte1FA8 (0x21); live movement
+is not implemented. Word-choice handlers use opcodes 0x24 (await) and 0x45 (configure).
 
 The audio part can be run independently with the same private ROM and reference:
 
@@ -151,6 +155,21 @@ callbacks and 56 text-update scenarios. Width/count/centering cases span all fiv
 languages and three variants. Full EWRAM/IWRAM state, VRAM and DMA3 destination/control
 are compared where relevant; the transient DMA3 source address is excluded.
 No game text, font, animation table or captured state is written to the checkout.
+
+Word-choice comparisons can be run separately:
+
+    python -B tools/compare_reference.py --choices-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+This passes 15,850 private comparisons. It checks leader/follower idle animations,
+96 synthetic descriptor layouts, selection/highlighting, 45 complete dialog state
+scenarios, expression-filtered options, directional priorities, confirmation,
+blocked/allowed cancellation, requested/delayed closure, Main configuration/await
+protocols, concurrent updates of all nine text tasks and all seven reset states.
+Main handler indexes are checked against the
+ROM dispatch table before direct function comparisons. Dialog state, linked tasks,
+graphics/background state, audio state, VRAM and DMA effects are compared; no
+captured resources are saved. These checks do not establish the full-game path
+through a word-choice dialog or a native playthrough.
 
 The same separate project can build the ROM-free hardware audio oracle:
 
