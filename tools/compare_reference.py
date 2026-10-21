@@ -14,7 +14,7 @@ import random
 import struct
 from contextlib import nullcontext
 from unicorn import (Uc, UC_ARCH_ARM, UC_MODE_THUMB, UC_HOOK_INTR,
-                     UC_HOOK_MEM_WRITE, UC_HOOK_CODE)
+                     UC_HOOK_MEM_WRITE, UC_HOOK_MEM_READ, UC_HOOK_CODE)
 from unicorn.arm_const import (UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2,
                               UC_ARM_REG_R3, UC_ARM_REG_SP, UC_ARM_REG_LR,
                               UC_ARM_REG_PC)
@@ -38,6 +38,7 @@ def main() -> None:
     parser.add_argument("--library", type=Path, default=ROOT / "build/Release/hn_reference_probe.dll")
     parser.add_argument("--video-oracle", type=Path, help="Optional separate RGB555 mGBA PPU oracle")
     parser.add_argument("--oracle-runtime-dir", type=Path, help="Optional runtime DLL directory for the PPU oracle")
+    parser.add_argument("--audio-only", action="store_true", help="Run just the audio function comparisons")
     args = parser.parse_args()
     spec = json.loads((ROOT / "config/rom.json").read_text())
     rom = args.rom.read_bytes()
@@ -172,13 +173,29 @@ def main() -> None:
     cpu.hook_add(UC_HOOK_MEM_WRITE, io_write, begin=0x04000000, end=0x040003FF)
     cpu.hook_add(UC_HOOK_CODE, finish_io)
 
+    audio_wait, audio_scanline_reads = False, 0
+    def audio_scanline(uc, _access, _address, _size, _value, _context):
+        nonlocal audio_scanline_reads
+        if audio_wait:
+            # Model only the frequency setter's explicit boundary wait. This is
+            # not elapsed CPU time, FIFO sampling, or a complete hardware clock.
+            audio_scanline_reads += 1
+            uc.mem_write(0x04000006, bytes([0 if audio_scanline_reads & 1 else 159, 0]))
+    cpu.hook_add(UC_HOOK_MEM_READ, audio_scanline, begin=0x04000006, end=0x04000006)
+
     def call(name: str, *arguments: int, limit=200000) -> int:
+        nonlocal audio_wait, audio_scanline_reads
         for register, value in zip((UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3), arguments):
             cpu.reg_write(register, value)
         if len(arguments) > 4:
             cpu.mem_write(cpu.reg_read(UC_ARM_REG_SP), struct.pack(f"<{len(arguments)-4}I", *arguments[4:]))
         cpu.reg_write(UC_ARM_REG_LR, STOP | 1)
-        cpu.emu_start(symbols[name] | 1, STOP, count=limit)
+        audio_wait = name in {"InitializeAudioDriver", "InitializeAudioCore", "SetAudioSampleFrequency", "SetAudioCoreMode"}
+        audio_scanline_reads = 0
+        try:
+            cpu.emu_start(symbols[name] | 1, STOP, count=limit)
+        finally:
+            audio_wait = False
         finish_io(cpu)
         if cpu.reg_read(UC_ARM_REG_PC) != STOP:
             raise RuntimeError(f"Reference function did not return: {name}")
@@ -226,7 +243,220 @@ def main() -> None:
             raise RuntimeError("Native guest-memory read failed.")
         return out.raw
 
+    def both(address: int, payload: bytes) -> None:
+        cpu.mem_write(address, payload)
+        if not seed(memory, address, payload, len(payload)):
+            raise RuntimeError("Private fixture injection failed.")
+
+    def fresh() -> None:
+        reset_memory(memory, buffer, len(rom))
+        for address, size in ((0x02000000, 0x40000), (0x03000000, 0x8000),
+                              (0x04000000, 0x400), (0x05000000, 0x400),
+                              (0x06000000, 0x18000), (0x07000000, 0x400)):
+            cpu.mem_write(address, bytes(size))
+        cpu.mem_write(0x04000130, b"\xFF\x03")
+        cpu.mem_write(0x0E000000, b"\xFF" * 0x8000)
+        cpu.reg_write(UC_ARM_REG_SP, 0x03007C00)
+
+    def compare(label: str, ranges) -> None:
+        for address, size in ranges:
+            equal(native_bytes(address, size), bytes(cpu.mem_read(address, size)), f"{label} RAM {address:08X}")
+
+    def native(name: str, arguments=0, result=None):
+        return bind(name, result, C.c_void_p, *([C.c_uint32] * arguments))
+
+    def audio_checks():
+        audio_ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x03007FF0, 4),
+                        (0x04000060, 0x80), (0x04000100, 4))
+        fresh()
+        equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, "native audio driver init")
+        call("InitializeAudioDriver", limit=2000000)
+        compare("audio driver init", audio_ranges)
+        for frequency in range(1, 13):
+            equal(native("hn_audio_mode", 1, C.c_bool)(memory, frequency << 16), True, f"audio rate success {frequency}")
+            call("SetAudioCoreMode", frequency << 16)
+            compare(f"audio rate {frequency}", audio_ranges)
+        for mode in (0, 0x7F, 0x93D800, 0x08FF, 0x100080, 0x800000):
+            equal(native("hn_audio_mode", 1, C.c_bool)(memory, mode), True, f"audio mode success {mode:X}")
+            call("SetAudioCoreMode", mode)
+            compare(f"audio mode {mode:X}", audio_ranges)
+        for case in range(100):
+            player, tracks = 0x030050A0, 0x03001410
+            both(player, rng.randbytes(64))
+            both(player + 8, bytes([8]))
+            both(player + 0x2C, struct.pack("<I", tracks))
+            both(player + 0x34, struct.pack("<I", 0x68736D53 if case % 7 else 0))
+            both(tracks, rng.randbytes(80 * 8))
+            for i in range(8):
+                both(tracks + i * 80 + 0x20, bytes(4))
+            for parameter, original in enumerate(("SetAudioTrackVolume", "SetAudioTrackPitch", "SetAudioTrackPan",
+                                                   "SetAudioPlayerTrackModulationDepth", "SetAudioPlayerTrackLfoSpeed")):
+                mask, value = rng.getrandbits(32), rng.getrandbits(32)
+                native("hn_audio_track_parameter", 4)(memory, player, mask, value, parameter)
+                call(original, player, mask, value)
+                compare(f"audio parameter {parameter} {case}", audio_ranges[:2])
+            scale = rng.randrange(65536)
+            native("hn_audio_tempo", 2)(memory, player, scale)
+            call("SetAudioTempoScale", player, scale)
+            compare(f"audio tempo {case}", audio_ranges[:2])
+            for i in range(8):
+                native("hn_audio_volume_pitch", 1)(memory, tracks + i * 80)
+                call("UpdateAudioTrackVolumePitch", player, tracks + i * 80)
+                compare(f"audio volume/pitch {case} {i}", audio_ranges[:2])
+            for mode, original in enumerate(("ConfigureAudioPlayerFade", "FadeOutAudioPlayer", "FadeInAudioPlayer")):
+                interval = case % 5
+                native("hn_audio_fade", 3)(memory, player, interval, mode)
+                call(original, player, interval)
+                compare(f"audio fade setup {case} {mode}", audio_ranges[:2])
+                for step in range(12):
+                    equal(native("hn_audio_fade_update", 1, C.c_bool)(memory, player), True, "native audio fade update")
+                    call("ProcessAudioPlayerFade", player)
+                    compare(f"audio fade {case} {mode} {step}", audio_ranges[:2])
+            equal(native("hn_audio_player_stop", 1, C.c_bool)(memory, player), True, "native stop player")
+            call("StopAudioPlayer", player)
+            native("hn_audio_player_resume", 1)(memory, player)
+            call("ResumeAudioPlayerState", player)
+            compare(f"audio player stop/resume {case}", audio_ranges)
+        for case in range(600):
+            channel = 0x03004FA0
+            both(channel, rng.randbytes(64))
+            native("hn_audio_psg_volume", 1)(memory, channel)
+            call("UpdateAudioPsgVolume", channel)
+            compare(f"audio PSG volume {case}", ((channel, 64),))
+            control, key, fraction = case % 5, rng.randrange(256), rng.randrange(256)
+            equal(native("hn_audio_psg_frequency", 3, C.c_uint32)(memory, control, key, fraction),
+                  call("CalculateAudioPsgFrequency", control, key, fraction), f"PSG pitch {case}")
+            both(0x02020004, struct.pack("<I", rng.getrandbits(32)))
+            equal(native("hn_audio_wave_frequency", 3, C.c_uint32)(memory, 0x02020000, key, fraction),
+                  call("CalculateAudioWaveFrequency", 0x02020000, key, fraction), f"wave pitch {case}")
+        fresh()
+        equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, "native song-control driver")
+        call("InitializeAudioDriver", limit=2000000)
+        song_functions = ("StartSong", "StartSongOrChange", "StartSongOrContinue", "StopSong", "ResumeSong")
+        for song in range(300):
+            record = rom[0x6EAE34 + song * 8:0x6EAE34 + song * 8 + 8]
+            data, index, _ = struct.unpack("<IHH", record)
+            if index >= 6:
+                raise RuntimeError("Selected private song has an invalid player index.")
+            player = struct.unpack_from("<I", rom, 0x6EADEC + index * 12)[0]
+            if song % 3 == 0:
+                both(player, struct.pack("<I", data))
+                both(player + 4, struct.pack("<I", 1 | (0x80000000 if song & 1 else 0)))
+            for action, original in enumerate(song_functions):
+                equal(native("hn_audio_song", 2, C.c_bool)(memory, song, action), True, f"native song action {song} {action}")
+                call(original, song)
+                compare(f"song action {song} {action}", audio_ranges)
+        for resume, original in ((False, "StopAllSongs"), (True, "ContinueAllSongs")):
+            equal(native("hn_audio_all", 1, C.c_bool)(memory, resume), True, f"native all players {resume}")
+            call(original)
+            compare(f"all players {resume}", audio_ranges)
+        sequence_names = (
+            "StopAudioTrackCommandChannels", "JumpAudioTrackStream", "CallAudioTrackPatternAsm",
+            "ReturnAudioTrackPatternAsm", "RepeatAudioTrackPatternAsm", "StopAudioTrackCommandChannels",
+            "StopAudioTrackCommandChannels", "StopAudioTrackCommandChannels", "ExecuteAudioMemoryCommand",
+            "SetAudioTrackPriorityAsm", "SetAudioPlayerTempoAsm", "SetAudioTrackKeyShiftAsm", "SetAudioTrackVoiceAsm",
+            "SetAudioTrackVolumeAsm", "SetAudioTrackPanAsm", "SetAudioTrackBendAsm", "SetAudioTrackBendRangeAsm",
+            "SetAudioTrackLfoSpeedAsm", "SetAudioTrackLfoDelayAsm", "SetAudioTrackModulationDepthAsm",
+            "SetAudioTrackModulationTypeAsm", "StopAudioTrackCommandChannels", "StopAudioTrackCommandChannels",
+            "SetAudioTrackTuningAsm", "StopAudioTrackCommandChannels", "StopAudioTrackCommandChannels",
+            "StopAudioTrackCommandChannels", "WriteAudioTrackSoundRegisterAsm", "ExecuteAudioExtendedCommand", "EndAudioTrackTieAsm")
+        audio_command = bind("hn_probe_audio_command", C.c_int, C.c_void_p, C.c_uint32,
+                             C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
+        report_audio = (C.c_uint32 * 3)()
+        for case in range(24):
+            for opcode, original in enumerate(sequence_names, 0xB1):
+                both(0x030050A0, rng.randbytes(64))
+                both(0x03001410, rng.randbytes(80))
+                both(0x030050B8, struct.pack("<I", 0x02021000))
+                both(0x030050D0, struct.pack("<I", 0x02022000))
+                both(0x02021000, rng.randbytes(256))
+                both(0x02022000, rng.randbytes(256 * 12))
+                both(0x03001412, bytes([case % 4, case * 13 % 256]))
+                both(0x03001430, bytes(4))
+                for i in range(3):
+                    both(0x03001454 + i * 4, struct.pack("<I", 0x02023000 + i * 16))
+                if opcode in (0xB1, 0xB3, 0xCD, 0xCE):
+                    both(0x03001430, struct.pack("<I", 0x03003F30))
+                    for i in range(3):
+                        channel = 0x03003F30 + i * 64
+                        both(channel, rng.randbytes(64))
+                        both(channel + 0x11, bytes([case & 127]))
+                        both(channel + 0x2C, struct.pack("<III", 0x03001410,
+                             channel - 64 if i else 0, channel + 64 if i < 2 else 0))
+                payload = bytes([case * 13 % 256])
+                if opcode in (0xB2, 0xB3):
+                    payload = struct.pack("<I", 0x02023000)
+                elif opcode == 0xB5:
+                    payload = struct.pack("<BI", case % 4, 0x02023000)
+                elif opcode == 0xB9:
+                    payload = struct.pack("<BBBI", case % 18, 3, case, 0x02023000)
+                elif opcode == 0xCC:
+                    payload = bytes([case % 32, case * 13 % 256])
+                elif opcode == 0xCD:
+                    payload = bytes([case % 12]) + struct.pack("<I", 0x12345678)
+                elif opcode == 0xCE:
+                    payload = bytes([case & 127 if case & 1 else 128])
+                both(0x02020000, payload)
+                both(0x03001450, struct.pack("<I", 0x02020000))
+                equal(audio_command(memory, 0x030050A0, 0x03001410, opcode, report_audio), 1,
+                      f"native audio sequence {opcode:02X} {case}: {list(report_audio)}")
+                call(original, 0x030050A0, 0x03001410)
+                compare(f"audio sequence {opcode:02X} {case}", audio_ranges)
+        note = bind("hn_probe_audio_note", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32,
+                    C.c_uint32, C.POINTER(C.c_uint32))
+        for case in range(240):
+            player, track, core = 0x030050A0, 0x02010000, 0x03003EE0
+            both(player + 9, bytes([rng.randrange(256)]))
+            both(track, rng.randbytes(80))
+            both(track + 5, bytes([rng.randrange(128)]))
+            both(track + 0x20, bytes(4))
+            both(track + 0x40, struct.pack("<I", 0x02020000))
+            both(core + 6, bytes([case % 9]))
+            both(core + 0x1C, struct.pack("<I", 0 if case % 13 == 0 else 0x03004FA0))
+            for i in range(16):
+                channel = core + 0x50 + i * 64 if i < 12 else 0x03004FA0 + (i - 12) * 64
+                both(channel, rng.randbytes(64))
+                status = 0 if case % 4 == 0 else 0x83 if case % 4 == 1 else 0x43 if case % 4 == 2 else rng.randrange(256)
+                both(channel, bytes([status]))
+                owner = (0x0200F000, 0x02010000, 0x02011000)[(case + i) % 3] if status else 0
+                both(channel + 0x2C, struct.pack("<III", owner, 0, 0))
+            # Explicit PCM/PSG, key-split and rhythm-bank paths; no sample bytes or captured state.
+            kind, bank = case % 5, case % 3
+            both(track + 0x24, struct.pack("<BBBBII", kind if bank == 0 else 0x40 if bank == 1 else 0x80,
+                                          60, 0, 0, 0x02026000 if bank == 0 else 0x02023000,
+                                          0x12345678 if bank == 0 else 0x02024000))
+            both(0x02024000, bytes(rng.randrange(8) for _ in range(256)))
+            for i in range(128):
+                both(0x02023000 + i * 12, struct.pack("<BBBBII", kind, i & 127, i & 255,
+                     rng.randrange(256), 0x02026000, rng.getrandbits(32)))
+            both(0x02026004, struct.pack("<I", rng.getrandbits(32)))
+            payload = bytes([rng.randrange(128), rng.randrange(128), rng.randrange(128)][:case % 4]) + b"\x81"
+            both(0x02020000, payload)
+            equal(note(memory, player, track, case % 49, report_audio), 1,
+                  f"native audio note {case}: {list(report_audio)}")
+            call("StartAudioTrackNoteAsm", case % 49, player, track)
+            compare(f"audio note {case}", audio_ranges)
+        player_step = bind("hn_probe_audio_player", C.c_int, C.c_void_p, C.c_uint32,
+                           C.c_uint32, C.POINTER(C.c_uint32))
+        for song in (1, 10, 40, 67, 128, 199, 200, 205, 220, 250, 270, 299):
+            fresh()
+            equal(native("hn_audio_driver_init", result=C.c_bool)(memory), True, f"audio sequencer driver {song}")
+            call("InitializeAudioDriver", limit=2000000)
+            equal(native("hn_audio_song", 2, C.c_bool)(memory, song, 0), True, f"audio sequencer song {song}")
+            call("StartSong", song)
+            index = struct.unpack_from("<H", rom, 0x6EAE34 + song * 8 + 4)[0]
+            player = struct.unpack_from("<I", rom, 0x6EADEC + index * 12)[0]
+            for frame_index in range(120):
+                equal(player_step(memory, player, 4096, report_audio), 1,
+                      f"native audio player {song} {frame_index}: {list(report_audio)}")
+                call("ProcessAudioPlayerAsm", player, limit=1000000)
+                compare(f"audio player {song} {frame_index}", audio_ranges)
+
     try:
+        if args.audio_only:
+            audio_checks()
+            print(f"{checks} private audio function comparisons passed; PCM and gameplay remain unverified.")
+            return
         heap_init(memory)
         call("InitializeHeap", 0)
         active = []
@@ -266,10 +496,6 @@ def main() -> None:
                    keys.first_delay, keys.next_delay, keys.counter, keys.held_frames),
                   (original[0], original[1], original[2], original[3],
                    original[6], original[7], original[8], original[9]), f"input {i}")
-        def both(address: int, payload: bytes) -> None:
-            cpu.mem_write(address, payload)
-            if not seed(memory, address, payload, len(payload)):
-                raise RuntimeError("Private fixture injection failed.")
         operations = (
             (0, "AdvanceScript", b"\x04\x01\x02\x03"),
             (1, "EndScriptFrame", b""), (2, "ScriptWaitFrames", b"\x02\x00"),
@@ -306,22 +532,6 @@ def main() -> None:
                                         (0x03002BB0, 0xB4), (0x02004520, 128), (0x0201DC40, 128)):
                     equal(native_bytes(address, length), bytes(cpu.mem_read(address, length)), f"script {name} RAM {address:08X}")
 
-        def fresh() -> None:
-            reset_memory(memory, buffer, len(rom))
-            for address, size in ((0x02000000, 0x40000), (0x03000000, 0x8000),
-                                  (0x04000000, 0x400), (0x05000000, 0x400),
-                                  (0x06000000, 0x18000), (0x07000000, 0x400)):
-                cpu.mem_write(address, bytes(size))
-            cpu.mem_write(0x04000130, b"\xFF\x03")
-            cpu.mem_write(0x0E000000, b"\xFF" * 0x8000)
-            cpu.reg_write(UC_ARM_REG_SP, 0x03007C00)
-
-        def compare(label: str, ranges) -> None:
-            for address, size in ranges:
-                equal(native_bytes(address, size), bytes(cpu.mem_read(address, size)), f"{label} RAM {address:08X}")
-
-        def native(name: str, arguments=0, result=None):
-            return bind(name, result, C.c_void_p, *([C.c_uint32] * arguments))
 
         resource_cases = (
             (0x0F, "MainScriptConfigureRenderSlot", struct.pack("<BBBHHHI", 3, 1, 0x30, 64, 80, 16, 4)),
@@ -1161,9 +1371,10 @@ def main() -> None:
         if args.video_oracle:
             print(f"{video_frames} private ROM PPU snapshots matched; {nonuniform} contained multiple colors.")
         print(f"360 input-injected script/render iterations matched; graphics scripts active in {active_graphics_iterations}.")
+        audio_checks()
     finally:
         destroy(memory)
-    print(f"{checks} private native/reference checks passed (heap, input, scripts, expressions, rendering, maps, saves).")
+    print(f"{checks} private native/reference checks passed (heap, input, scripts, expressions, rendering, maps, saves, audio).")
     print("Function-level evidence only; boot and gameplay remain unverified.")
 
 if __name__ == "__main__":

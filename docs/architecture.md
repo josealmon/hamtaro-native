@@ -47,7 +47,7 @@ SDL's device conversion happens after game PCM generation.
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, maps, saves, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Native boot/title | Pending | 88 Main-only, 180 idle and 360 input-injected script/render iterations compared; task/actor updates, real IRQ cadence and audio are not connected |
 | New game, movement, in-game save/load | Pending | Requires the connected native game loop |
-| Music and effects | Pending | Native sequencer/mixer and PSG; the host stream is ready |
+| Music and effects | Partial | Native driver/player state, sequence commands, note allocation, priority and modulation compared; PCM mixing, PSG synthesis and delivery to the host stream remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
 | Public release | Pending | Native gameplay, complete coverage and source-provenance review |
@@ -117,6 +117,24 @@ wraparound path. Fade, alpha and mosaic modes preserve their distinct delay and
 completion rules. Raster-effect commands remain explicit faults. Main save-load
 commands preserve the failure cursor/depth behavior and reload the saved map with
 a white palette on success; file persistence still needs the real game loop.
+
+Audio uses explicit guest layouts for the driver, six player records, 80-byte
+tracks and 64-byte channels. Initialization reads dispatch and song metadata
+from the private ROM. Callback words remain guest addresses and are resolved
+through typed native calls; relocated ARM mixer bytes are retained as guest
+data only. The Windows application never executes that image.
+
+Native audio comparisons cover driver setup, sample-frequency parameters,
+player/song controls, fades, volume/pitch/pan, 30 sequence opcodes, memory and
+extended commands, PCM/PSG note allocation and the player tick loop. Tests
+compare 300 song-control selections and 120 sequencer updates for each of 12
+private ROM sequences. The latter deliberately omit the mixer and PSG register
+service, so they verify sequence/channel state rather than audible playback.
+The frequency setter's VCOUNT wait is represented by an explicit boundary model
+in the CPU oracle. Real timer/FIFO cadence, PCM generation, PSG synthesis and
+delivery to the host stream remain pending. Main/animation sound commands stay
+unsupported until that path is connected; a successful state comparison never
+substitutes for pre-device PCM or listening evidence.
 
 The optional mGBA 0.10.5 software PPU oracle is a separate test build; its code and
 runtime never enter the application or package. Static synthetic comparisons

@@ -3,6 +3,7 @@
 #include "game/render.h"
 #include "game/background.h"
 #include "game/graphics.h"
+#include "game/audio.h"
 #include <stdlib.h>
 #include <string.h>
 /* Optional private oracle bridge. Never installed or shipped with the app. */
@@ -95,4 +96,19 @@ int hn_probe_graphics(HNMemory *m,unsigned budget,uint32_t report[3])
 {
     HNGraphics graphics;hn_graphics_init(&graphics,m);bool ok=hn_graphics_update(&graphics,budget);
     report[0]=graphics.fault;report[1]=graphics.fault_opcode;report[2]=graphics.fault_address;return ok;
+}
+int hn_probe_audio_command(HNMemory *m,GameAddr player,GameAddr track,unsigned opcode,uint32_t report[3])
+{
+    HNAudio audio;hn_audio_init(&audio,m);bool ok=hn_audio_sequence_command(&audio,player,track,opcode);
+    report[0]=audio.fault;report[1]=audio.fault_opcode;report[2]=audio.fault_address;return ok;
+}
+int hn_probe_audio_note(HNMemory *m,GameAddr player,GameAddr track,unsigned clock_selector,uint32_t report[3])
+{
+    HNAudio audio;hn_audio_init(&audio,m);bool ok=hn_audio_note(&audio,player,track,clock_selector);
+    report[0]=audio.fault;report[1]=audio.fault_opcode;report[2]=audio.fault_address;return ok;
+}
+int hn_probe_audio_player(HNMemory *m,GameAddr player,unsigned command_budget,uint32_t report[3])
+{
+    HNAudio audio;hn_audio_init(&audio,m);bool ok=hn_audio_player_update(&audio,player,command_budget);
+    report[0]=audio.fault;report[1]=audio.fault_opcode;report[2]=audio.fault_address;return ok;
 }
