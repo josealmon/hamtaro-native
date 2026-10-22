@@ -15,6 +15,7 @@
 #include "game/map_choice.h"
 #include "game/bank2.h"
 #include "game/bank3.h"
+#include "game/bank4.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
 #include "game/records.h"
@@ -523,6 +524,7 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         result=hn_wander_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_bank2_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_bank3_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_bank4_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_map_choice_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_particles_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_scene_motion_callback(m,callback,arguments,consumed);
@@ -543,6 +545,7 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
     bank=hn_bank3_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     bank=hn_bank3_games_animation(m,callback,slot,arguments,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     bank=hn_bank3_chain_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
+    bank=hn_bank4_animation(m,callback,slot,arguments,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     HNSceneResult map=hn_map_choice_animation(m,callback,slot,arguments,consumed,yield);if(map!=HN_SCENE_UNKNOWN)return map;
     HNSceneResult motion=hn_scene_motion_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;
     switch(callback&~1u){

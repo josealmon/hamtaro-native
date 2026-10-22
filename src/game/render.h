@@ -21,6 +21,7 @@ uint32_t hn_render_direction_between(HNMemory *,uint8_t from,uint8_t to,bool eig
 uint32_t hn_render_direction_raw(HNMemory *,uint8_t from,uint8_t to,bool eight_directions);
 void hn_render_error(HNMemory *,uint16_t code);
 void hn_render_set_animation(HNMemory *,uint32_t index,GameAddr animation);
+void hn_render_set_animation_pointer(HNMemory *,GameAddr slot,GameAddr animation);
 void hn_render_flags(HNMemory *,uint32_t index,uint8_t clear_mask,uint8_t value);
 bool hn_render_modes(HNMemory *,uint8_t index,uint8_t mode,uint8_t value,uint8_t field65);
 /* Source wrappers address byte-selected mapped slots without an active-count guard. */

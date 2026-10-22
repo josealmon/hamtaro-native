@@ -55,6 +55,7 @@ statically. A separate clean-machine validation remains pending.
 | Bank-2 actor and scene families | Adapted | All 120 functions in map_bank2_render_callbacks.c, map_bank2_scene_control.c, map_bank2_scene_presets.c and map_bank2_height_callbacks.c compared; 116 argument-free task targets, 70 Main contracts, panel stages, randomized motion, height latches and one full-word animation yield; complete Sunny Peak integration remains pending |
 | Bank-3 late scene family | Adapted | All 31 functions in map_bank3_late_callbacks.c compared: 25 void presets, four animation callbacks and two Main modal callbacks; 27 F4 targets, song pan/tempo, mirror/affine scales and raw actor snapshot roundtrips; full area integration remains pending |
 | Bank-3 main scene/activity family | Adapted | All 282 source functions accounted for across presets, source/spawn entries, pair board, phases/orbits, record text, chains and one shared condition; typed Main/task/animation contracts and helpers compared, including live links, byte wrapping and retained-register paths; complete activity progression and area integration remain pending |
+| Bank-4 scene/path family | Adapted | All 483 map_bank4_callbacks.c functions and the shared screen-indicator family compared; presentation, jump stages/windows, byte counters, audio distance scaling and three path followers retain reviewed Main/task/animation/helper contracts; complete area story/activity and timed scene integration remain pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
@@ -213,7 +214,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-2,147,107 checks with the independent BIOS and PPU oracles, including separately
+2,595,147 checks with the independent BIOS and PPU oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
@@ -726,6 +727,42 @@ Bank 3's five recovered script sources now declare 512 functions with explicit
 dispatch for every declaration. Helpers need separate review; these structural
 counts prove neither runtime reachability nor area completion. Longer story,
 activity and save-state routes remain required.
+
+The complete 483-function bank-4 family is grouped by responsibility:
+bank4_presets.c contains 428 presentation presets; bank4.c covers jump preparation,
+counter display/progression, audio, projected bounds and other scene state;
+bank4_path.c contains the three path followers and their eight helpers. A separate
+shared indicator dependency changes only the original indicator fields. Together
+they expose 220 reviewed Main contracts, 445 argument-free task targets and 16
+animation contracts, with 16 typed helpers. These counts overlap by calling
+contract and are not a completion percentage.
+
+Jump staging preserves the clamped stage, rejection-based PRNG choice, mask
+updates and original double-precision acceleration calculation. Counter drawing
+retains live counts and byte-wrapped render indices; counter completion preserves
+its sentinel and reset order. Distance audio uses wrapped signed products and
+halfword volume inputs. Background return reloads saved coordinates after reset
+and again after the first step write, including aliased destinations. Wandering
+accepts the reviewed bank-4 projected-position predicate and its pending-script
+side effect.
+
+Path coordinates, cursors, waits and accumulators retain their original byte and
+halfword behavior. The stepped path accumulates fractional movement before its
+blocking test; reversible routes retain direction priority, optional follower
+blocking, one-reversal limits and animation suppression across command advances.
+Two early-wait paths test a value inherited from incoming SL: direct adapters pass
+it explicitly and compare both zero and nonzero values. The normal adapter uses
+the reference reset baseline's zero initial SL, preserved by the startup and
+top-level render callers. Arbitrary BIOS/register-history equivalence is not
+established. The bounds helper leaves outputs unchanged for an invalid direction;
+path roots require an active facing of 1..4. Malformed nonterminating paths and
+rejection loops fail explicitly at bounded limits rather than hanging the host.
+
+Bank 4's three recovered script sources declare 506 functions, with explicit
+dispatch for 502. The four remaining declarations belong to Cable Link, outside
+the first release. This remains a structural inventory: literal indirect targets,
+complete bank-4 progression, activities and actual-window integration need
+separate validation. The existing opening scenario is an earlier-area regression.
 
 A separate private input-only scout completes the initial Ham-Jam conversation,
 No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement

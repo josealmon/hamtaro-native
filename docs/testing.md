@@ -199,7 +199,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 2,147,107 checks,
+GBA machine. The complete run with BIOS and PPU oracles passes 2,595,147 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -621,6 +621,37 @@ versus single completed grid lines, unchanged-line signaling, tile byte wrapping
 and rejected calling contracts. Function-family checks and the existing long
 opening scenario do not establish complete bank-3 activity progression, rendering
 timing, save effects or a desktop playthrough of those activities.
+
+The complete 483-function bank-4 source family and shared indicator dependency
+have a combined private check:
+
+    python -B tools/compare_reference.py --bank4-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+--bank4-presets-only selects the 428 presentation presets; --bank4-dynamics-only
+selects jump/counter/audio/path behavior and the 16 typed helpers. The combined
+check also runs in the full suite. Its census requires every original source
+entry, with Main, F4 and animation contracts checked separately and unsupported
+calling forms rejected. Comparisons include EWRAM, IWRAM below the oracle stack,
+palette, VRAM, OAM and SRAM.
+
+Cases cover sparse/inactive mapped actors, live class selectors, all byte counter
+and timer values, double-precision jump acceleration, counter slot wrapping,
+background reset/step destinations aliased to saved and live coordinates,
+wrapped distance-volume products and the new wandering predicate. Path helpers
+cover all 65,536 speed values, byte cursor wrapping, reversed sentinel scans,
+overlapping output bounds, invalid-direction output retention, arbitrary mapped
+actor pointers and live animation/overlay tables. Three path followers run every
+supported operation, wait/flag variants and continuous sequences through their normal
+typed animation adapter. Explicit direct probes also vary incoming SL for the
+early-wait decision. The normal adapter's reset-baseline assumption and corrupt
+state guards are documented in architecture.md; these checks do not establish
+arbitrary original register/stack history.
+
+ROM-free public regressions separately check stage clamping, timer wrapping,
+packed writes with aliased destinations, projected-bound side effects, final
+counter reset, byte-wrapped actor clearing, accumulator carry, bounds aliases and
+the early-wait SL distinction. Full bank-4 story/activity and timed desktop
+integration remain pending.
 
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:

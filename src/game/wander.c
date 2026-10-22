@@ -3,6 +3,7 @@
 #include "game/render.h"
 #include "game/random.h"
 #include "game/map_choice.h"
+#include "game/bank4.h"
 #include "game/video.h"
 #include "gba/bios.h"
 
@@ -60,7 +61,8 @@ bool hn_wander_bounds(HNMemory *m,GameAddr context,GameAddr slot,uint8_t directi
         GameAddr callback=hn_read32(m,0x03002BB0+(selector-1)*4);uint32_t result;
         /* Reviewed u32(slot, direction) contract. This predicate ignores R1;
            void height helpers do not acquire a fabricated boolean return. */
-        if((callback&~1u)!=0x08032C80||hn_map_choice_slot(m,callback,slot,&result)!=HN_SCENE_OK)return false;
+        if((callback&~1u)==0x0806BA64)result=hn_bank4_projected_position(m,slot);
+        else if((callback&~1u)!=0x08032C80||hn_map_choice_slot(m,callback,slot,&result)!=HN_SCENE_OK)return false;
         if(result)goto stop;
     }
     if(direction!=255){

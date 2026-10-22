@@ -46,7 +46,10 @@ uint32_t hn_render_direction_between(HNMemory *m,uint8_t from,uint8_t to,bool ei
 }
 void hn_render_set_animation(HNMemory *m,uint32_t index,GameAddr animation)
 {
-    GameAddr slot=hn_render_slot(m,index);
+    hn_render_set_animation_pointer(m,hn_render_slot(m,index),animation);
+}
+void hn_render_set_animation_pointer(HNMemory *m,GameAddr slot,GameAddr animation)
+{
     hn_write32(m,slot+4,animation);hn_write16(m,slot+0x4C,0);hn_write8(m,slot+0x63,0);
     for(unsigned i=0;i<4;i++){hn_write32(m,slot+8+i*4,0);hn_write16(m,slot+0x56+i*2,0);}
     unsigned flag=hn_read8(m,0x03002182),value=hn_read8(m,slot+0x61);
