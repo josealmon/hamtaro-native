@@ -4,12 +4,19 @@
 #include "game/transfer.h"
 #include "game/task.h"
 #include "game/background.h"
+#include "game/input.h"
+#include "game/video.h"
 #include "gba/bios.h"
 
 enum { DESCRIPTORS=0x0858D0D8,COUNTERS=0x0201CC20,LIST=0x0201EE40,
        TEXT_TILES=0x02004C36,CONTEXTS=0x030037A0,DIGITS=0x086E7F54,
        MARKER_COORDS=0x086E7F94,MARKER_ANIMATIONS=0x086E7F7C,TEXT_BUNDLES=0x086E7FAC,
-       DETAIL_BUFFER=0x02005720,EMPTY_ANIMATION=0x0889F620 };
+       DETAIL_BUFFER=0x02005720,EMPTY_ANIMATION=0x0889F620,
+       ITEMS=0x03003900,ITEM_ORDER=0x086E7554,ITEM_FLAGS=0x086E7584,
+       ITEM_ANIMATIONS=0x086E75B4,ITEM_PAGE_COUNTS=0x086E77D0,
+       ITEM_TEXT_OFFSETS=0x086E78B2,ITEM_TEXT_BUNDLES=0x086E7910,
+       ITEM_DETAILS=0x086E7C5C,ITEM_PAGE_ANIMATIONS=0x086E7DC4,
+       ITEM_LAST_ROW=0x02001C00 };
 static uint8_t control(HNMemory *m,unsigned index){return hn_read8(m,HN_SCENE_CONTROLS+index);}
 static void store(HNMemory *m,unsigned index,uint32_t value){hn_write8(m,HN_SCENE_CONTROLS+index,(uint8_t)value);}
 static GameAddr resource(HNMemory *m,GameAddr table,uint32_t index){return hn_read32(m,table+index*4);}
@@ -27,6 +34,7 @@ static void flag(HNMemory *m,unsigned id,bool enabled)
     GameAddr address=0x03002180+(id>>3);uint8_t mask=(uint8_t)(1u<<(id&7));
     hn_write8(m,address,(uint8_t)((hn_read8(m,address)&~mask)|(enabled?mask:0)));
 }
+static bool enabled(HNMemory *m,unsigned id){return ((hn_read8(m,0x03002180+(id>>3))>>(id&7))&1)!=0;}
 static bool slot(HNMemory *m,uint8_t index,uint8_t mode,int32_t x,int32_t y,int32_t z,GameAddr image)
 {return hn_render_configure_raw(m,index,1,mode,x,y,z,image);}
 static bool rows(HNMemory *m,unsigned kind)
@@ -88,11 +96,152 @@ static bool navigate(HNMemory *m,uint8_t direction)
     if(hn_read16(m,0x03001FBC)==1)flag(m,256,hn_read8(m,COUNTERS+(uint32_t)control(m,0x180)+1)!=255);
     return !m->fault;
 }
+static bool item_text(HNMemory *m,bool paged)
+{
+    for(unsigned i=0;i<4;i++){
+        GameAddr created=hn_task_allocate(m);hn_write32(m,CONTEXTS+i*4,created);if(!created)return false;
+        if(paged&&!i)continue;
+        if(!paged&&!hn_task_graphics(m,created,14,2,0,1,0,3,24,0x06004020+i*896,0x0600CE00))return false;
+        uint8_t item=hn_read8(m,ITEMS+control(m,0x180));if(item==255)continue;
+        if(paged){
+            if(hn_read8(m,ITEM_PAGE_COUNTS+item*5+control(m,0xEB))==3)continue;
+            if(!hn_task_graphics(m,created,14,2,0,1,0,3,24,0x06004020+i*896,0x0600CE00))return false;
+        }
+        GameAddr task=hn_read32(m,CONTEXTS+i*4);
+        uint32_t offset=hn_read16(m,ITEM_TEXT_OFFSETS+hn_read8(m,ITEMS+control(m,0x180))*2)+i;
+        if(paged)offset+=control(m,0x183);
+        GameAddr text=resource(m,ITEM_TEXT_BUNDLES,offset);
+        if(text!=HN_TASK_DEFAULT_SCRIPT)text=resource(m,text,control(m,0xEB));
+        if(!hn_task_set_script(m,task,text))return false;
+    }
+    return !m->fault;
+}
+static bool item_scroll(HNMemory *m,uint8_t previous,bool down)
+{
+    uint8_t ordinal=0,index=0;
+    int32_t start=down?((int32_t)previous-8)/8*8:(int32_t)(previous/8)*8-8;
+    for(unsigned i=0;i<48;i++)if(hn_read8(m,ITEMS+i)!=255){
+        if((int32_t)i>=start&&(int32_t)i<start+24){
+            uint32_t entry=hn_read8(m,ITEMS+ordinal)*3+(down?1:2);
+            if(!slot(m,(uint8_t)(index+4),0x72,(int16_t)((index&7)*24+20),0,
+                     (int16_t)((index>>3)*24+(down?84:60)),resource(m,ITEM_ANIMATIONS,entry)))return false;
+            index++;
+        }
+        ordinal++;
+    }
+    if(!hn_background_configure_raw(m,5,0x88,down?0x088F98BD:0x088F98C6))return false;
+    animation(m,1,resource(m,ITEM_PAGE_ANIMATIONS,control(m,0x182)*2+(down?0:1)));return !m->fault;
+}
+static bool navigate_items(HNMemory *m,uint8_t direction)
+{
+    hn_write16(m,0x03001FBC,1);uint8_t previous=control(m,0x180);
+    flag(m,255,hn_read8(m,ITEMS+previous)!=255);
+    switch(direction){
+    case 0:
+        if(control(m,0x180)<hn_read8(m,ITEM_LAST_ROW+control(m,0x182))){
+            store(m,0x180,control(m,0x180)+8);
+            if((int32_t)hn_read32(m,hn_render_slot(m,0)+0x20)<=0x5FFFFF)animation(m,0,0x088F8D61);
+            else if(!item_scroll(m,previous,true))return false;
+            hn_write16(m,0x03001FBC,0);
+        }break;
+    case 1:
+        if(control(m,0x180)>7){
+            store(m,0x180,control(m,0x180)-8);
+            if((int32_t)hn_read32(m,hn_render_slot(m,0)+0x20)>0x600000)animation(m,0,0x088F8D4D);
+            else if(!item_scroll(m,previous,false))return false;
+            hn_write16(m,0x03001FBC,0);
+        }break;
+    case 2:
+        if(control(m,0x180)&7){store(m,0x180,control(m,0x180)-1);animation(m,0,0x088F8D75);hn_write16(m,0x03001FBC,0);}break;
+    case 3:
+        if((control(m,0x180)&7)!=7){store(m,0x180,control(m,0x180)+1);animation(m,0,0x088F8D89);hn_write16(m,0x03001FBC,0);}break;
+    }
+    flag(m,256,hn_read8(m,ITEMS+control(m,0x180))!=255);return !m->fault;
+}
 #define REQUIRE(operation) do {if(!(operation))return HN_SCENE_RESOURCE;}while(0)
 HNSceneResult hn_record_menu_callback(HNMemory *m,GameAddr callback,GameAddr arguments,uint32_t *consumed)
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x080C1B84:{
+        uint8_t selector=control(m,0xE5);store(m,0xE5,0);
+        if(selector>1){
+            GameAddr position=0x086E7098+selector*4;
+            REQUIRE(slot(m,26,0x74,(int16_t)hn_read16(m,position),(int16_t)hn_read16(m,position+2),0,selector==7?0x088F703A:0x088F701B));
+            if(selector==7){
+                REQUIRE(slot(m,27,0xB0,0,0,0,0x088F70A5));REQUIRE(hn_render_modes_raw(m,27,2,3,26));priority(m,27,1);
+            }
+        }else animation(m,26,0x088F7039);
+        priority(m,26,1);break;
+    }
+    case 0x080C3CBC:
+        hn_video_hblank(m,0);hn_write8(m,HN_DISPLAY_SHADOW+1,hn_read8(m,HN_DISPLAY_SHADOW+1)|64);
+        hn_write16(m,0x04000048,0x3800);hn_write16(m,0x0400004A,0x37);hn_write16(m,0x04000042,0x14D4);hn_write16(m,0x04000046,0x5484);
+        hn_write32(m,HN_VIDEO_STATE,hn_read32(m,HN_VIDEO_STATE)|1);break;
+    case 0x080C3D10:{
+        for(unsigned i=0;i<48;i++)hn_write8(m,ITEMS+i,255);uint8_t count=0;
+        for(unsigned i=0;i<48;i++){
+            uint8_t item=hn_read8(m,ITEM_ORDER+i);
+            if(enabled(m,hn_read8(m,ITEM_FLAGS+item)))hn_write8(m,ITEMS+count++,item);
+        }
+        store(m,0x182,count<=16?0:count<=24?1:count<=32?2:count<=40?3:4);break;
+    }
+    case 0x080C3DD0:
+        for(unsigned i=0;i<16;i++){
+            uint8_t item=hn_read8(m,ITEMS+i);
+            if(item!=255)REQUIRE(slot(m,(uint8_t)(i+4),0x72,(int16_t)((i&7)*24+20),0,(int16_t)((i>>3)*24+84),resource(m,ITEM_ANIMATIONS,item*3)));
+        }break;
+    case 0x080C3E44:REQUIRE(item_text(m,false));break;
+    case 0x080C3F00:{
+        uint32_t next=control(m,0x183)+3,item=hn_read8(m,ITEMS+control(m,0x180));
+        if(next>hn_read8(m,ITEM_PAGE_COUNTS+item*5+control(m,0xEB)))store(m,0x183,0);break;
+    }
+    case 0x080C3F50:REQUIRE(item_text(m,true));break;
+    case 0x080C4054:
+        for(unsigned count=4;count;count--)REQUIRE(hn_task_remove(m,hn_read32(m,CONTEXTS+(count-1)*4)));break;
+    case 0x080C4078:REQUIRE(navigate_items(m,hn_read8(m,arguments)));*consumed=1;break;
+    case 0x080C4380:{
+        uint8_t start=(uint8_t)(control(m,0x180)/8*8),index=0;
+        if((int32_t)hn_read32(m,hn_render_slot(m,0)+0x20)>0x600000)start=(uint8_t)(start-8);
+        for(unsigned i=0;i<24;i++)hide(m,(uint8_t)(i+4));
+        for(unsigned i=0;i<48;i++){
+            uint8_t item=hn_read8(m,ITEMS+i);
+            if(item!=255&&i>=start&&i<(uint32_t)start+16){
+                REQUIRE(slot(m,(uint8_t)(index+4),0x72,(int16_t)((index&7)*24+20),0,(int16_t)((index>>3)*24+84),resource(m,ITEM_ANIMATIONS,item*3)));index++;
+            }
+        }break;
+    }
+    case 0x080C4454:
+        if(hn_read8(m,ITEMS+control(m,0x180))!=255){
+            REQUIRE(hn_transfer_decompress_rows(m,resource(m,ITEM_DETAILS,hn_read8(m,ITEMS+control(m,0x180))*2),DETAIL_BUFFER,256,8,1024));
+            REQUIRE(hn_bios_lz77(m,resource(m,ITEM_DETAILS,hn_read8(m,ITEMS+control(m,0x180))*2+1),DETAIL_BUFFER-4096,0x40000));
+        }break;
+    case 0x080C44C0:
+        if(enabled(m,2)){
+            hn_input_script_mask(m,0);uint16_t keys=hn_read16(m,0x0201DC40);
+            if(keys&0x200)for(unsigned i=0;i<16;i++)flag(m,0x9E + i,true);
+            else if(keys&0x100)for(unsigned i=0;i<16;i++)flag(m,0xAE + i,true);
+            else if(keys&0x40){for(unsigned i=0;i<16;i++)if(32+i<=44)flag(m,0xBE + i,true);}
+            else if(keys&0x80)for(unsigned i=0;i<45;i++)flag(m,0x9E + i,false);
+        }break;
+    case 0x080C4570:{
+        uint8_t item=hn_read8(m,ITEMS+control(m,0x180));
+        if(item!=255&&hn_read8(m,ITEM_PAGE_COUNTS+item*5+control(m,0xEB))!=3){REQUIRE(slot(m,31,0x72,208,0,64,0x088F8D9D));store(m,0x183,0);}
+        else hide(m,31);break;
+    }
+    case 0x080C45F0:
+        if(enabled(m,2)){
+            hn_input_script_mask(m,0);
+            if(hn_read16(m,0x0201DC40)&0x340)for(unsigned i=1;i<=30;i++)hn_write8(m,COUNTERS+i,1);
+        }break;
+    case 0x080C56B8:
+        if(enabled(m,2)){
+            hn_input_script_mask(m,0);uint16_t keys=hn_read16(m,0x0201DC40);
+            if(keys&0x3C0)for(unsigned i=0;i<30;i++){
+                unsigned value=(keys&0x200)?1+i:(keys&0x100)?31+i:(keys&0x40)?61+i:0;
+                hn_write8(m,LIST+i,(uint8_t)(value<=80?value:0));
+            }
+        }break;
     case 0x080C4634:{
         uint32_t initial=control(m,0x8A);
         if(initial==255){store(m,0x180,0);store(m,0x181,0);store(m,0x60,0);}
@@ -201,6 +350,9 @@ HNSceneResult hn_record_menu_callback(HNMemory *m,GameAddr callback,GameAddr arg
 HNSceneResult hn_record_menu_task(HNMemory *m,GameAddr callback)
 {
     switch(callback&~1u){
+    case 0x080C1B84:case 0x080C56B8:
+    case 0x080C3CBC:case 0x080C3D10:case 0x080C3DD0:case 0x080C3E44:case 0x080C3F00:case 0x080C3F50:
+    case 0x080C4054:case 0x080C4380:case 0x080C4454:case 0x080C44C0:case 0x080C4570:case 0x080C45F0:
     case 0x080C4634:case 0x080C46A4:case 0x080C4770:case 0x080C48A8:case 0x080C4990:
     case 0x080C49D4:case 0x080C4AF0:case 0x080C4B60:case 0x080C4EF4:case 0x080C50A8:
     case 0x080C51B4:case 0x080C52A8:case 0x080C53A0:case 0x080C5480:case 0x080C5510:case 0x080C55E8:{

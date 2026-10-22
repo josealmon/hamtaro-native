@@ -68,15 +68,16 @@ statically. A separate clean-machine validation remains pending.
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; complete Items/Gems and timed raster integration remain pending |
+| Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; native empty-inventory entry/return runs, populated inventories and complete activity integration remain pending |
 | Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
 | Status counters and stage sequence | Adapted | All 13 functions in map10_4_counter_sequence.c compared, including the complete 16-bit counter domain, five tile banks, windows, stage/scroll graphics and sequence phases; nine Main and twelve argument-free task contracts; later-stage live integration remains pending |
 | Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Ham-Chat book | Adapted | Acquisition, learned-word order, five language permutations, category/page selection, paired text contexts, counters, markers and cleanup compared; initial book display and return run natively; manual book navigation remains unverified |
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
-| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status display, left/right navigation and End Game confirmation connected; Items/Gems and later activity panels remain incomplete |
+| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return and End Game confirmation connected; populated inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | A 139,833-update native input scenario completes the basic lessons/reward, Sunny Peak through Bijou, Ham-lift, Oopsie, Gossip-P and the first reconciliation, Spat/Harmony conversations, Clubhouse return, photo-room greeting, book/status and seven End Game/Continue roundtrips; host-file/fresh-session validation is recorded below; full story and desktop playthrough remain pending |
+| New game, movement, in-game save/load | Partial | A 144,204-update native input scenario completes the basic lessons/reward, Sunny Peak through Bijou, Ham-lift, Oopsie, Gossip-P and the first reconciliation, Spat/Harmony conversations, Clubhouse return, photo-room greeting, book/status, empty Items/Gems entry/return and eight End Game/Continue roundtrips; host-file/fresh-session validation is recorded below; full story and desktop playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -132,12 +133,16 @@ love. These checkpoints establish the word count, not which dialogue line teache
 the additional word. The next route enters the photo room, completes the greeting
 and returns to its action menu. A seventh End Game/Continue restores map 1:3,
 x=130.5, z=80.5, the same twenty-one words, ten seeds, Bijou and one rescued love.
-Complete Sunny Peak and photo-activity coverage remain pending.
-The scenario counts 139,833 input updates in total; the runtime frame counter resets
+The route then opens Items, exercises direction/read/cancel inputs, returns to
+Status and opens Gems. Closing both panels restores the same photo-room actors,
+position and counters. An eighth End Game/Continue and a fresh host Session
+retain those fields. These inventories are empty in this story save; populated
+inventory and full Sunny Peak/photo-activity coverage remain pending.
+The scenario counts 144,204 input updates in total; the runtime frame counter resets
 on returning to the title. A separate replay through the actual host Session API writes private
 32 KiB SRAM files, stops the session and starts a fresh one from disk. Continue
 restores the same nine story/position/partner/counter fields; this replay passes
-147,133 host-session checks without retaining its temporary profile. A separate
+151,630 host-session checks without retaining its temporary profile. A separate
 earlier review launches the actual Windows executable with its own private
 Clubhouse profile. Continue restores the Clubhouse
 scene; Select, assigned to V, displays twenty-one learned words, ten seeds and one rescued
@@ -208,7 +213,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-2,034,370 checks with the independent BIOS and PPU oracles, including separately
+2,147,107 checks with the independent BIOS and PPU oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
@@ -726,16 +731,32 @@ A separate private input-only scout completes the initial Ham-Jam conversation,
 No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement
 and return to Clubhouse also run natively after the SaveGroup3 batch below.
 The greeting now completes and returns to its action menu after the entire
-48-function actor_render_sequence_presets.c family was adapted. A subsequent
-Items entry stops explicitly at ScriptCallbackChangeMap10_5FlagsFromKeys
-(0x080C44C0), in the 14-function script_callback_actor_map10_5.c family. Review
-that complete shared family and its dependencies next. The original Ham-Jam scout
+48-function actor_render_sequence_presets.c family was adapted. The shared
+14-function script_callback_actor_map10_5.c family and three one-function
+key-save-mark, key-save-sequence and raster-E5 panel families are now adapted.
+All 112 declarations in map_bank10_selection_scripts.c have explicit native
+dispatch. This structural inventory is not full runtime coverage. Native input
+opens and leaves both empty Items and Gems panels, retaining the photo-room
+actor position and story counters. The original Ham-Jam scout
 is outside the canonical opening scenario; photo entry,
 greeting and a save/load roundtrip now have canonical input markers. Neither route
 establishes complete activity progression.
 A separate Windows process also restores the photo-room save beside the characters
 and renders the greeting, portrait, actor animations and continuation indicator.
 The complete desktop photo activity and the training-seat quest remain unverified.
+The current Windows executable separately opens the empty Items and Gems panels
+with keyboard input and returns through Status to the same photo-room scene.
+
+The shared selection adapters retain four text-task allocations even for an empty
+selection. Paged text leaves context zero unconfigured, uses halfword item offsets
+and reads the language and page from live state. Scroll reconstruction retains the
+source's separate physical list position and nonempty ordinal; refresh uses an
+eight-bit row start, including its row-zero underflow. Old/new item-validity flags
+update even when navigation cannot move. Debug-key entry points remain gated by
+the original flag 2 and preserve key priority and list boundaries. The raster-E5
+panel retains signed coordinates, its selector-seven linked overlay and the
+follower animation gate. Argument-dependent navigation and modal transitions do
+not acquire an invented argument-free task contract.
 
 The SaveGroup3 batch covers the complete 33-function pair/render family, four
 pair-selection functions, six graphics helpers, eight field helpers, the catalog

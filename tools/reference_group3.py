@@ -144,12 +144,12 @@ def check_group3(*, entries, rom, memory, cpu, bind, call, both, fresh, equal,
 
 
 def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, equal,
-                        compare, native_bytes, command, record_menus=False):
+                        compare, native_bytes, command, record_menus=False, selection_scene=False):
     import re
     from pathlib import Path
     from inventory_reference import body
-    module="record_menu" if record_menus else "save_group3"
-    dispatch="hn_record_menu" if record_menus else "hn_group3"
+    module="record_menu" if record_menus or selection_scene else "save_group3"
+    dispatch="hn_record_menu" if record_menus or selection_scene else "hn_group3"
     source = (Path(__file__).resolve().parents[1] / f"src/game/{module}.c").read_text()
     addresses = lambda name: {int(x, 16) for x in re.findall(r"case (0x[0-9A-Fa-f]+):", body(source, name))}
     main_addresses, task_addresses = addresses(dispatch+"_callback"), addresses(dispatch+"_task")
@@ -168,19 +168,35 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
     family_rows = [r for r in entries if r["source"] in families]
     if record_menus:
         family_rows=[r for r in entries if r["source"]=="src/save/record_selection.c"];helpers=set()
-    equal(len(family_rows), 18 if record_menus else 67, "complete record-menu or seven-family SaveGroup3 inventory")
+        rows=[r for r in rows if r["source"]=="src/save/record_selection.c"]
+    if selection_scene:
+        family_rows=[r for r in entries if r["source"]=="src/scripts/script_callback_actor_map10_5.c"];helpers=set()
+        central=(Path(__file__).resolve().parents[1]/"src/game/scene.c").read_text()
+        central_addresses={int(x,16) for x in re.findall(r"case (0x[0-9A-Fa-f]+):",body(central,"hn_scene_callback"))}
+        equal({r["address"] for r in family_rows}<=main_addresses|central_addresses,True,"all selection-scene functions have explicit native dispatch")
+        rows=family_rows
+    equal(len(family_rows), 14 if selection_scene else 18 if record_menus else 67, "complete menu or SaveGroup3 source inventory")
     equal({r["name"] for r in family_rows}, {r["name"] for r in rows} | helpers, "all family entry points covered")
+    if selection_scene:
+        dependencies=[]
+        for source_name in ("script_callback_key_save_marks.c","script_callback_key_save_sequences.c","script_callback_raster_e5_render.c"):
+            family=[r for r in entries if r["source"]=="src/scripts/"+source_name]
+            equal(len(family),1,"complete selection dependency family "+source_name)
+            equal(family[0]["address"] in main_addresses&task_addresses,True,"selection dependency Main and F4 contracts")
+            dependencies+=family
+        rows+=dependencies
     main = bind("hn_scene_callback", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
     apply = bind(dispatch+"_task", C.c_int, C.c_void_p, C.c_uint32)
     task = bind("hn_probe_task_command", C.c_int, C.c_void_p, C.c_uint32, C.c_uint, C.POINTER(C.c_uint32))
     heap_init = bind("hn_heap_init", None, C.c_void_p)
     allocate_task=bind("hn_task_allocate",C.c_uint32,C.c_void_p)
+    initialize_map=bind("hn_map_initialize",C.c_bool,C.c_void_p,C.c_uint8,C.c_uint8)
     rng = random.Random(0x4752335343454E45)
     base, controls, args = 0x02008000, 0x02004520, 0x0203F000
     catalogs, selected, counts, fields = (0x03003A50, 0x03003850, 0x03003680), 0x03003790, 0x0300357C, 0x03003C50
     ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x05000000, 0x400),
               (0x06000000, 0x18000), (0x07000000, 0x400), (0x0E000000, 0x8000))
-    if record_menus:ranges+=((0x04000000,0x60),(0x040000B0,12))
+    if record_menus or selection_scene:ranges+=((0x04000000,0x60),(0x040000B0,12))
     def byte(address, value):both(address, bytes([value & 255]))
     def ctrl(offset, value):byte(controls + offset, value)
     def fixture(case):
@@ -191,6 +207,7 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
         both(0x03003070, struct.pack("<I", 0x02015000));byte(0x03002E10, 1);both(0x02015000, rng.randbytes(32 * 44))
         both(0x03002E08,struct.pack("<I",0x02017000));both(0x02017000,rng.randbytes(8*80))
         both(controls, rng.randbytes(512));both(fields, rng.randbytes(120));both(0x0201EE40, bytes(rng.randrange(81) for _ in range(32)))
+        if selection_scene:both(0x03003900,bytes((i*7+case)%45 if i<48 and (i+case)%5 else 255 for i in range(256)))
         both(0x03002180, rng.randbytes(96));byte(0x03002182, 128 | case & 127)
         both(0x03003730, rng.randbytes(96));both(0x03000820, struct.pack("<H", (0, 0x100, 0x200, 0x300)[case % 4]))
         for group, catalog in enumerate(catalogs):
@@ -209,6 +226,26 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
         ctrl(0xEB, case % 5);ctrl(0x181, case);byte(0x03003D00, case)
         both(args, struct.pack("<HH", 0x181, 0x61) + rng.randbytes(12))
     def prepare(row, case):
+        if selection_scene:
+            ctrl(0x180,case%48);ctrl(0x182,case%5);ctrl(0x183,0);both(args,bytes([case%5]))
+            if row["name"]=="ScriptCallbackRemoveMap10_5SelectionText":
+                for i in range(4):
+                    created=allocate_task(memory);equal(created,call("AllocateTaskContext"),"selection text removal fixture")
+                    both(0x030037A0+i*4,struct.pack("<I",created))
+            if row["address"] in (0x080C3A88,0x080C3B20):
+                fresh();heap_init(memory);call("InitializeHeap")
+                equal(initialize_map(memory,10,10),True,"selection modal setup");call("InitializeMapDescriptor",10,10)
+                slots=struct.unpack("<I",native_bytes(0x03002D98,4))[0]
+                both(slots,rng.randbytes(16*104));both(0x02002EB0,rng.randbytes(624))
+                byte(0x03001F60,case&1);byte(0x03001F90,(case>>1)&1);byte(0x03002182,128|case&127)
+                for i,index in enumerate((1,0 if case&8 else 2,3,4)):
+                    byte((0x03002C0C,0x03002274,0x03001F50,0x03002270)[i],index)
+                    byte(slots+index*104+96,((case+i)%4)+1 if i==0 or case&(1<<(i-1)) else 0)
+                ctrl(0x0D,10);ctrl(0x0E,10)
+                if row["address"]==0x080C3B20:
+                    consumed=C.c_uint32();equal(main(memory,0x080C3A89,0,C.byref(consumed)),1,"selection saved actor fixture")
+                    equal(consumed.value,call("ScriptCallbackSaveActorsAndChangeMap10_5",0),"modal save wrapped consumed count")
+                both(0x03002C60,struct.pack("<I",0x02020111));both(args,rng.randbytes(16))
         if row["name"] == "ScriptCallbackPrepareSaveGroup3PairText":ctrl(0x60, 1 + case % 109);ctrl(0x61, 1 + case % 3)
         if row["name"] == "RenderSaveGroup3NumberFromArguments":both(args, bytes([case & 255, 255, 255]))
         if row["name"] == "ScriptCallbackCaptureSaveGroup3SelectedRecord":ctrl(0x181, case % 6);ctrl(0x61, 1 + case % 8)
@@ -271,6 +308,45 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
         else:
             equal(apply(memory, row["address"] | 1), 0, "argument-dependent group3 target rejected by F4")
             compare("rejected group3 task preserves memory", ranges)
+    if selection_scene:
+        by_name={r["name"]:r for r in rows}
+        text_rows=[by_name["ScriptCallbackConfigureMap10_5SelectionText"],by_name["ScriptCallbackConfigureMap10_5PagedText"]]
+        for item in range(45):
+            for language in range(5):
+                count=rom[0x6E77D0+item*5+language]
+                for page in range(0,count,3):
+                    for row in text_rows:
+                        fixture(item);prepare(row,item);ctrl(0xEB,language);ctrl(0x183,page)
+                        byte(0x03003900+item%48,item);check(row,"all items, languages and defined text pages")
+        wrapping=by_name["ScriptCallbackWrapMap10_5TextPage"]
+        for page in range(256):
+            for item in (0,1,44,255):
+                fixture(page);prepare(wrapping,page);ctrl(0x183,page)
+                byte(0x03003900+page%48,item);check(wrapping,"full-byte text page addition and empty selection")
+        refresh=by_name["ScriptCallbackRefreshMap10_5SelectionSlots"]
+        for selection in range(256):
+            for z in (0xFFFFFFFF,0x600000,0x600001):
+                fixture(selection);prepare(refresh,selection);ctrl(0x180,selection)
+                both(base+0x20,struct.pack("<I",z));check(refresh,"signed threshold and byte row underflow")
+        navigation=next(r for r in rows if r["name"]=="ScriptCallbackNavigateMap10_5Selection")
+        for selection in range(256):
+            for direction in range(5):
+                fixture(selection);prepare(navigation,selection);ctrl(0x180,selection)
+                both(args,bytes([direction]));z=(0xFFFFFFFF,0x5FFFFF,0x600000,0x600001)[selection%4]
+                both(base+0x20,struct.pack("<I",z));check(navigation,"byte cursors, scroll thresholds and signed row start")
+        render_row=by_name["ScriptCallbackConfigureRenderSlotsFromRasterE5"]
+        for selector in range(256):
+            fixture(selector);prepare(render_row,selector);ctrl(0xE5,selector)
+            check(render_row,"full-byte panel selector including linked slot and retained actor")
+        for keys_row in (by_name["ScriptCallbackChangeMap10_5FlagsFromKeys"],by_name["ScriptCallbackMarkSaveRecordsFromKeys"],by_name["ScriptCallbackFillSaveRecordsFromKeys"]):
+            for keys in range(1024):
+                for enabled in (False,True):
+                    fixture(keys);prepare(keys_row,keys);both(0x03001F64,struct.pack("<H",1023));both(0x03000820,struct.pack("<H",keys))
+                    both(0x0201CC20,rng.randbytes(257))
+                    value=native_bytes(0x03002180,1)[0];byte(0x03002180,(value|4) if enabled else (value&~4))
+                    check(keys_row,"all held keys, disabled flag and L/R/up/down priority")
+        print("All 14 shared map-10/5 selection functions and three complete dependency families passed; complete inventory/story integration remains unverified.")
+        return
     if record_menus:
         navigation=next(r for r in rows if r["name"]=="ScriptCallbackNavigateRecordSelection")
         for selection in range(30):
