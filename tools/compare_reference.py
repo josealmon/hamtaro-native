@@ -48,9 +48,10 @@ def main() -> None:
     parser.add_argument("--scripts-only", action="store_true", help="Run Main memory commands and scene-transition comparisons")
     parser.add_argument("--book-only", action="store_true", help="Run Ham-Chat acquisition, page and decoration comparisons")
     parser.add_argument("--indicators-only", action="store_true", help="Run destination progress, indicators, navigation and unlock comparisons")
+    parser.add_argument("--presets-only", action="store_true", help="Run scene-render presets, actor dependencies and typed task/Main contracts")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
-    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.scripts_only,args.book_only,args.indicators_only))):
+    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -1623,6 +1624,65 @@ def main() -> None:
             call("RenderPairListNumber",index,value,x,y)
             compare(f"three-digit number {case}",((0x02000000,0x40000),(0x03000000,0x7000)))
 
+    def preset_checks():
+        start_checks=checks;local=random.Random(0x50525354)
+        family=[e for e in entries if e["source"]=="src/scripts/script_callbacks_render_presets.c"]
+        dependencies=("ConfigureRenderSetupPreset192A4","ConfigureRenderSetupPreset19584","ConfigureRenderSetupPreset195D8",
+                      "ConfigureRenderSetupPreset197D0","ConfigureRenderSetupPreset19878","ConfigureRenderSetupPreset19BB0",
+                      "ConfigureRenderSetupPreset1A458","ConfigureRenderSetupPreset1A4AC","ConfigureRenderSetupPreset1A500",
+                      "ConfigureRenderSetupPreset1AA10","ConfigureRenderSetupPreset1AAB8","ConfigureRenderSetupPreset1B7A8",
+                      "ConfigureRenderSetupPreset1BAFC","SetActorAnimationPreset13384","SetActorClassAnimationPreset136B8",
+                      "SetDirectionalAnimationPreset16A6C","SetDirectionalAnimationPreset16BD8","SetDirectionalAnimationPreset1707C",
+                      "SetDirectionalAnimationPreset1710C","SetExtendedAnimationPreset1499C","SetExtendedAnimationPreset149E4",
+                      "SetGraphicsAnimationPreset1536C","SetGraphicsAnimationPreset1542C","SetGraphicsAnimationPreset1548C",
+                      "SetRenderSetupAnimationPreset17C6C","SetRenderSetupAnimationPreset182FC","SetSecondaryAnimationPreset13FEC",
+                      "SetSecondaryAnimationPreset14400")
+        callbacks=[e for e in family if e["name"].startswith(("ScriptCallback","SceneRenderCallback"))]
+        equal((len(family),len(dependencies),len(callbacks)),(77,28,35),"complete render-preset family and dependency inventory")
+        preset=bind("hn_preset_apply",C.c_int,C.c_void_p,C.c_uint32)
+        task_command=bind("hn_probe_task_command",C.c_int,C.c_void_p,C.c_uint32,C.c_uint,C.POINTER(C.c_uint32));report=(C.c_uint32*4)()
+        def fixture(case,base=0x02010000):
+            fresh();both(base,local.randbytes(40*104));both(0x02015000,local.randbytes(8*44))
+            both(0x02004520,local.randbytes(512));both(0x03002D98,struct.pack("<I",base));both(0x03002DC0,b"\x28")
+            both(0x03003070,struct.pack("<I",0x02015000));both(0x03002E10,b"\x08")
+            classes=(1,2,10,13,16,19,22,25,30,38)
+            for i,address in enumerate((0x03001F50,0x03002C04,0x03002C00)):both(address,bytes([classes[(case+i*3)%len(classes)]]))
+            both(0x03002170,b"\xA5");both(0x03002182,bytes([(0,128,255)[case%3]]))
+            both(0x020045E6,bytes([(0,6,7,8,255)[case%5]]));both(0x03004ED4,struct.pack("<I",local.getrandbits(32)))
+            both(0x03001FAC,bytes([case%40]));both(0x03001F7C,struct.pack("<I",local.getrandbits(32)))
+        names=[e["name"] for e in family]+list(dependencies)
+        for name in names:
+            for case in range(64):
+                fixture(case);equal(preset(memory,symbols[name]|1),1,f"native render preset {name}/{case}")
+                call(name);compare(f"render preset {name}/{case}",((0x02000000,0x40000),(0x03000000,0x7000)))
+        # F4 ignores a callback's return, while Main1C must consume its defined
+        # zero. Exercise the two native routes separately, including no-op entries.
+        for row in family:
+            for case in range(32):
+                fixture(case);task=0x02019000;script=0x02020000;index=(case*37)%104
+                both(task,local.randbytes(52));both(task+0x10,struct.pack("<I",script));both(script,bytes([index,0xE1]))
+                both(0x03001FC0+index*4,struct.pack("<I",row["address"]|1))
+                equal(task_command(memory,task,0xF4,report),1,f"native F4 render preset {row['name']}")
+                equal(report[3],call("TaskCommandF4",task),"render preset task continuation")
+                compare(f"F4 render preset {row['name']}",((0x02000000,0x40000),(0x03000000,0x7000)))
+        for row in callbacks:
+            for case in range(32):
+                fixture(case);both(0x02020000,struct.pack("<I",row["address"]|1));both(0x03000010,b"\x1C"+bytes(15))
+                equal(command(memory,0x1C,0x02020000),1,f"native Main render preset {row['name']}")
+                call("MainScriptInvokeCallback",0x02020000)
+                compare(f"Main render preset {row['name']}",((0x02000000,0x40000),(0x03000000,0x7000)))
+        # A configured slot can overwrite its class selector. Its next helper
+        # call must reread that byte, not use the original host-local value.
+        for name in dependencies:
+            if not name.startswith("ConfigureRenderSetupPreset"):continue
+            selector=0x03001F50 if name.endswith(("192A4","19584")) else 0x03002C04 if name.endswith(("195D8","197D0","19878","1AA10","1AAB8","1B7A8")) else 0x03002C00
+            delta=1 if name.endswith(("1A500","1AAB8","1B7A8")) else -1
+            for value in (2,10,13,16,19,22,25,30,38):
+                base=selector-(value+delta)*104-0x60;fixture(value,base);both(selector,bytes([value]))
+                equal(preset(memory,symbols[name]|1),1,"native live preset class selector")
+                call(name);compare("live preset class selector",((0x02000000,0x40000),(0x03000000,0x7000)))
+        print(f"{checks-start_checks} private render-preset comparisons passed (77 source functions and 28 actor dependencies).")
+
     def scene_motion_checks():
         start_checks=checks
         local=random.Random(0x53434E45)
@@ -1915,6 +1975,10 @@ def main() -> None:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.presets_only:
+            preset_checks()
+            print(f"{checks} private render-preset checks passed; complete story remains unverified.")
+            return
         if args.indicators_only:
             indicator_checks()
             print(f"{checks} private destination-indicator comparisons passed; full gameplay remains unverified.")
@@ -1960,7 +2024,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();scene_motion_checks();script_memory_checks()
+        indicator_checks();book_checks();preset_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

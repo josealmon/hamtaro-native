@@ -127,7 +127,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 719,753 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 753,481 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -170,6 +170,20 @@ all byte indices, visibility masks and shift boundaries, marker states, five
 language backgrounds, refresh retention, sequential unlocks and navigation.
 Navigation covers all 256 unlock-byte values, both navigation modes, zero/combined
 directions, locked destinations, same-area selection and original menu sounds.
+
+The scene-render presets and their actor dependencies can run separately:
+
+    python -B tools/compare_reference.py --presets-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+This passes 33,728 private comparisons: all 77 scene-render preset functions and
+28 required actor helpers, direct calls, F4 task dispatch and the 35 Main callbacks
+with defined zero returns. Cases cover class aliases, conditional controls,
+animation execution flags, boot-gate ownership, graphics reset state, linked slots,
+indicator ownership, field60-only clearing and class selectors overwritten during
+configuration. The public suite checks those ABI boundaries and rejects unknown
+targets and missing slots. Other functions in the actor-helper source families and
+complete activity/story integration remain pending. Resource contents are never
+embedded in fixtures or written by this comparison.
 
 The Ham-Chat book group can run separately:
 

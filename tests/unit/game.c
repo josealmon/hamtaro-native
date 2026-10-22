@@ -8,6 +8,7 @@
 #include "game/save.h"
 #include "game/input.h"
 #include "game/scene.h"
+#include "game/presets.h"
 #include "game/random.h"
 #include "game/text.h"
 #include "game/render.h"
@@ -1108,6 +1109,48 @@ static void actor_snapshot_contract(void)
     CHECK(hn_read8(&memory,slots+208)==0xA5&&hn_read8(&memory,slots+208+99)==0xA5);
     CHECK(hn_read32(&memory,slots+104)==0x13121110&&!memory.fault);
 }
+static void preset_contract(void)
+{
+    reset();uint32_t consumed=99;
+    CHECK(hn_preset_apply(&memory,0x08001001)==HN_SCENE_UNKNOWN&&!memory.fault);
+    CHECK(hn_scene_callback(&memory,0x080CC8A9,0,&consumed)==HN_SCENE_UNKNOWN); /* Void ABI is not a Main return. */
+    CHECK(hn_scene_callback(&memory,0x080CD105,0,&consumed)==HN_SCENE_OK&&consumed==0);
+    CHECK(hn_preset_apply(&memory,0x080CC941)==HN_SCENE_RESOURCE&&!memory.fault);
+    hn_write32(&memory,HN_RENDER_SLOTS,0x02010000);hn_write8(&memory,HN_RENDER_INFO+16,40);
+    hn_write32(&memory,HN_GRAPHICS_SCRIPTS,0x02015000);hn_write8(&memory,HN_GRAPHICS_COUNT,8);
+    hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,19);hn_write8(&memory,0x03002C04,19);hn_write8(&memory,0x03002170,0xA5);
+    CHECK(hn_preset_apply(&memory,0x0801536D)==HN_SCENE_OK&&hn_read8(&memory,0x03002170)==0xA5);
+    GameAddr actor=hn_render_slot(&memory,19);
+    CHECK(hn_read32(&memory,actor+4)==0x088CAB5E);
+    CHECK(hn_preset_apply(&memory,0x0801542D)==HN_SCENE_OK&&hn_read8(&memory,0x03002170)==0);
+    CHECK(hn_read32(&memory,actor+4)==0x088CACA8);
+    GameAddr slot12=hn_render_slot(&memory,12),slot14=hn_render_slot(&memory,14);
+    hn_write32(&memory,slot12+4,0x08000101);hn_write32(&memory,slot12+0x24,0x12345678);
+    hn_write8(&memory,slot12+0x60,7);hn_write8(&memory,slot12+0x62,0xE3);hn_write8(&memory,slot14+0x60,9);
+    GameAddr task=0x02019000,script=0x02020000;hn_write32(&memory,task+0x10,script);hn_write8(&memory,script,7);
+    hn_write32(&memory,HN_MAP_WORDS+28,0x080CCF09);HNTasks tasks;hn_tasks_init(&tasks,&memory);uint32_t keep=0;
+    CHECK(hn_task_command(&tasks,task,0xF4,&keep)&&keep==1&&hn_read32(&memory,task+0x10)==script+1);
+    CHECK(!hn_read8(&memory,slot12+0x60)&&!hn_read8(&memory,slot14+0x60));
+    CHECK(hn_read32(&memory,slot12+4)==0x08000101&&hn_read32(&memory,slot12+0x24)==0x12345678&&hn_read8(&memory,slot12+0x62)==0xE3);
+    hn_write8(&memory,HN_SCENE_CONTROLS+0xC6,6);hn_write32(&memory,hn_render_slot(&memory,22)+4,0x08000111);
+    CHECK(hn_preset_apply(&memory,0x080CCE79)==HN_SCENE_OK&&hn_read32(&memory,hn_render_slot(&memory,22)+4)==0x08000111);
+    hn_write8(&memory,HN_SCENE_CONTROLS+0xC6,7);
+    CHECK(hn_preset_apply(&memory,0x080CCE79)==HN_SCENE_OK&&hn_read32(&memory,hn_render_slot(&memory,22)+4)==0x088F4248);
+    CHECK(hn_preset_apply(&memory,0x080CCF85)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,0x03001FAC)==19&&hn_read32(&memory,0x03001F7C)==0x088C5C60);
+    CHECK(hn_preset_apply(&memory,0x080CCAF1)==HN_SCENE_OK);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,16)+0x18)==0x00288000&&hn_read32(&memory,hn_render_slot(&memory,25)+0x20)==0x00808000);
+    CHECK(hn_read32(&memory,0x02015000+4*44+0x18)==0x088DB4C3&&hn_read32(&memory,0x02015000+5*44+0x18)==0x088D111A);
+    hn_write32(&memory,0x03004ED4,0x80000000);
+    CHECK(hn_scene_callback(&memory,0x080CC879,0,&consumed)==HN_SCENE_OK&&consumed==0&&hn_read8(&memory,HN_SCENE_CONTROLS)==1);
+    hn_write32(&memory,0x03004ED4,0x7FFFFFFF);
+    CHECK(hn_scene_callback(&memory,0x080CC879,0,&consumed)==HN_SCENE_OK&&!hn_read8(&memory,HN_SCENE_CONTROLS));
+    reset();hn_write32(&memory,HN_RENDER_SLOTS,0x030026C0);hn_write8(&memory,HN_RENDER_INFO+16,40);
+    hn_write8(&memory,0x03002C00,13);hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,2);
+    CHECK(hn_preset_apply(&memory,0x0801BAFD)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,0x03002C00)==1&&hn_read32(&memory,hn_render_slot(&memory,2)+4)==0x088D48D6);
+    CHECK(hn_read8(&memory,hn_render_slot(&memory,0)+0x65)==1&&hn_read8(&memory,hn_render_slot(&memory,2)+0x65)==1&&!memory.fault);
+}
 static void scene_motion_contract(void)
 {
     reset();uint32_t consumed=99,yield=0x12345678;GameAddr args=0x02020000;
@@ -1194,6 +1237,6 @@ static void runtime_contract(void)
 int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
-    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();indicator_contract();book_contract();actor_snapshot_contract();scene_motion_contract();runtime_contract();
+    text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();indicator_contract();book_contract();actor_snapshot_contract();preset_contract();scene_motion_contract();runtime_contract();
     printf("%u native game subsystem checks passed.\n",checks);return 0;
 }
