@@ -69,7 +69,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status display, left/right navigation and End Game confirmation connected; Items/Gems and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | A 43,831-update native input scenario completes the basic lessons/reward, Sunny Peak interactions, Heyhoo, Bluhoo and Gogo, book/status and two End Game/Continue roundtrips; final map, position, thirteen words and ten seeds also survive host-file/fresh-session loading; a separate Windows process restores the scene and displays thirteen words/ten seeds; full story and desktop playthrough remain pending |
+| New game, movement, in-game save/load | Partial | A 60,545-update native input scenario completes the basic lessons/reward, Sunny Peak through Heyhoo/Bluhoo/Gogo/Pakapaka/Putput, book/status and three End Game/Continue roundtrips; final map, position, fifteen words and ten seeds also survive host-file/fresh-session loading; a separate Windows process restores a thirteen-word save and its status; full story and desktop playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -104,7 +104,12 @@ original SRAM write, returns to the title and chooses Continue. The restored sta
 has the same map 2:2, position, eleven words and ten seeds. It then talks to Oxnard
 to learn Bluhoo, walks east and completes the handkerchief scene to learn Gogo.
 A second End Game/Continue restores map 2:3, position, thirteen words and ten seeds.
-The scenario counts 43,831 input updates in total; the runtime frame counter resets
+The route then crosses the upper maps and descends two vines to the boat dock.
+Lookie with Arnie teaches Pakapaka. The player boards the boat, cuts its rope and
+drifts west to map 2:17, then disembarks and talks to the wandering hamster.
+Answering Yep-P teaches Putput. A third End Game/Continue restores map 2:17,
+x=131.5, z=208.5, fifteen words and ten seeds.
+The scenario counts 60,545 input updates in total; the runtime frame counter resets
 on returning to the title. A separate replay through the actual host Session API writes private
 32 KiB SRAM files, stops the session and starts a fresh one from disk. Continue
 restores the same six story/position fields. A separate review closes and relaunches

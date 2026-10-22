@@ -88,7 +88,7 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 43,831 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 60,545 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
@@ -108,6 +108,11 @@ to the title and chooses Continue. The same map, position, eleven learned words
 and ten seeds are restored. Oxnard's conversation then teaches Bluhoo, and the
 eastern handkerchief scene teaches Gogo. A second status/End Game/Continue restores
 map 2:3 at the same position with thirteen words and ten seeds.
+Crossing the upper maps and descending the vines reaches Arnie and the boat dock.
+Lookie teaches Pakapaka; cutting the boat's rope carries the player west to map
+2:17. Hamha and Yep-P with the wandering hamster teach Putput. A third
+status/End Game/Continue restores map 2:17 at x=131.5, z=208.5 with fifteen words
+and ten seeds.
 The runtime frame counter resets at the title, while
 the runner's update total remains cumulative. Battery removal, Bijou's rescue
 and reconciliation are not established. The
@@ -123,24 +128,23 @@ actual SRAM-file persistence, add:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json --session-test build/Release/hn_session_tests.exe
 
-The host replay performs all 43,831 input updates in a disposable private profile, verifies
+The host replay passes 65,010 checks. It performs all 60,545 input updates in a disposable private profile, verifies
 that the saved 32 KiB file equals the game's SRAM, stops and starts a fresh Session,
-then selects Continue. Map, position, thirteen words and ten seeds are unchanged.
+then selects Continue. Map, position, fifteen words and ten seeds are unchanged.
 The original ROM and player's profile are untouched; temporary input traces and
 SRAM files are removed. Trace scratch uses HAMTARO_NATIVE_WORK or the private
 .hamtaro-native-dev profile outside the checkout. This option starts from erased
 SRAM and cannot be combined with --save. It does not create an SDL gameplay window
 or prove a complete desktop playthrough.
 
-For desktop review, append --desktop-profile PATH_TO_NEW_PRIVATE_PROFILE. The
-verified replay with this option passes 47,776 host-session checks and retains
-the validated user ROM and tested SRAM in that new directory. The directory must
+For desktop review, append --desktop-profile PATH_TO_NEW_PRIVATE_PROFILE. This
+retains the validated user ROM and tested SRAM in that new directory. The directory must
 be outside the checkout and must not already exist. Start the actual application
 with --data-dir PATH_TO_NEW_PRIVATE_PROFILE to inspect the same saved scene.
 This explicit private export differs from the default disposable test profile.
 
-A real-window review closed and relaunched the Windows executable using that
-private profile, selected Continue and restored the saved Sunny Peak scene.
+A real-window review used an earlier thirteen-word profile. It closed and
+relaunched the Windows executable, selected Continue and restored the saved Sunny Peak scene.
 The controls UI reassigned Select to V; the in-game status then displayed thirteen
 learned words and ten seeds. End Game returned to the title and updated the private
 32 KiB SRAM file while preserving its previous bytes as the backup. After another
