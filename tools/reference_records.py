@@ -8,9 +8,10 @@ import struct
 def check_records(*, entries, rom, memory, cpu, bind, call, both, fresh,
                   equal, compare, native_bytes, command):
     families = {"src/save/game_records.c", "src/save/game_record_allocator.c",
-                "src/save/game_record_allocate_callback.c", "src/scripts/script_callback_allocate_class_game_record.c"}
+                "src/save/game_record_allocate_callback.c", "src/scripts/script_callback_allocate_class_game_record.c",
+                "src/scripts/script_callback_allocate_record_batch.c"}
     rows = [row for row in entries if row["source"] in families]
-    equal(len(rows), 8, "complete record allocation/query/consume/counter families")
+    equal(len(rows), 9, "complete record allocation/query/consume/counter families")
     count = bind("hn_records_count", C.c_uint8, C.c_void_p)
     allocate = bind("hn_record_allocate", C.c_int32, C.c_void_p, C.c_uint16)
     query = bind("hn_record_query", C.c_int32, C.c_void_p, C.c_uint8, C.c_uint32)
@@ -117,4 +118,19 @@ def check_records(*, entries, rom, memory, cpu, bind, call, both, fresh,
         equal(task(memory, 0x02019000, 0xF4, report), 1, "class record allocation F4 ABI")
         equal(report[3], call("TaskCommandF4", 0x02019000), "class record task continuation")
         compare("class record allocation F4 ABI", ranges)
-    print("Eight record allocation/query/consume/counter functions passed; full inventory/save UI integration remains unverified.")
+    batch = next(r for r in rows if r["name"] == "ScriptCallbackAllocateGameRecordBatch")
+    for occupied in range(65):
+        for amount in (0, 1, 2, 30, 31, 32, 33, 63, 64, 65, 255, 65535):
+            fixture(occupied + amount)
+            for index in range(64):
+                both(slots + index * 4, struct.pack("<I", valid_keys[index % len(valid_keys)] | (128 if index < occupied else 0)))
+            both(0x0201DC4C, struct.pack("<H", amount));both(args, struct.pack("<H", (0, 6, 11, 63, 65535)[amount % 5]))
+            both(0x03002DC0, b"\x01")
+            consumed = C.c_uint32(99)
+            equal(main(memory, batch["address"] | 1, args, C.byref(consumed)), 1, "batch allocation occupancy/amount edges")
+            equal(consumed.value, call(batch["name"], args), "batch allocation consumed")
+            compare("batch capacity, zero/full branch, countdown and division boundaries", ranges)
+    apply = bind("hn_preset_apply", C.c_int, C.c_void_p, C.c_uint32)
+    fixture(0);equal(apply(memory, batch["address"] | 1), 0, "argument-dependent batch rejected by F4")
+    compare("rejected record batch preserves memory", ranges)
+    print("Nine record allocation/query/consume/counter functions across five families passed; full inventory/save UI integration remains unverified.")

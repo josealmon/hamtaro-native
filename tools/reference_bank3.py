@@ -634,4 +634,46 @@ def check_bank3_late(*, entries, reference, rom, memory, cpu, bind, call, both,
         for case in range(8):
             modal_fixture(case, row == restore);main_check(row, "Main ABI", opcode=True)
             modal_fixture(case, row == restore);task_check(row)
-    print("31 late bank-3 functions, 27 F4 targets, four animation and two Main contracts passed; full area integration remains unverified.")
+    restart = next(r for r in entries if r["source"] == "src/scripts/main_script_restart_song43.c")
+    fixture(0);call("StartSongOrChange", 0x43)
+    song43_header = bytes(cpu.mem_read(0x03004E90, 4))
+    def restart_fixture(volume, state, identity, matching):
+        fixture(volume);both(0x02004580, bytes([volume]))
+        both(0x03004E90, song43_header if matching else bytes(4))
+        both(0x03004E94, struct.pack("<I", state));both(0x03004E98, b"\x0A")
+        both(0x03004EBC, struct.pack("<I", 0x02030000));both(0x03004EC4, struct.pack("<I", identity))
+        both(0x02030000, bytes(10 * 80))
+        for index in range(10):
+            both(0x02030000 + index * 80, bytes([128 if (index + volume) % 3 else 0]))
+            both(0x02030000 + index * 80 + 0x13, b"\x55")
+    for volume in range(256):
+        restart_fixture(volume, (0, 1, 0x80000000, 0x80000001)[volume % 4], 0x68736D53, volume % 2)
+        main_check(restart, f"song-43 volume byte {volume}")
+    for state in (0, 1, 0x80000000, 0x80000001):
+        for identity in (0, 0x68736D53):
+            for matching in (False, True):
+                restart_fixture(0, state, identity, matching)
+                main_check(restart, "zero volume, stopped/empty/playing and identity guards")
+    for volume in (0, 1, 255):
+        restart_fixture(volume, 0x80000001, 0x68736D53, True);main_check(restart, "Main cursor", opcode=True)
+        restart_fixture(volume, 0x80000001, 0x68736D53, True);task_check(restart)
+    restart_tracks = bind("hn_audio_restart_tracks", C.c_bool, C.c_void_p, C.c_uint32)
+    track_row = next(r for r in entries if r["name"] == "RestartStoppedAudioTracks")
+    for case in range(256):
+        fixture(case);player, tracks = 0x0202F000, 0x02020000
+        both(player, rng.randbytes(64));both(player + 8, bytes([(0, 1, 2, 8, 16, 17, 255)[case % 7]]))
+        both(player + 0x2C, struct.pack("<I", tracks));both(tracks, rng.randbytes(255 * 80))
+        for index in range(255):both(tracks + index * 80, bytes([(case + index) & 255]))
+        equal(restart_tracks(memory, player), True, "restart stopped tracks without player identity/count clamp")
+        call(track_row["name"], player);compare("track status bytes, 64-byte clear and retained last 16 bytes", ranges)
+    for count in (1, 2, 16):
+        fixture(count);player, tracks = 0x0202F000, 0x0202EFF0
+        both(tracks, rng.randbytes(80 * 16));both(player + 8, bytes([count]));both(player + 0x2C, struct.pack("<I", tracks))
+        for index in range(count):both(tracks + index * 80, b"\xFF")
+        equal(restart_tracks(memory, player), True, "restart captures count/track pointer before overlapping clear")
+        call(track_row["name"], player);compare("restart live player alias", ranges)
+    fixture(0);consumed = C.c_uint32(99)
+    equal(apply(memory, track_row["address"] | 1), 0, "argumentful audio restart rejected by F4")
+    equal(main(memory, track_row["address"] | 1, args, C.byref(consumed)), 0, "argumentful audio restart rejected by Main")
+    compare("rejected audio restart contract preserves memory", ranges)
+    print("31 late bank-3 functions plus song-43 restart and stopped-track helper passed; full area integration remains unverified.")

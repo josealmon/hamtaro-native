@@ -1489,6 +1489,14 @@ HNSceneResult hn_bank3_callback(HNMemory *m,GameAddr callback,GameAddr arguments
 {
     (void)arguments;
     switch(callback&~1u){
+    case 0x08050F90:{
+        if(!hn_read8(m,HN_SCENE_CONTROLS+0x60)){
+            (void)hn_audio_song(m,0x43,HN_SONG_CHANGE);
+            if(!hn_audio_restart_tracks(m,0x03004E90))return HN_SCENE_RESOURCE;
+        }
+        hn_audio_track_parameter(m,0x03004E90,255,(uint32_t)hn_read8(m,HN_SCENE_CONTROLS+0x60)<<2,0);
+        *consumed=0;return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+    }
     case 0x0804D0C4:
     case 0x0804D0FC:
     case 0x0804D118:
@@ -1539,7 +1547,7 @@ HNSceneResult hn_bank3_task(HNMemory *m,GameAddr callback)
     if(result==HN_SCENE_UNKNOWN)result=late_presets(m,callback);
     if(result!=HN_SCENE_UNKNOWN)return result;
     switch(callback&~1u){
-    case 0x08051798:case 0x08051830:{uint32_t ignored;return hn_bank3_callback(m,callback,0,&ignored);}
+    case 0x08050F90:case 0x08051798:case 0x08051830:{uint32_t ignored;return hn_bank3_callback(m,callback,0,&ignored);}
     default:
         result=hn_bank3_games_task(m,callback);
         return result==HN_SCENE_UNKNOWN?hn_bank3_chain_task(m,callback):result;

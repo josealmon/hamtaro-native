@@ -196,7 +196,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,820,023 checks,
+GBA machine. The complete run with BIOS and PPU oracles passes 1,835,252 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -490,16 +490,18 @@ Additional focused area-dependency checks use:
     python -B tools/compare_reference.py --wave-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
     python -B tools/compare_reference.py --counter-scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-These pass 31,758 scene actor comparisons, 91,597 actor preset comparisons,
-26,322 record comparisons and 16,497 scanline-wave comparisons. The scene group
-covers 35 functions across 13 families and one shared bank-3 condition, including
+These pass 37,798 scene actor comparisons, 91,597 actor preset comparisons,
+30,930 record comparisons and 16,497 scanline-wave comparisons. The scene group
+covers 44 functions across 15 families and one shared bank-3 condition, including
 approach completion, signed limits, all ARM shift counts, direction constructors,
 snapshots and copy aliases. The preset group covers all 476 functions in five
 families, Main rejection of void callbacks, F4 dispatch, direction sectors,
 captured auxiliary arguments versus live selector aliases and inactive mapped
 byte selectors at 0, 1, 254 and 255. Record checks cover
 allocation/empty/full slots, twelve-byte result views, consuming zero counts,
-sentinel counters, arithmetic wrap and allocation callbacks. Wave checks cover
+sentinel counters, arithmetic wrap and allocation callbacks. Batch allocation checks
+cover all 65 occupancy values, zero/full capacity, amount and animation timing
+boundaries, inactive mapped slots and byte-wise argument aliases. Wave checks cover
 all 228 scanlines, blend thresholds, signed wrapping, frame-end phase updates and
 typed Main/F4/HBlank calls. Public synthetic game tests cover these boundaries
 without original assets. These comparisons do not establish full-area progression,
@@ -561,7 +563,8 @@ The complete bank-3 late scene family uses:
 
     python -B tools/compare_reference.py --bank3-late-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
 
-This group passes 26,464 comparisons for all 31 source functions: 25 void presets,
+This group passes 31,045 checks for all 31 source functions plus song-43 restart
+and its stopped-track dependency. The original late family has 25 void presets,
 four animation callbacks and two Main modal callbacks, with 27 reviewed F4 targets.
 It compares EWRAM, IWRAM excluding the oracle stack, palette, VRAM, OAM and SRAM.
 Cases cover mapped inactive byte-selected actors, signed centered positions, all
@@ -572,6 +575,11 @@ Audio cases initialize actual song/player records, ten active/inactive tracks,
 the eight-bit mask and player identity, then compare continuous callback sequences.
 Synthetic public tests independently check pan/tempo values, upper mirror bits,
 affine allocation/exhaustion, raw snapshot behavior and rejected calling contracts.
+Song-43 cases cover all volume bytes, stopped/empty/playing states, valid and
+invalid player identities, Main cursor effects and F4 calls. Stopped-track restart
+checks all status bytes, counts 0/1/2/8/16/17/255, retained 16-byte record tails and
+overlapping player storage. Synthetic public checks separately verify its five
+defaults, unchanged active-only tracks and the eight-bit volume mask.
 The complete 282-function bank-3 main family is split into focused groups:
 
     python -B tools/compare_reference.py --bank3-presets-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE

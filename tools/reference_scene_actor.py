@@ -15,13 +15,14 @@ def check_scene_actors(*, entries, reference, rom, memory, cpu, bind, call, both
         "src/scripts/script_callback_render_info_x.c", "src/scripts/script_callback_render_slot_bytes.c",
         "src/scripts/script_callbacks_adjust_class_turn_target.c", "src/actors/actor_approach_class_coordinates.c",
         "src/graphics/screen_pair_presets.c", "src/graphics/screen_pair_state_presets.c",
+        "src/graphics/screen_pair_more_presets.c", "src/actors/actor_restore_slots.c",
         "src/scripts/script_callbacks_direction_slots.c", "src/scripts/script_callbacks_direction_variants.c",
         "src/scripts/script_callback_render_shake15248.c"}
     rows = [row for row in entries if row["source"] in sources or row["name"] == "ScriptCallbackJumpUnlessMapBank3ValueEquals"]
-    equal(len(rows), 36, "complete scene actor families and shared cross-bank condition")
+    equal(len(rows), 45, "complete scene actor families and shared cross-bank condition")
     task_rows = [row for row in rows if row["name"] == "ScriptCallbackStoreClassScreenYSide" or not re.search(
         r"\barguments\b", body((reference / row["source"]).read_text(encoding="utf-8"), row["name"]))]
-    equal(len(task_rows), 27, "reviewed argument-free scene actor task contracts")
+    equal(len(task_rows), 36, "reviewed argument-free scene actor task contracts")
     main = bind("hn_scene_callback", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
     task = bind("hn_probe_task_command", C.c_int, C.c_void_p, C.c_uint32, C.c_uint, C.POINTER(C.c_uint32))
     rng = random.Random(0x53434E414354)
@@ -138,7 +139,7 @@ def check_scene_actors(*, entries, reference, rom, memory, cpu, bind, call, both
             both(args, bytes([0x60, 0, 1, 0, 16, 0, 0, 1, 0]))
             check_main(approach, f"live alias {offset:X}/{direction}")
     snapshots_rows = [row for row in rows if row["name"] in {"ScriptCallbackBackupTwoRenderSlots",
-                      "ScriptCallbackRestoreActorRenderSlotsAndClearFlag"}]
+                      "ScriptCallbackRestoreActorRenderSlotsAndClearFlag", "ScriptCallbackRestoreSavedRenderSlotPair"}]
     for row in snapshots_rows:
         for case in range(64):
             # Equal/disjoint slot intervals can overwrite an index or data
@@ -147,9 +148,18 @@ def check_scene_actors(*, entries, reference, rom, memory, cpu, bind, call, both
             both(args, bytes([case % 8, (case * 7) % 8]))
             both(controls + 0x14, bytes([case % 8, (case * 7) % 8]))
             check_main(row, f"snapshot alias {case}")
+    for row in [r for r in rows if r["source"] in {"src/graphics/screen_pair_more_presets.c", "src/actors/actor_restore_slots.c"}]:
+        for case in (0, 1, 254, 255):
+            fixture(case);both(0x03002DC0, b"\x01");both(0x03002E10, b"\x01")
+            both(controls + 0x14, bytes([case, 255 - case]))
+            check_main(row, "mapped inactive slots and optional restore byte selectors")
+    saved_pair = next(r for r in rows if r["name"] == "ScriptCallbackRestoreSavedRenderSlotPair")
+    for offset in (0, 1, 4, 16, 63, 99):
+        fixture(offset, render_base=controls + 0x14 - offset)
+        both(controls + 0x14, bytes([0, 1]));check_main(saved_pair, "first copy overwrites live restore indices")
     adjust = next(row for row in rows if row["name"] == "ScriptCallbackAdjustClassTurnTarget")
     for shift in range(256):
         fixture(shift)
         both(controls + 0x63, bytes([shift]))
         check_main(adjust, f"ARM shift count {shift}")
-    print("35 scene actor/panel functions and one shared cross-bank condition passed; area/story completion remains unverified.")
+    print("44 scene actor/panel functions across 15 families and one shared condition passed; area/story completion remains unverified.")

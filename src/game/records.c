@@ -2,6 +2,7 @@
 #include "game/state.h"
 #include "game/render.h"
 #include "game/text.h"
+#include "gba/bios.h"
 
 static void count_store(HNMemory *m,GameAddr slot,unsigned count)
 {hn_write16(m,slot,(uint16_t)((hn_read16(m,slot)&~0xF80u)|((count&31)<<7)));}
@@ -62,9 +63,35 @@ uint32_t hn_record_adjust_counter(HNMemory *m,uint8_t index,int32_t delta)
 }
 uint8_t hn_record_counter(HNMemory *m,uint8_t index)
 {return index<=31?hn_read8(m,HN_RECORD_COUNTERS+index):255;}
+static HNSceneResult allocate_batch(HNMemory *m,GameAddr arguments)
+{
+    hn_write8(m,0x03001138,hn_read8(m,arguments));hn_write8(m,0x03001139,hn_read8(m,arguments+1));
+    uint16_t occupied=hn_records_count(m);hn_write16(m,0x0201DC56,occupied);
+    uint16_t amount=hn_read16(m,0x0201DC4C);hn_write32(m,HN_COUNTER_COUNTDOWN,0);
+    if(occupied>63){amount=0;hn_write8(m,0x03002182,(uint8_t)(hn_read8(m,0x03002182)&~8u));}
+    else{
+        if(64-occupied<amount)amount=(uint16_t)(64-occupied);
+        for(unsigned index=0;index<amount;index++)
+            (void)hn_record_allocate(m,hn_read16(m,0x0201DC40+(hn_read16(m,0x03001138)+index)*2));
+        hn_write8(m,0x03002182,(uint8_t)(hn_read8(m,0x03002182)|8));
+    }
+    if(!hn_text_counter(m,occupied,1))return HN_SCENE_RESOURCE;
+    if((uint16_t)(amount-1)<=30){
+        hn_write32(m,HN_COUNTER_DELTA,1);hn_write32(m,HN_COUNTER_STEPS,amount);
+        hn_write32(m,HN_COUNTER_DELAY,(uint32_t)hn_runtime_divide(32,amount));
+    }else{
+        hn_write32(m,HN_COUNTER_DELTA,(uint32_t)hn_runtime_divide(amount,32));
+        hn_write32(m,HN_COUNTER_STEPS,32);hn_write32(m,HN_COUNTER_DELAY,1);
+    }
+    hn_write16(m,0x0201DC4C,amount);hn_write16(m,0x0201DC56,(uint16_t)(hn_read16(m,0x0201DC56)+amount));
+    hn_write16(m,0x0201DC4E,hn_read16(m,0x0201DC56));
+    if(!hn_render_configure_raw(m,2,1,0,176,-16,0,HN_COUNTER_ANIMATION))return HN_SCENE_RESOURCE;
+    hn_render_flags(m,2,12,0);return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+}
 HNSceneResult hn_records_callback(HNMemory *m,GameAddr callback,GameAddr arguments,uint32_t *consumed)
 {
     switch(callback&~1u){
+    case 0x0801E0BC:*consumed=2;return allocate_batch(m,arguments);
     case 0x0801DE14:
         hn_write8(m,0x03001138,hn_read8(m,arguments));hn_write8(m,0x03001139,hn_read8(m,arguments+1));*consumed=2;break;
     case 0x0801E00C:hn_write16(m,0x03001138,hn_read16(m,0x0201DC84));*consumed=0;break;

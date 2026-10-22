@@ -2027,6 +2027,37 @@ static void bank3_contract(void)
     hn_write8(&memory,entries+6*8,12);hn_write8(&memory,entries+6*8+3,255);hn_write8(&memory,entries+6*8+4,7);
     hn_write8(&memory,entries+7*8,12);hn_write8(&memory,entries+7*8+3,255);hn_write8(&memory,entries+7*8+4,6);
     CHECK(!hn_bank3_chain_effect(&memory,7,1,12));
+    for(unsigned i=0;i<208;i++)hn_write8(&memory,HN_ACTOR_RENDER_SNAPSHOT+0x1A0+i,(uint8_t)(i*13));
+    hn_write8(&memory,control+0x14,10);hn_write8(&memory,control+0x15,13);
+    CHECK(hn_scene_callback(&memory,0x0801D841,0,&consumed)==HN_SCENE_OK&&consumed==0);
+    CHECK(hn_read8(&memory,hn_render_slot(&memory,10)+0x63)==((99u*13u)&255)&&hn_read8(&memory,hn_render_slot(&memory,13)+0x63)==((203u*13u)&255));
+    CHECK(hn_scene_callback(&memory,0x0801F705,0,&consumed)==HN_SCENE_OK&&consumed==0);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,10)+4)==0x088A56EF&&hn_read32(&memory,hn_render_slot(&memory,13)+4)==0x088A9628);
+    CHECK(hn_read8(&memory,hn_render_slot(&memory,9)+0x65)==10&&hn_read8(&memory,hn_render_slot(&memory,11)+0x65)==10&&hn_read8(&memory,hn_render_slot(&memory,12)+0x65)==13);
+    CHECK(hn_read32(&memory,0x02018000+4*44+0x18)==0x088E1403&&hn_read32(&memory,0x03001F7C)==0x088A56EF);
+    for(unsigned key=0;key<128;key++)rom[HN_RECORD_DESCRIPTORS-HN_ROM_BASE+key*4+1]=8;
+    put32(rom+HN_COUNTER_TEMPLATES-HN_ROM_BASE+4,0x0202F000);
+    const unsigned amounts[]={0,1,30,31,32,33,64,65,65535};
+    for(unsigned edge_case=0;edge_case<3;edge_case++)for(unsigned test=0;test<sizeof(amounts)/sizeof(*amounts);test++){
+        unsigned occupied=edge_case==0?0:edge_case==1?63:64,amount=amounts[test],expected=amount<64-occupied?amount:64-occupied;
+        for(unsigned i=0;i<64;i++){hn_write32(&memory,HN_RECORD_SLOTS+i*4,i<occupied?128:0);hn_write16(&memory,0x0201DC40+(128+i)*2,1);}
+        hn_write16(&memory,0x0201DC4C,(uint16_t)amount);hn_write16(&memory,0x02028000,128);
+        CHECK(hn_scene_callback(&memory,0x0801E0BD,0x02028000,&consumed)==HN_SCENE_OK&&consumed==2);
+        CHECK(hn_read16(&memory,0x0201DC4C)==expected&&hn_read16(&memory,0x0201DC56)==occupied+expected&&hn_read16(&memory,0x0201DC4E)==occupied+expected);
+        CHECK(hn_records_count(&memory)==occupied+expected&&((hn_read8(&memory,0x03002182)&8)!=0)==(occupied<64));
+        CHECK(hn_read32(&memory,HN_COUNTER_STEPS)==(expected>=1&&expected<=31?expected:32));
+        CHECK(hn_read32(&memory,HN_COUNTER_DELAY)==(expected>=1&&expected<=31?32/expected:1));
+        CHECK(hn_read32(&memory,HN_COUNTER_DELTA)==(expected>=1&&expected<=31?1:expected/32));
+    }
+    hn_write32(&memory,0x03004EC4,HN_AUDIO_IDENT);hn_write8(&memory,0x03004E98,2);hn_write32(&memory,0x03004EBC,0x02030000);
+    hn_write8(&memory,0x02030000,128);hn_write8(&memory,0x02030050,0);hn_write8(&memory,0x02030063,0xA5);hn_write8(&memory,control+0x60,255);
+    CHECK(hn_scene_callback(&memory,0x08050F91,0,&consumed)==HN_SCENE_OK&&consumed==0);
+    CHECK(hn_read8(&memory,0x02030013)==255&&hn_read8(&memory,0x02030063)==0xA5);
+    for(unsigned i=0;i<160;i++)hn_write8(&memory,0x02030000+i,0xA5);
+    hn_write8(&memory,0x02030000,0xC7);hn_write8(&memory,0x02030050,0x80);
+    CHECK(hn_audio_restart_tracks(&memory,0x03004E90));
+    CHECK(hn_read8(&memory,0x02030000)==0x80&&hn_read8(&memory,0x0203000F)==2&&hn_read8(&memory,0x02030013)==64&&hn_read8(&memory,0x02030019)==0x16&&hn_read8(&memory,0x02030024)==1);
+    CHECK(!hn_read32(&memory,0x02030020)&&hn_read32(&memory,0x02030040)==0xA5A5A5A5&&hn_read8(&memory,0x02030063)==0xA5);
     CHECK(!memory.fault);
     free(rom);
 }

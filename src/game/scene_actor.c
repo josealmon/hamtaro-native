@@ -13,6 +13,10 @@ static bool animation(HNMemory *m,uint8_t index,GameAddr resource)
     if(index==hn_read8(m,HN_RENDER_CLASS_FOLLOWER))hn_write8(m,0x03002170,0);
     hn_render_set_animation(m,index,resource);return !m->fault;
 }
+static bool auxiliary(HNMemory *m,uint8_t index,uint8_t parent,GameAddr resource)
+{return hn_render_configure_raw(m,index,1,176,0,0,0,resource)&&hn_render_modes_raw(m,index,2,3,parent);}
+static void indicator(HNMemory *m,uint8_t index,GameAddr resource)
+{hn_write8(m,0x03001FAC,index);hn_write32(m,0x03001F7C,resource);}
 /* Resource words name the player's ROM. Preserve ordered setup and live flags. */
 static HNSceneResult simple_presets(HNMemory *m,GameAddr callback)
 {
@@ -73,6 +77,33 @@ static HNSceneResult simple_presets(HNMemory *m,GameAddr callback)
         hn_write32(m,0x03001F7C,0x088A5079);
         break;
     }
+    /* Complete screen_pair_more_presets.c family; raw word-choice contracts. */
+    case 0x0801F4D0:
+        if(!animation(m,10,0x088A509F)||!auxiliary(m,9,10,0x088E1A24)||
+           !animation(m,13,0x088A8DBB)||!auxiliary(m,12,13,0x088E1A24))return HN_SCENE_RESOURCE;
+        indicator(m,10,0x088A509F);break;
+    case 0x0801F550:case 0x0801F588:case 0x0801F5C0:{
+        GameAddr first=(callback&~1u)==0x0801F550?0x088A525C:(callback&~1u)==0x0801F588?0x088A5438:0x088A5470;
+        GameAddr second=(callback&~1u)==0x0801F550?0x088A9166:(callback&~1u)==0x0801F588?0x088A937D:0x088A93B2;
+        if(!animation(m,10,first)||!animation(m,13,second))return HN_SCENE_RESOURCE;
+        indicator(m,10,first);break;
+    }
+    case 0x0801F5F8:
+        if(!hn_graphics_configure_raw(m,4,0x088E1412)||!animation(m,10,0x088A54AE)||!auxiliary(m,11,10,0x088E1B67)||
+           !animation(m,13,0x088A93ED)||!auxiliary(m,14,13,0x088E1B67))return HN_SCENE_RESOURCE;
+        indicator(m,10,0x088A54AE);break;
+    case 0x0801F684:
+        if(!animation(m,13,0x088A949D)||!auxiliary(m,14,13,0x088E1C3C))return HN_SCENE_RESOURCE;
+        indicator(m,13,0x088A949D);break;
+    case 0x0801F6D8:
+        if(!animation(m,13,0x088A953A))return HN_SCENE_RESOURCE;
+        indicator(m,13,0x088A953A);break;
+    case 0x0801F704:
+        if(!hn_graphics_configure_raw(m,4,0x088E1403)||!animation(m,10,0x088A56EF)||
+           !hn_render_configure_raw(m,9,1,176,0,0,0,0x088E1CBF)||!hn_render_configure_raw(m,11,1,176,0,0,0,0x088E1C65)||
+           !hn_render_modes_raw(m,9,2,3,10)||!hn_render_modes_raw(m,11,2,3,10)||
+           !animation(m,13,0x088A9628)||!auxiliary(m,12,13,0x088E1D24))return HN_SCENE_RESOURCE;
+        indicator(m,10,0x088A56EF);break;
     case 0x0801F7D8:{ /* ScriptCallbackScreenPreset1F7D8 */
         if(!hn_graphics_configure(m,4,0x088E137B))return HN_SCENE_RESOURCE;
         if(!animation(m,10, 0x088A5AB7))return HN_SCENE_RESOURCE;
@@ -384,11 +415,11 @@ HNSceneResult hn_scene_actor_callback(HNMemory *m,GameAddr callback,GameAddr arg
         }
         *consumed=2;break;
     }
-    case 0x0801D7E8:{
+    case 0x0801D7E8:case 0x0801D840:{
         GameAddr indices=HN_SCENE_CONTROLS+0x14;
         for(unsigned i=0;i<2;i++)if(hn_read8(m,indices+i)!=255){
             if(!hn_memory_copy(m,hn_render_slot(m,hn_read8(m,indices+i)),HN_ACTOR_RENDER_SNAPSHOT+(i+4)*104,104))return HN_SCENE_RESOURCE;
-            hn_write8(m,hn_render_slot(m,hn_read8(m,indices+i))+0x63,0);
+            if((callback&~1u)==0x0801D7E8)hn_write8(m,hn_render_slot(m,hn_read8(m,indices+i))+0x63,0);
         }
         break;
     }
@@ -435,8 +466,9 @@ HNSceneResult hn_scene_actor_task(HNMemory *m,GameAddr callback)
 {
     switch(callback&~1u){
     case 0x0801CE90:case 0x0801EB34:case 0x0801EB98:
-    case 0x0801CD4C:case 0x0801CDA4:case 0x0801CE28:case 0x0801D7E8:case 0x0801ECE8:
+    case 0x0801CD4C:case 0x0801CDA4:case 0x0801CE28:case 0x0801D7E8:case 0x0801D840:case 0x0801ECE8:
     case 0x0801F278:case 0x0801F2DC:case 0x0801F314:case 0x0801F398:case 0x0801F418:case 0x0801F498:
+    case 0x0801F4D0:case 0x0801F550:case 0x0801F588:case 0x0801F5C0:case 0x0801F5F8:case 0x0801F684:case 0x0801F6D8:case 0x0801F704:
     case 0x0801F7D8:case 0x0801F8B8:case 0x0801F994:case 0x0801F9CC:case 0x0801FA54:case 0x0801FB20:
     case 0x0801FBA0:case 0x0801FC20:case 0x0801FC58:case 0x0801FCD8:case 0x0801FD48:case 0x0801FDC8:
     case 0x0801FE54:case 0x0801FF1C:case 0x0801FFE4:case 0x080200AC:{

@@ -25,6 +25,7 @@ bool hn_audio_player_configure(HNMemory *,GameAddr player,GameAddr tracks,uint32
 bool hn_audio_player_start(HNMemory *,GameAddr player,GameAddr song);
 bool hn_audio_player_stop(HNMemory *,GameAddr player);
 void hn_audio_player_resume(HNMemory *,GameAddr player);
+bool hn_audio_restart_tracks(HNMemory *,GameAddr player);
 bool hn_audio_song(HNMemory *,uint16_t song,HNSongAction action);
 bool hn_audio_region(HNMemory *,GameAddr arguments,uint32_t *yield);
 bool hn_audio_all(HNMemory *,bool resume);

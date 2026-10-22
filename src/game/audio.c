@@ -220,6 +220,15 @@ bool hn_audio_player_stop(HNMemory *m,GameAddr player)
 }
 void hn_audio_player_resume(HNMemory *m,GameAddr player)
 {if(identified(m,player))hn_write32(m,player+4,hn_read32(m,player+4)&0x7FFFFFFF);}
+bool hn_audio_restart_tracks(HNMemory *m,GameAddr player)
+{
+    unsigned remaining=hn_read8(m,player+8);GameAddr track=hn_read32(m,player+0x2C);
+    for(;remaining&&!m->fault;remaining--,track+=80)if((hn_read8(m,track)&0xC0)==0xC0){
+        clear(m,track,64);hn_write8(m,track,0x80);hn_write8(m,track+0x0F,2);
+        hn_write8(m,track+0x13,64);hn_write8(m,track+0x19,0x16);hn_write8(m,track+0x24,1);
+    }
+    return !m->fault;
+}
 bool hn_audio_song(HNMemory *m,uint16_t song,HNSongAction action)
 {
     GameAddr record=HN_AUDIO_SONG_RECORDS+song*8;unsigned index=hn_read16(m,record+4);if(index>=HN_AUDIO_PLAYERS)return false;

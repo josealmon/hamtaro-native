@@ -56,7 +56,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
-| Scene actor state and panels | Adapted | 35 functions across 13 source families plus one shared cross-bank condition compared: snapshots, forward copy/swap, signed accelerations, class-target approach, panel presets and direction constructors; 27 reviewed argument-free task contracts; complete scene integration remains pending |
+| Scene actor state and panels | Adapted | 44 functions across 15 source families plus one shared cross-bank condition compared: snapshots with and without execution-flag clearing, forward copy/swap, signed accelerations, class-target approach, panel presets and direction constructors; 36 reviewed argument-free task contracts; complete scene integration remains pending |
 | Actor render presets | Adapted | All 945 functions across nine base/linked/neighbor/class/secondary/render-setup/graphics/directional/extended families compared; task ABI, captured auxiliary arguments, live selectors, inactive mapped slots, byte-sized neighbors and direction sectors preserved; only the base family's defined-zero no-op also accepts Main; later-area integration remains pending |
 | Map-choice scene control | Adapted | All 273 functions in map_choice_callbacks.c compared: 93 Main contracts, 253 argument-free task targets, five animation contracts and four slot helpers, including cursor skips/jumps, packed choices, motion, regions, phases and presets; complete area/activity integration remains pending |
 | Map particles | Adapted | All four functions in map_particles.c and the alternate parameter selection compared; initialization, reset boundaries, live parameter reads, scaling and field60-only hiding; timed scene integration remains pending |
@@ -64,7 +64,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
-| Gameplay record slots and counters | Adapted | Eight allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and two allocation callbacks; complete inventory UI and save integration remain pending |
+| Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
 | Status counters and stage sequence | Adapted | All 13 functions in map10_4_counter_sequence.c compared, including the complete 16-bit counter domain, five tile banks, windows, stage/scroll graphics and sequence phases; nine Main and twelve argument-free task contracts; later-stage live integration remains pending |
 | Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Ham-Chat book | Adapted | Acquisition, learned-word order, five language permutations, category/page selection, paired text contexts, counters, markers and cleanup compared; initial book display and return run natively; manual book navigation remains unverified |
@@ -200,7 +200,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-1,820,023 checks with the independent BIOS and PPU oracles, including separately
+1,835,252 checks with the independent BIOS and PPU oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
@@ -516,8 +516,8 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 1. Review remaining area and shared scene families with their dependencies, then adapt
    complete groups of story/scene callbacks, scanline effects and timed CPU transfers.
-2. Extend the Clubhouse return after the first reconciliation and Harmony introduction,
-   then remaining area routes; validate later story effects and their save state in
+2. Extend the post-Harmony Clubhouse route through the photo room and SaveGroup3
+   UI, then the remaining Sunny Peak and later-area routes; validate story effects and their save state in
    the actual Windows window.
 3. Expand coverage through the remaining story, secondary activities and minigames;
    establish input scenarios and compare story state and save effects with the reference.
@@ -614,11 +614,11 @@ Auxiliary arguments remain captured; separate calls reload class selectors after
 each potentially overlapping write. These function checks prepare later-area
 dependencies; they do not establish that those areas are playable.
 
-Thirty-five scene actor/state/panel functions across 13 source families preserve
+Forty-four scene actor/state/panel functions across 15 source families preserve
 the nine-byte class-coordinate approach state, fixed-point/signed boundaries,
 forward copy/swap order, two-slot backup/restore, screen-pair presets and direction
 constructors. One additional shared bank-3 value condition supports the bank-2
-scripts without claiming the rest of bank 3. Eight gameplay-record functions retain
+scripts without claiming the rest of bank 3. Nine gameplay-record functions retain
 packed counters, the twelve-byte query result and original underflow/clamp behavior.
 The three-function scanline-wave family has typed Main/task/HBlank adapters with
 all-line threshold and frame-end phase comparisons; timed raster images remain
@@ -666,7 +666,8 @@ Mirror uses the entire control byte, while affine scale propagation captures X
 and reloads Y in source order. Exhausted affine allocation returns index 32 and
 preserves its adjacent usage-byte alias. Modal save/restore accepts mapped inactive
 byte-selected actor slots and retains the original script cursor and map controls.
-Focused comparisons cover 26,464 checks, including active ten-track audio players,
+Focused comparisons cover 31,045 checks for that family plus song-43 restart and
+its stopped-track helper, including active ten-track audio players,
 the eight-bit track mask, all byte counters/mirror values, inactive slots and
 SRAM/video memory.
 
@@ -697,7 +698,26 @@ are bounded at 4,096 attempts, and pathological recursive effect graphs at depth
 64, rather than hanging the host. These limits do not establish original behavior
 for corrupt game state.
 
-Bank 3's five recovered script sources declare 512 functions, six without explicit
-dispatch after this family: record-batch allocation, a saved actor-pair restore,
-three shared screen presets and song-43 restart. Helpers need separate review;
-these structural counts prove neither runtime reachability nor area completion.
+The remaining bank-3 declarations were adapted by complete source family: eight
+screen-pair presets, a raw saved actor-pair restore, batch record allocation,
+song-43 volume restart and its stopped-track helper. The actor restore preserves
+the saved execution byte and reloads indices after each forward copy. Record
+batches preserve the original capacity limit, zero-amount flag behavior, byte-wise
+argument reads and counter animation division boundaries. Restarting stopped
+audio tracks captures the byte count and track pointer, clears only 64 of each
+80-byte record and restores its five original defaults; player resume is a
+separate operation. Track counts above 16 and overlapping player records are
+checked explicitly.
+
+Bank 3's five recovered script sources now declare 512 functions with explicit
+dispatch for every declaration. Helpers need separate review; these structural
+counts prove neither runtime reachability nor area completion. Longer story,
+activity and save-state routes remain required.
+
+A separate private input-only scout completes the initial Ham-Jam conversation,
+No-P response and return to Clubhouse. Entering the photo room (map 1:3) then stops
+explicitly at ScriptCallbackUpdateSaveGroup3CompletedFieldMask (0x080CA7AC),
+outside the adapted bank-3 families. Its complete 33-function pair/render source
+family and supporting helpers are the next integration dependency. The scout is
+not part of the canonical opening scenario and does not establish either activity
+as complete.
