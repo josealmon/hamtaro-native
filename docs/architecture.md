@@ -59,6 +59,7 @@ statically. A separate clean-machine validation remains pending.
 | Bank-5 scene/mechanism family | Adapted | All 207 map_bank5_callbacks.c functions and the four-function stairs/idle dependency family compared; grid choices, actor mirrors, lane states/outcomes, round timing and a typed VBlank callback; complete area progression and timed desktop integration remain pending |
 | Bank-6 main/final scene families | Adapted | All 243 functions in map_bank6_callbacks.c and map_bank6_final_callbacks.c plus the complete neighbor-pair dependency compared; oscillators/orbits, projected motion, cursor/rectangles, target selection/restore, task patterns and typed helpers; full area integration remains pending |
 | Bank-6 chain family | Adapted | All 12 map_bank6_chain_callbacks.c functions compared: three chain transforms, shared position, paired landing, containment/overlap, sine flight, fixed approach, wrapping and a live indicator; five Main, two argument-free task and seven animation contracts; full area/story and timed scene integration remain pending |
+| Shared presentation families | Adapted | All 56 functions across nine bank-7 height/preset, region-motion, background/reset/scroll, window and tilemap-transfer families compared, including two existing modal roots; 28 Main, 40 task, six animation and six helper contracts, with overlaps; complete scene/activity and timed rendering integration remain pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
@@ -166,9 +167,14 @@ A subsequent private SDK scout follows the request through an in-game save,
 uses Lookie with Seamore in the photo room and receives the training seat. Items
 shows its icon and description, accepts navigation/read input and returns to the
 scene. A further in-game save and Continue retains that item. The exported original
-SRAM also restores the scene and item in a separate SDK process. These are compiled
-runtime and native PPU observations; the extended desktop route, return of the
-seat to Arnie and completion of that quest remain pending.
+SRAM also restores the scene and item in a separate SDK process. An extended route
+then returns the seat to Arnie, follows him up the vines and learns Sesam-E. From
+erased SRAM, all 179,239 native input updates pass; a second replay passes 187,706
+host-session checks and restores map 2:7 at x=72.5, z=80.5 with 22 words, ten seeds,
+Bijou and one rescued love from private 32 KiB SRAM in a fresh host session. An SDK
+inspection after Continue also shows the empty Items panel after handing over the
+seat. These are compiled runtime, host-file and native PPU observations; the actual
+desktop route and complete Sunny Peak progression remain pending.
 Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
@@ -231,7 +237,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-3,976,678 checks with the independent BIOS and PPU oracles, including separately
+4,015,796 checks with the independent BIOS and PPU oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
@@ -857,6 +863,33 @@ halfword counters, invalid-slot class 460, wrapped branch thresholds and flag-ba
 continuation; wrapping tests the signed sum before a single Y decrement. Whole
 function-family comparisons do not establish complete timed scene or area play.
 
+The shared presentation batch uses presentation.c, presentation_background.c and
+presentation_window.c, with the tilemap-row queue in transfer.c. Its nine complete
+source families cover bank-7 actor height/presets, region motion, graphics/background
+resets, affine background callbacks, background actors/scroll, window presets, the
+scroll-text-row helper and the DMA tilemap-row queue. The 56-function census includes
+the two already-adapted window modal roots. Its 28 Main, 40 argument-free task, six
+animation and six direct-helper contracts overlap; these counts are not progress
+percentages or evidence of full scene completion.
+
+Height changes preserve the original one-step overshoots and unsigned rectangle
+tests. Region motion retains its mixed signed/unsigned bounds and animation identity.
+Affine backgrounds use the full halfword angle, signed scale reciprocals and wrapped
+anchors. Background actors retain five shared timers/offsets, two random draws per
+spawn, live selectors, exhausted matrix index 32 and a word-sized velocity index
+after the byte-sized constructor index. Scroll rows preserve compact split buffers,
+two tilemap pages, late descriptor reads and private linked text tasks. Tilemap DMA
+queueing retains zero-width rows, low-byte word arguments and the original queue wrap.
+
+Window sequences keep byte countdown underflow, null-script allocations, stage
+thresholds, raw selectors and pointer reloads after overlapping effect writes. Object
+window styles are limited to the eight pointers copied by the original stack frame;
+the located recovered callers use styles 0..3. An undefined larger style or removal
+of a task absent from the list fails explicitly. These malformed-state guards do
+not establish original caller-stack or invalid-list parity. Source resources remain
+in the player's ROM; complete credits/window sequences and timed desktop presentation
+still require integration checks.
+
 A separate private input-only scout completes the initial Ham-Jam conversation,
 No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement
 and return to Clubhouse also run natively after the SaveGroup3 batch below.
@@ -873,7 +906,8 @@ greeting and a save/load roundtrip now have canonical input markers. Neither rou
 establishes complete activity progression.
 A separate Windows process also restores the photo-room save beside the characters
 and renders the greeting, portrait, actor animations and continuation indicator.
-The complete desktop photo activity and the training-seat quest remain unverified.
+The complete photo activity and training-seat route remain unverified in the
+actual desktop window.
 The current Windows executable separately opens the empty Items and Gems panels
 with keyboard input and returns through Status to the same photo-room scene.
 

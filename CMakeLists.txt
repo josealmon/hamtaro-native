@@ -20,6 +20,7 @@ add_library(hn_core STATIC
     src/game/render.c src/game/presets.c src/game/actor_presets.c src/game/map_choice.c src/game/particles.c src/game/bank2.c src/game/bank3.c src/game/bank3_games.c src/game/bank3_chain.c src/game/bank4.c src/game/bank4_presets.c src/game/bank4_path.c src/game/wander.c src/game/scene_actor.c src/game/animation.c src/game/draw.c src/game/background.c src/game/graphics.c src/game/raster.c
     src/game/bank5.c src/game/bank5_presets.c
     src/game/bank6.c src/game/bank6_presets.c src/game/bank6_targets.c src/game/bank6_chain.c
+    src/game/presentation.c src/game/presentation_background.c src/game/presentation_window.c
     src/game/audio.c src/game/audio_sequence.c src/game/audio_note.c src/game/audio_player.c
     src/game/audio_psg.c src/game/audio_mixer.c)
 target_include_directories(hn_core PUBLIC src)

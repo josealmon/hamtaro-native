@@ -49,6 +49,12 @@ void hn_transfer_tiles(HNMemory *m,GameAddr source,GameAddr destination,uint32_t
         enqueue(m,source,destination,bytes);source+=bytes;destination+=1024;
     }
 }
+void hn_transfer_tilemap_rows(HNMemory *m,GameAddr source,GameAddr destination,uint32_t width_word,uint32_t rows_word,uint32_t wide_word)
+{
+    uint32_t bytes=(uint8_t)width_word*2,stride=(uint8_t)wide_word?128:64;
+    /* Unlike the generic queue wrapper, the source retains zero-width rows. */
+    for(unsigned i=0;i<(uint8_t)rows_word;i++,source+=bytes,destination+=stride)enqueue(m,source,destination,bytes);
+}
 void hn_transfer_queue_fill(HNMemory *m,uint32_t value,GameAddr destination,uint32_t bytes)
 {
     unsigned index=hn_read32(m,HN_TRANSFER_AUX_INDEX);

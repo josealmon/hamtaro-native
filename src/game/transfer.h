@@ -11,6 +11,7 @@ bool hn_transfer_fill_words(HNMemory *,GameAddr destination,uint32_t value,uint3
 void hn_transfer_flush(HNMemory *);
 void hn_transfer_copy(HNMemory *,GameAddr source,GameAddr destination,uint32_t bytes,bool fill);
 void hn_transfer_tiles(HNMemory *,GameAddr source,GameAddr destination,uint32_t width,uint32_t rows);
+void hn_transfer_tilemap_rows(HNMemory *,GameAddr source,GameAddr destination,uint32_t width,uint32_t rows,uint32_t wide);
 void hn_transfer_cpu_queue(HNMemory *,GameAddr source,GameAddr destination,uint32_t bytes);
 bool hn_transfer_strided_rows(HNMemory *,GameAddr source,GameAddr destination,uint32_t row_bytes,uint32_t rows,uint32_t stride);
 bool hn_transfer_decompress_rows(HNMemory *,GameAddr source,GameAddr destination,uint32_t row_bytes,uint32_t rows,uint32_t stride);

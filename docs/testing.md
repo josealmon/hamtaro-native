@@ -199,7 +199,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 3,976,678 checks,
+GBA machine. The complete run with BIOS and PPU oracles passes 4,015,796 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -712,6 +712,24 @@ cover repeated allocation of matrix zero, phase-65 Y retention, preserved yield,
 strict edges, signed division and invalid calling forms. These checks run in the
 full suite; complete scene/story and desktop integration remain pending.
 
+Nine complete shared presentation families can be checked together:
+
+    python -B tools/compare_reference.py --presentation-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+The 39,118 comparisons cover all 56 source entries, including two existing window
+modal callbacks, 28 Main contracts, 40 reviewed F4 targets, six animation contracts
+and six direct helpers. The counts overlap. Checks exercise the actual Main, F4
+and animation commands and reject unreviewed interfaces. Fixtures cover height
+overshoot, unsigned rectangles, mixed signed region bounds, full halfword angles,
+signed affine reciprocals, raw/wrapped render selectors, word-sized velocity indices,
+timer/random/offset ordering, byte counters and stage/delay underflow. Whole-memory
+comparisons retain effect-pointer reloads, constructor/control aliases, tilemap queue
+wrap including zero-width rows, split scrolling pages and task allocations. Only
+DMA3's transient source register is excluded. Public synthetic tests independently
+cover these boundaries and the undefined-style/missing-task failure guards.
+These families run in the full comparison; complete scene/activity and timed PPU
+integration remain pending.
+
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:
 
@@ -788,6 +806,11 @@ Seamore and receives the training seat. Its populated Items panel displays one
 item's icon and description and accepts navigation/read/cancel. An in-game save,
 Continue and a separate SDK process loaded from the exported original 32 KiB SRAM
 retain that item. The source profile is read-only; the development checkpoint
-has one prior-copy backup. These bounded SDK observations do not establish a
-complete desktop activity or the return of the seat to Arnie. Multiple-item
-scrolling, populated Gems and the rest of the quest remain pending.
+has one prior-copy backup. The extended input-only replay then gives the seat to
+Arnie, follows him up the vines and learns Sesam-E. All 179,239 updates pass from
+erased SRAM, followed by 187,706 host-session checks and a fresh continuation from
+private 32 KiB SRAM in map 2:7 at x=72.5, z=80.5 with 22 words, ten seeds, Bijou and
+one rescued love. An SDK inspection after Continue also displays empty Items after
+the delivery. This remains separate from the canonical opening and its empty
+Items/Gems checks. Multiple-item scrolling, populated Gems, the actual desktop
+quest route and complete Sunny Peak progression remain pending.
