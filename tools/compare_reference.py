@@ -51,9 +51,10 @@ def main() -> None:
     parser.add_argument("--indicators-only", action="store_true", help="Run destination progress, indicators, navigation and unlock comparisons")
     parser.add_argument("--presets-only", action="store_true", help="Run scene-render presets, actor dependencies and typed task/Main contracts")
     parser.add_argument("--map-choice-only", action="store_true", help="Run complete map-choice, particle and dependency comparisons (requires BIOS oracle)")
+    parser.add_argument("--bank2-only", action="store_true", help="Run complete bank-2 actor/control/preset/height families (requires BIOS oracle)")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
-    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only))):
+    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -2188,10 +2189,20 @@ def main() -> None:
                     call("MainScriptInvokeCallback",0x02020000,limit=1000000)
                     compare(f"actor map callback {name} {case}",((0x02000000,0x40000),(0x03000000,0x7000)))
 
+    def bank2_checks():
+        from reference_bank2 import check_bank2
+        check_bank2(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
+                    bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
+                    native_bytes=native_bytes,command=command)
+
     if args.bios_oracle:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.bank2_only:
+            bank2_checks()
+            print(f"{checks} private bank-2 comparisons passed; complete story remains unverified.")
+            return
         if args.map_choice_only:
             map_choice_checks()
             print(f"{checks} private map-choice checks passed; complete story remains unverified.")
@@ -2245,7 +2256,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
+        indicator_checks();book_checks();bank2_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

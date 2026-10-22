@@ -476,6 +476,18 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
         if(hn_read8(m,SCRATCH+1))hn_write16(m,CLASSES+destination*2,value);
         else hn_write8(m,CONTROLS+destination,(uint8_t)value);advance(m,7);break;
     }
+    case 0x51:{
+        scratch(m,args,0,4);GameAddr target=hn_read32(m,SCRATCH);
+        if(target<=15){target=VARIABLES+target*4;hn_write32(m,SCRATCH,hn_read32(m,target));}
+        /* The original <=15 route calls the slot address itself. It is not a
+           second ordinary callback-pointer lookup. Only reviewed ROM leaves
+           are accepted here; their void contract does not consume a return. */
+        switch(target&~1u){
+        case 0x08043118:case 0x0804311C:case 0x08043120:break;
+        default:return fail(s,HN_SCRIPT_CALLBACK,op,target);
+        }
+        advance(m,4);break;
+    }
     case 0x52:
         hn_video_forced_blank(m,hn_read8(m,args));hn_write8(m,YIELDED,1);advance(m,1);break;
     case 0x53:

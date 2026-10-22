@@ -111,6 +111,20 @@
     {"repeat": 2, "steps": [{"frames": 1, "buttons": ["Down"]}, {"frames": 10}]},
     {"frames": 1, "buttons": ["A"]},
     {"frames": 240},
-    {"label": "River control after Tack-Q", "expect": {"frame": 20663, "map_bank": 2, "map_index": 11, "opcode": 33, "main_cursor": "0x0803E38E", "leader_x": 128.5, "leader_z": 200.5, "learned_words": 10, "seeds": 10}}
+    {"label": "River control after Tack-Q", "expect": {"frame": 20663, "map_bank": 2, "map_index": 11, "opcode": 33, "main_cursor": "0x0803E38E", "leader_x": 128.5, "leader_z": 200.5, "learned_words": 10, "seeds": 10}},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 60},
+    {"label": "Bridge choice reopened", "expect": {"frame": 20724, "opcode": 36, "main_cursor": "0x0803E4EF"}},
+    {"repeat": 4, "steps": [{"frames": 1, "buttons": ["Down"]}, {"frames": 10}]},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 180},
+    {"frames": 120},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 119},
+    {"label": "Bridge Lookie response", "expect": {"frame": 21189, "opcode": 26, "main_cursor": "0x0803E90E"}},
+    {"repeat": 3, "steps": [{"frames": 1, "buttons": ["A"]}, {"frames": 119}]},
+    {"frames": 100, "buttons": ["Right"]},
+    {"frames": 60},
+    {"label": "River eastern approach", "expect": {"frame": 21709, "map_bank": 2, "map_index": 11, "opcode": 33, "main_cursor": "0x0803E38E", "leader_x": 203.5, "leader_z": 200.5, "learned_words": 10, "seeds": 10}}
   ]
 }

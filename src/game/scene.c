@@ -13,6 +13,7 @@
 #include "game/scene_motion.h"
 #include "game/presets.h"
 #include "game/map_choice.h"
+#include "game/bank2.h"
 #include "game/particles.h"
 
 static unsigned menu_kind(HNMemory *m)
@@ -275,8 +276,6 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         hn_write8(m,result,(uint8_t)(left==right?0:left>right?1:2));*consumed=2;break;
     }
     case 0x08011EF4:hn_write8(m,HN_SAVED_CALL_DEPTH,hn_read8(m,0x03002BF0));break;
-    case 0x0802D190:if(!hn_motion_scene_actor(m,arguments))return HN_SCENE_RESOURCE;*consumed=1;break;
-    case 0x0802D2EC:if(!hn_motion_restore_actors(m))return HN_SCENE_RESOURCE;break;
     case 0x0801D414:{
         unsigned index=hn_read8(m,HN_RENDER_CLASS_LEADER);
         if(index>=hn_read8(m,HN_RENDER_INFO+16)||!hn_read32(m,HN_RENDER_SLOTS))return HN_SCENE_RESOURCE;
@@ -503,7 +502,8 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         hn_write16(m,0x0201DC40,keys);hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));break;
     }
     default:{
-        HNSceneResult result=hn_map_choice_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        HNSceneResult result=hn_bank2_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_map_choice_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_particles_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_scene_motion_callback(m,callback,arguments,consumed);
         if(result!=HN_SCENE_UNKNOWN)return result;
@@ -518,6 +518,7 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
                                          uint32_t *consumed,uint32_t *yield)
 {
     (void)slot;(void)arguments;
+    HNSceneResult bank=hn_bank2_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     HNSceneResult map=hn_map_choice_animation(m,callback,slot,arguments,consumed,yield);if(map!=HN_SCENE_UNKNOWN)return map;
     HNSceneResult motion=hn_scene_motion_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;
     switch(callback&~1u){

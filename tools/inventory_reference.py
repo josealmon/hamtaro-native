@@ -51,6 +51,11 @@ def dispatches() -> dict[int, list[str]]:
         ("text-task", "map_choice.c", "simple_apply"),
         ("render-slot", "map_choice.c", "hn_map_choice_slot"),
         ("main", "particles.c", "hn_particles_callback"),
+        ("main", "bank2.c", "main_contract"),
+        ("text-task", "bank2.c", "simple_apply"),
+        ("text-task", "bank2.c", "hn_bank2_apply"),
+        ("animation", "bank2.c", "hn_bank2_animation"),
+        ("argument-word", "script.c", "hn_main_command"),
     )
     for abi, filename, function in definitions:
         text = body((ROOT / "src/game" / filename).read_text(encoding="utf-8"), function)

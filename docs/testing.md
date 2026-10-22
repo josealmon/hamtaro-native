@@ -88,15 +88,16 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 20,663 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 21,709 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
 then select Sunny Peak, return the highlight to Clubhouse, select Sunny Peak again
 and confirm travel to player control in map 2:1. The route then enters the river
 scene, advances dialogue, executes Hamha, opens the bridge's filtered word menu,
-selects Tack-Q and returns to player control. Bridge progression and reconciliation
-are not established. The
+selects Tack-Q and returns to player control. It then reopens the menu, selects
+Lookie, advances the response and walks to the river's eastern approach. Bridge
+progression and reconciliation are not established. The
 JSON contains only button inputs and metadata checkpoints. The runner writes no
 save or capture, rejects unknown inputs and fails on any native runtime fault or
 checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
@@ -127,7 +128,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 948,988 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 984,970 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -201,6 +202,23 @@ jumps and overlapping position/script variables are compared with the original.
 The source's unusual integer wrapping and height overshoot are preserved. Fixtures
 use synthetic state and caller-provided resources, with no captures or extracted
 tables written to disk. Complete area/activity playthroughs remain separate evidence.
+
+The complete bank-2 actor/control/preset/height group uses the BIOS oracle:
+
+    python -B tools/compare_reference.py --bank2-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+This group passes 35,982 comparisons across all 120 C functions and three reviewed
+assembly leaves. It compares direct calls, 116 F4 task targets, 70 Main contracts,
+the height-latch animation's full-word yield and Main51's void dispatch. Fixtures
+cover all four panel stages, aliased stage resets, wrapped coordinates, conditional
+presets, original PRNG consumption, 480 consecutive motion updates, velocity clamps
+and exact signed height boundaries. Public checks reject void functions as Main1C
+callbacks and preserve the unusual Main51 slot-address failure. Resources stay in
+the private ROM; no captured state or extracted table is written. These checks
+do not establish the complete Sunny Peak route or a reconciliation. An exploratory
+continuation east from the passing scenario reaches map 2:17, then correctly
+reports missing render-motion initialization at 0x0801E45C; its connected motion
+families remain the next integration dependency group.
 
 The Ham-Chat book group can run separately:
 
