@@ -2,6 +2,7 @@
 #include "game/presets.h"
 #include "game/map_choice.h"
 #include "game/bank2.h"
+#include "game/wander.h"
 #include "game/state.h"
 #include "game/render.h"
 #include "game/transfer.h"
@@ -180,6 +181,9 @@ static bool task_callback(HNMemory *m,GameAddr callback)
     case 0x080CB398:animation=0x088BA4B4;break;
     case 0x080CB3AC:animation=0x088BA4C0;break;
     case 0x080CB3C4:animation=0x088ABE43;indicator=true;break;
+    /* These reviewed u32 callbacks ignore their argument register; F4 ignores return. */
+    case 0x0801C5F4:case 0x0801C66C:case 0x0801CB7C:case 0x0801CCE4:{
+        uint32_t ignored;return hn_wander_callback(m,callback,0,&ignored)==HN_SCENE_OK;}
     default:{HNSceneResult result=hn_bank2_apply(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         uint32_t ignored;result=hn_map_choice_apply(m,callback,&ignored);
         return result==HN_SCENE_UNKNOWN?hn_preset_apply(m,callback)==HN_SCENE_OK:result==HN_SCENE_OK;}

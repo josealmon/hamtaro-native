@@ -56,6 +56,8 @@ def dispatches() -> dict[int, list[str]]:
         ("text-task", "bank2.c", "hn_bank2_apply"),
         ("animation", "bank2.c", "hn_bank2_animation"),
         ("argument-word", "script.c", "hn_main_command"),
+        ("animation", "wander.c", "hn_wander_animation"),
+        ("main", "wander.c", "hn_wander_callback"),
     )
     for abi, filename, function in definitions:
         text = body((ROOT / "src/game" / filename).read_text(encoding="utf-8"), function)

@@ -14,6 +14,7 @@
 #include "game/presets.h"
 #include "game/map_choice.h"
 #include "game/bank2.h"
+#include "game/wander.h"
 #include "game/particles.h"
 
 static unsigned menu_kind(HNMemory *m)
@@ -502,7 +503,8 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         hn_write16(m,0x0201DC40,keys);hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));break;
     }
     default:{
-        HNSceneResult result=hn_bank2_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        HNSceneResult result=hn_wander_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_bank2_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_map_choice_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_particles_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_scene_motion_callback(m,callback,arguments,consumed);
@@ -518,6 +520,7 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
                                          uint32_t *consumed,uint32_t *yield)
 {
     (void)slot;(void)arguments;
+    HNSceneResult wander=hn_wander_animation(m,callback,slot,arguments,consumed,yield);if(wander!=HN_SCENE_UNKNOWN)return wander;
     HNSceneResult bank=hn_bank2_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     HNSceneResult map=hn_map_choice_animation(m,callback,slot,arguments,consumed,yield);if(map!=HN_SCENE_UNKNOWN)return map;
     HNSceneResult motion=hn_scene_motion_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;

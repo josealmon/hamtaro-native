@@ -1,5 +1,5 @@
 {
-  "name": "New game, basic Ham-Chat lessons and Sunny Peak river interactions",
+  "name": "New game, basic Ham-Chat lessons and Sunny Peak actor interactions",
   "steps": [
     {"frames": 100},
     {"repeat": 8, "steps": [{"frames": 1, "buttons": ["A"]}, {"frames": 119}]},
@@ -125,6 +125,25 @@
     {"repeat": 3, "steps": [{"frames": 1, "buttons": ["A"]}, {"frames": 119}]},
     {"frames": 100, "buttons": ["Right"]},
     {"frames": 60},
-    {"label": "River eastern approach", "expect": {"frame": 21709, "map_bank": 2, "map_index": 11, "opcode": 33, "main_cursor": "0x0803E38E", "leader_x": 203.5, "leader_z": 200.5, "learned_words": 10, "seeds": 10}}
+    {"label": "River eastern approach", "expect": {"frame": 21709, "map_bank": 2, "map_index": 11, "opcode": 33, "main_cursor": "0x0803E38E", "leader_x": 203.5, "leader_z": 200.5, "learned_words": 10, "seeds": 10}},
+    {"frames": 110, "buttons": ["Right"]},
+    {"frames": 180},
+    {"label": "Eastern map entrance", "expect": {"frame": 21999, "map_bank": 2, "map_index": 17, "opcode": 0, "main_cursor": "0x085A49FF", "leader_x": 0.5, "leader_z": 208.5}},
+    {"frames": 240},
+    {"frames": 40, "buttons": ["Right"]},
+    {"frames": 60},
+    {"label": "Eastern map control", "expect": {"frame": 22339, "map_bank": 2, "map_index": 17, "opcode": 33, "main_cursor": "0x08043BBF", "leader_x": 40.5, "leader_z": 208.5}},
+    {"frames": 120, "buttons": ["Right"]},
+    {"frames": 10},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 120},
+    {"label": "Eastern actor word choice", "expect": {"frame": 22590, "map_bank": 2, "map_index": 17, "opcode": 36, "main_cursor": "0x08043F09", "leader_x": 160.5, "leader_z": 208.5}},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 239},
+    {"label": "Eastern actor Hamha dialogue", "expect": {"frame": 22830, "opcode": 26, "main_cursor": "0x080448D9"}},
+    {"repeat": 7, "steps": [{"frames": 1, "buttons": ["A"]}, {"frames": 119}]},
+    {"label": "Eastern actor reply", "expect": {"frame": 23670, "opcode": 0, "main_cursor": "0x085AA7EB"}},
+    {"repeat": 4, "steps": [{"frames": 1, "buttons": ["A"]}, {"frames": 119}]},
+    {"label": "Eastern conversation completed", "expect": {"frame": 24150, "map_bank": 2, "map_index": 17, "opcode": 33, "main_cursor": "0x08043BBF", "leader_x": 156.5, "leader_z": 208.5, "learned_words": 10, "seeds": 10}}
   ]
 }

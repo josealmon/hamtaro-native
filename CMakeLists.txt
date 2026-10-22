@@ -17,7 +17,7 @@ add_library(hn_core STATIC
     src/gba/memory.c src/gba/bios.c src/gba/bios_math.c src/gba/video.c src/gba/timing.c src/gba/timer.c src/gba/audio.c src/gba/psg.c
     src/game/input.c src/game/random.c src/game/heap.c src/game/script.c src/game/scene.c src/game/scene_motion.c src/game/text.c src/game/book.c src/game/actor.c src/game/motion.c src/game/collision.c src/game/runtime.c
     src/game/video.c src/game/transfer.c src/game/world.c src/game/expression.c src/game/save.c src/game/task.c src/game/task_text.c src/game/choice.c
-    src/game/render.c src/game/presets.c src/game/map_choice.c src/game/particles.c src/game/bank2.c src/game/animation.c src/game/draw.c src/game/background.c src/game/graphics.c src/game/raster.c
+    src/game/render.c src/game/presets.c src/game/map_choice.c src/game/particles.c src/game/bank2.c src/game/wander.c src/game/animation.c src/game/draw.c src/game/background.c src/game/graphics.c src/game/raster.c
     src/game/audio.c src/game/audio_sequence.c src/game/audio_note.c src/game/audio_player.c
     src/game/audio_psg.c src/game/audio_mixer.c)
 target_include_directories(hn_core PUBLIC src)
