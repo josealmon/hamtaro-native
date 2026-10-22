@@ -98,6 +98,42 @@ static bool circle_window(HNMemory *m)
     }
     return !m->fault;
 }
+bool hn_raster_wave(HNMemory *m)
+{
+    unsigned line=hn_read16(m,0x04000006),phase=hn_read8(m,HN_SCANLINE_PHASE+1);
+    int32_t sine=(int16_t)hn_read16(m,HN_RENDER_SINE_TABLE+((line+phase)&255)*2);
+    hn_write16(m,0x04000018,(uint16_t)(sine>>4));
+    int position=(int16_t)(hn_read16(m,0x04000006)+hn_read16(m,HN_SCANLINE_RADIUS));uint16_t alpha;
+    if(position>112)alpha=0x1000;
+    else if(position<=55)alpha=0x0808;
+    else if(position<=64)alpha=0x0907;
+    else if(position<=72)alpha=0x0A06;
+    else if(position<=80)alpha=0x0B05;
+    else if(position<=88)alpha=0x0C04;
+    else if(position<=96)alpha=0x0D03;
+    else if(position<=104)alpha=0x0E02;
+    else alpha=0x0F01;
+    hn_write16(m,0x04000052,alpha);
+    if(hn_read16(m,0x04000006)==227){
+        hn_write8(m,HN_SCANLINE_PHASE,(uint8_t)(hn_read8(m,HN_SCANLINE_PHASE)+1));
+        if(!(hn_read8(m,HN_SCANLINE_PHASE)&1))hn_write8(m,HN_SCANLINE_PHASE+1,(uint8_t)(hn_read8(m,HN_SCANLINE_PHASE+1)+1));
+        unsigned y=hn_read16(m,HN_VIDEO_STATE+0x6C);
+        int32_t wave=(int32_t)((uint32_t)hn_read16(m,HN_RENDER_SINE_TABLE+hn_read8(m,HN_SCANLINE_PHASE+1)*2)<<16)>>19;
+        hn_write16(m,HN_SCANLINE_RADIUS,(uint16_t)((uint32_t)wave-y));
+    }
+    return !m->fault;
+}
+HNSceneResult hn_raster_callback(HNMemory *m,GameAddr callback,uint32_t *consumed)
+{
+    switch(callback&~1u){
+    case 0x0802E22C:
+        hn_video_hblank(m,1);hn_write16(m,HN_SCANLINE_RADIUS,hn_read16(m,HN_VIDEO_STATE+0x6C));
+        hn_write8(m,HN_SCANLINE_PHASE,0);hn_write8(m,HN_SCANLINE_PHASE+1,45);break;
+    case 0x0802E258:hn_video_hblank(m,0);break;
+    default:return HN_SCENE_UNKNOWN;
+    }
+    *consumed=0;return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+}
 bool hn_raster_hblank(HNMemory *m)
 {
     unsigned selector=hn_read8(m,HN_HBLANK_SELECTOR);
@@ -106,6 +142,7 @@ bool hn_raster_hblank(HNMemory *m)
     GameAddr callback=hn_read32(m,0x02000000+selector*4)&~1u;
     if(callback==0x08000578||callback==0x080CEA30)return !m->fault;
     if(callback==0x0800F4FC)return circle_window(m);
+    if(callback==0x0802E268)return hn_raster_wave(m);
     return false;
 }
 static bool begin(HNMemory *m,GameAddr state,GameAddr effect)

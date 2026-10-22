@@ -44,7 +44,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Map and core initialization | Adapted | Runtime tables read from ROM, task sentinel, render slots/order, background state and all 11 map banks tested at index 0 |
 | Objects and animation scripts | Partial | Physics, positions, priority ordering, affine reuse, OAM and animation/sound commands compared; animation callback bindings remain incomplete |
 | Background scripts and transforms | Adapted | All 61 command handlers, repeat/call flow, motion, clamping, affine layers and tilemap copies compared; invalid stacks/resources fail explicitly |
-| Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular HBlank callback compared, remaining scanline callbacks and timed DMA/PPU integration pending |
+| Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular and wave HBlank callbacks compared, remaining scanline callbacks and timed DMA/PPU integration pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
 | Scene actor snapshots | Adapted | Four 104-byte render snapshots, active-slot restoration and six modal map roundtrips compared; idle animation variants, optional slots and script cursor retention preserved |
@@ -52,19 +52,22 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Scene render presets | Adapted | All 77 functions in script_callbacks_render_presets.c and 28 required actor helpers compared; typed F4/task calls and 35 defined-zero Main callbacks, linked slots, indicators, graphics and live class selectors; full area/activity integration remains pending |
 | Bank-2 actor and scene families | Adapted | All 120 functions in map_bank2_render_callbacks.c, map_bank2_scene_control.c, map_bank2_scene_presets.c and map_bank2_height_callbacks.c compared; 116 argument-free task targets, 70 Main contracts, panel stages, randomized motion, height latches and one full-word animation yield; complete Sunny Peak integration remains pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
+| Scene actor state and panels | Adapted | 35 functions across 13 source families plus one shared cross-bank condition compared: snapshots, forward copy/swap, signed accelerations, class-target approach, panel presets and direction constructors; 27 reviewed argument-free task contracts; complete scene integration remains pending |
+| Actor render presets | Adapted | All 476 functions across five linked/neighbor/class/secondary/render-setup families compared; void/task ABI, captured auxiliary arguments, live selectors and direction sectors preserved; these functions are rejected as Main callbacks |
 | Map-choice scene control | Adapted | All 273 functions in map_choice_callbacks.c compared: 93 Main contracts, 253 argument-free task targets, five animation contracts and four slot helpers, including cursor skips/jumps, packed choices, motion, regions, phases and presets; complete area/activity integration remains pending |
 | Map particles | Adapted | All four functions in map_particles.c and the alternate parameter selection compared; initialization, reset boundaries, live parameter reads, scaling and field60-only hiding; timed scene integration remains pending |
 | Motion and collision | Adapted | Leader input/walk/run, action priority, map edge sampling/sliding, collision responses, event staging, follower routes, actor-position snapshots, transition animation/position selection and wrapped facing interpolation compared; full-game coverage remains pending |
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
+| Gameplay record slots and counters | Adapted | Eight allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and two allocation callbacks; complete inventory UI and save integration remain pending |
 | Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Ham-Chat book | Adapted | Acquisition, learned-word order, five language permutations, category/page selection, paired text contexts, counters, markers and cleanup compared; initial book display and return run natively; manual book navigation remains unverified |
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
-| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; later scene callbacks remain incomplete |
+| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select reaches map 10:5 and stops on the unadapted counter/sequence family; later scene callbacks remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | A 24,150-update native input scenario completes the basic lessons/reward, opens the destination map, reaches Sunny Peak, exercises river choices and completes a conversation in the eastern map; function-level save comparisons and atomic host persistence verified; live-window story and in-game save/reload playthrough remain pending |
+| New game, movement, in-game save/load | Partial | A 31,041-update native input scenario completes the basic lessons/reward, destination-map roundtrip, Sunny Peak river/eastern actor interactions, stairs, Heyhoo acquisition and an eleven-word book roundtrip; function-level save comparisons and atomic host persistence verified; live-window story and in-game save/reload playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -89,7 +92,11 @@ It reopens that menu, selects Lookie, advances the response and walks east to
 x=203.5, z=200.5. It then enters map 2:17, reaches player control, opens an actor's
 word menu, chooses Hamha and completes the conversation. Its last checkpoint
 returns control at x=156.5, z=208.5 with the ten learned words and ten seeds retained.
-This does not establish bridge progression, a reconciliation or a complete opening.
+The route then returns west, crosses the northern path into map 2:20, climbs the
+stairs to map 2:2 and triggers the stump conversation. It learns Heyhoo, increasing
+the word count from ten to eleven, opens the updated book, enters its first page
+and returns to movement. This does not establish battery removal, Bijou's rescue,
+a reconciliation or a complete opening.
 Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
@@ -152,7 +159,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-1,043,419 comparisons with the independent BIOS and PPU oracles.
+1,203,881 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -335,7 +342,7 @@ functions. Invalid palette extents fail instead of taking the original zero-coun
 wraparound path. Fade, alpha and mosaic modes preserve their distinct delay and
 completion rules. Raster state retains guest heap ownership, DMA0 register setup,
 window/layer restoration, byte/phase wrapping and the signed radius-update condition.
-The typed HBlank dispatcher supports the circular effect and known no-op callbacks;
+The typed HBlank dispatcher supports the circular effect, scanline wave/blend and known no-op callbacks;
 other callback addresses fail explicitly. Static snapshots and sampled callback
 comparisons do not establish raster-image fidelity or the real IRQ cadence. Main save-load
 commands preserve the failure cursor/depth behavior and reload the saved map with
@@ -461,9 +468,9 @@ are rejected; the unused group-0 record write/load path is not exposed.
 
 ## Remaining integration order
 
-1. Adapt the remaining story/scene callbacks, scanline effects and timed CPU transfers
-   as the connected native runtime reaches them.
-2. Extend the deterministic opening scenario through Sunny Peak's first interactions
+1. Review remaining area and shared scene families with their dependencies, then adapt
+   complete groups of story/scene callbacks, scanline effects and timed CPU transfers.
+2. Extend the deterministic opening scenario beyond Sunny Peak's first learned word
    and in-game save/reload, and verify the same paths in the actual Windows window.
 3. Expand coverage through the remaining story, secondary activities and minigames;
    establish input scenarios and compare story state and save effects with the reference.
@@ -536,3 +543,27 @@ source's no-op behavior. The extended native scenario now exercises these famili
 through eastern-map entry, wandering actors, facing and a complete conversation.
 Complete Sunny Peak story progression, the first reconciliation and later areas
 remain pending.
+
+The next area-dependency batch covers all 476 void actor presets across
+actor_animation_linked_presets.c, actor_animation_neighbor_presets.c,
+actor_class_animation_presets.c, actor_secondary_animation_presets.c and
+actor_render_setup_presets.c. Twenty-six already-reviewed implementations remain
+shared with the earlier presets. Auxiliary setup captures its byte-sized slot and
+parent arguments before calling helpers; separate source calls reload live selectors.
+No void return is repurposed as Main's consumed-argument count.
+
+Thirty-five scene actor/state/panel functions across 13 source families preserve
+the nine-byte class-coordinate approach state, fixed-point/signed boundaries,
+forward copy/swap order, two-slot backup/restore, screen-pair presets and direction
+constructors. One additional shared bank-3 value condition supports the bank-2
+scripts without claiming the rest of bank 3. Eight gameplay-record functions retain
+packed counters, the twelve-byte query result and original underflow/clamp behavior.
+The three-function scanline-wave family has typed Main/task/HBlank adapters with
+all-line threshold and frame-end phase comparisons; timed raster images remain
+unverified.
+
+tools/inventory_reference.py --area-bank 2 now finds explicit dispatch for all 383
+functions declared by the four recovered bank-2 script sources. This is a planning
+inventory: declarations can be unused, while literal shared-script targets and
+animation resources can introduce other dependencies. It proves neither a complete
+call graph nor Sunny Peak completion.

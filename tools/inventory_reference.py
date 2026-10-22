@@ -58,6 +58,12 @@ def dispatches() -> dict[int, list[str]]:
         ("argument-word", "script.c", "hn_main_command"),
         ("animation", "wander.c", "hn_wander_animation"),
         ("main", "wander.c", "hn_wander_callback"),
+        ("main", "scene_actor.c", "simple_presets"),
+        ("main", "scene_actor.c", "hn_scene_actor_callback"),
+        ("text-task", "scene_actor.c", "hn_scene_actor_task"),
+        ("text-task", "actor_presets.c", "hn_actor_presets_apply"),
+        ("main", "records.c", "hn_records_callback"),
+        ("main", "raster.c", "hn_raster_callback"),
     )
     for abi, filename, function in definitions:
         text = body((ROOT / "src/game" / filename).read_text(encoding="utf-8"), function)
@@ -105,17 +111,49 @@ def inventory(reference: Path, pattern: str) -> dict:
             "note": "Callback names are planning candidates. Dispatch presence does not prove semantics, ABI compatibility, reachability or playthrough coverage. Helpers and unnamed indirect targets require review; this is not a port completion percentage."}
 
 
+def area_inventory(reference: Path, bank: int) -> dict:
+    report = inventory(reference, "*")
+    symbols = {row["name"]: {**row, "source": group["source"]}
+               for group in report["sources"] for row in group["functions"]}
+    declarations = defaultdict(list)
+    files = sorted((reference / "src/data/graphics").glob(f"map_bank{bank}_*.c"))
+    if not files:
+        raise ValueError(f"No recovered script source for map bank {bank}")
+    for path in files:
+        for name in re.findall(r"^extern[^;\n]*?\b(\w+)\s*\(", path.read_text(encoding="utf-8"), re.M):
+            declarations[name].append(path.relative_to(reference).as_posix())
+    rows = []
+    for name, sources in sorted(declarations.items()):
+        row = dict(symbols[name]) if name in symbols else {"name": name, "native_dispatch_abis": []}
+        row["declared_in"] = sorted(set(sources))
+        rows.append(row)
+    return {"reference_revision": report["reference_revision"], "reference_dirty": report["reference_dirty"],
+            "bank": bank, "script_sources": [p.relative_to(reference).as_posix() for p in files],
+            "functions": rows, "note": "Declared externs are dependency-planning candidates, not a complete call graph. Literal script targets, animation resources and unused declarations need separate review. Dispatch presence does not prove ABI correctness, execution coverage or area completion."}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reference", type=Path, required=True)
     parser.add_argument("--source", default="*", help="Reference-relative source glob")
+    parser.add_argument("--area-bank", type=int, choices=range(11), help="Inspect declared dependencies of a recovered map-bank script family")
     parser.add_argument("--json", action="store_true", help="Include function metadata on stdout")
     args = parser.parse_args()
-    report = inventory(args.reference.resolve(strict=True), args.source)
+    if args.area_bank is not None and args.source != "*":
+        parser.error("Choose --source or --area-bank.")
+    report = (area_inventory(args.reference.resolve(strict=True), args.area_bank) if args.area_bank is not None
+              else inventory(args.reference.resolve(strict=True), args.source))
     if args.json:
         print(json.dumps(report, indent=2))
         return 0
     print(f"Reference: {report['reference_revision']} (dirty={report['reference_dirty']})")
+    if args.area_bank is not None:
+        missing = [row for row in report["functions"] if not row["native_dispatch_abis"]]
+        print(f"Bank {args.area_bank}: {len(report['script_sources'])} script sources, {len(report['functions'])} declared functions, {len(missing)} without explicit native dispatch")
+        for row in sorted(missing, key=lambda r: (r.get("source", ""), r["name"])):
+            print(f"{row.get('address', 'unresolved'):>10} {row['name']} ({row.get('source', 'no symbol metadata')})")
+        print(report["note"])
+        return 0
     print(" C    ASM   Named   Dispatch  Reference source")
     for row in report["sources"]:
         print(f"{row['c_functions']:4} {row['asm_functions']:4} {row['callback_named_candidates']:7} {row['candidates_with_dispatch']:9}  {row['source']}")

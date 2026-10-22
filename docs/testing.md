@@ -88,7 +88,7 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 24,150 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 31,041 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
@@ -98,8 +98,12 @@ scene, advances dialogue, executes Hamha, opens the bridge's filtered word menu,
 selects Tack-Q and returns to player control. It then reopens the menu, selects
 Lookie, advances the response and walks to the river's eastern approach. It enters
 map 2:17, reaches control, opens an actor word menu, selects Hamha and completes
-the conversation, returning to movement with its words and seed count retained. Bridge
-progression and reconciliation are not established. The
+the conversation, returning to movement with its words and seed count retained.
+It then returns to the river, takes the northern path through map 2:20, climbs the
+stairs to map 2:2 and triggers the stump conversation. Heyhoo acquisition increases
+the word count from ten to eleven; the scenario opens the updated book, enters its
+first page and returns to the same movement position. Battery removal, Bijou's
+rescue and reconciliation are not established. The
 JSON contains only button inputs and metadata checkpoints. The runner writes no
 save or capture, rejects unknown inputs and fails on any native runtime fault or
 checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
@@ -130,7 +134,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,043,419 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 1,203,881 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -405,6 +409,7 @@ Before adapting a source family, inspect its read-only planning inventory:
 
     python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP
     python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP --source "src/actors/*.c" --json
+    python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP --area-bank 2
 
 The default table groups C/ASM functions and callback-named candidates by original
 source. JSON additionally lists function names, addresses and explicit native
@@ -413,3 +418,24 @@ loads a ROM or executes reference code. A missing dispatch candidate needs revie
 an existing one still needs contract and behavior checks. This is neither a complete
 indirect-call inventory nor a completion percentage. Follow the batch order and
 validation boundaries in architecture.md; keep any redirected output outside Git.
+
+Additional focused area-dependency checks use:
+
+    python -B tools/compare_reference.py --scene-actors-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+    python -B tools/compare_reference.py --actor-presets-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+    python -B tools/compare_reference.py --records-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+    python -B tools/compare_reference.py --wave-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+These pass 31,758 scene actor comparisons, 85,885 actor preset comparisons,
+26,322 record comparisons and 16,497 scanline-wave comparisons. The scene group
+covers 35 functions across 13 families and one shared bank-3 condition, including
+approach completion, signed limits, all ARM shift counts, direction constructors,
+snapshots and copy aliases. The preset group covers all 476 functions in five
+families, Main rejection of void callbacks, F4 dispatch, direction sectors and
+captured auxiliary arguments versus live selector aliases. Record checks cover
+allocation/empty/full slots, twelve-byte result views, consuming zero counts,
+sentinel counters, arithmetic wrap and allocation callbacks. Wave checks cover
+all 228 scanlines, blend thresholds, signed wrapping, frame-end phase updates and
+typed Main/F4/HBlank calls. Public synthetic game tests cover these boundaries
+without original assets. These comparisons do not establish full-area progression,
+the complete inventory UI, SRAM integration or timed raster-image fidelity.

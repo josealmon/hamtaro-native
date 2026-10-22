@@ -53,9 +53,13 @@ def main() -> None:
     parser.add_argument("--map-choice-only", action="store_true", help="Run complete map-choice, particle and dependency comparisons (requires BIOS oracle)")
     parser.add_argument("--bank2-only", action="store_true", help="Run complete bank-2 actor/control/preset/height families (requires BIOS oracle)")
     parser.add_argument("--wander-only", action="store_true", help="Run connected actor-wandering families (requires BIOS oracle)")
+    parser.add_argument("--scene-actors-only", action="store_true", help="Run complete cutscene actor/state/panel families")
+    parser.add_argument("--actor-presets-only", action="store_true", help="Run all five actor-preset families (requires BIOS oracle)")
+    parser.add_argument("--records-only", action="store_true", help="Run game record allocation/query/consume/counter families")
+    parser.add_argument("--wave-only", action="store_true", help="Run complete scanline-wave family and typed IRQ dispatch")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
-    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or args.wander_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only))):
+    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or args.wander_only or args.actor_presets_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only,args.scene_actors_only,args.records_only,args.wave_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -2201,10 +2205,47 @@ def main() -> None:
         check_wander(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,
                      both=both,fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    def scene_actor_checks():
+        from reference_scene_actor import check_scene_actors
+        check_scene_actors(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
+                           bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
+                           native_bytes=native_bytes,command=command)
+
+    def actor_preset_checks():
+        from reference_actor_presets import check_actor_presets
+        check_actor_presets(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
+                            bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes)
+
+    def record_checks():
+        from reference_records import check_records
+        check_records(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,
+                      both=both,fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
+
+    def wave_checks():
+        from reference_wave import check_wave
+        check_wave(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
+                   fresh=fresh,equal=equal,compare=compare,command=command)
+
     if args.bios_oracle:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.records_only:
+            record_checks()
+            print(f"{checks} private record comparisons passed; complete story remains unverified.")
+            return
+        if args.wave_only:
+            wave_checks()
+            print(f"{checks} private scanline-wave comparisons passed; full raster timing remains unverified.")
+            return
+        if args.actor_presets_only:
+            actor_preset_checks()
+            print(f"{checks} private actor-preset comparisons passed; complete story remains unverified.")
+            return
+        if args.scene_actors_only:
+            scene_actor_checks()
+            print(f"{checks} private scene actor comparisons passed; complete story remains unverified.")
+            return
         if args.wander_only:
             wander_checks()
             print(f"{checks} private wandering comparisons passed; complete story remains unverified.")
@@ -2266,7 +2307,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();bank2_checks();wander_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
+        indicator_checks();book_checks();bank2_checks();wander_checks();scene_actor_checks();actor_preset_checks();record_checks();wave_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

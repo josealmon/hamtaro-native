@@ -1,4 +1,5 @@
 #include "game/presets.h"
+#include "game/actor_presets.h"
 #include "game/state.h"
 #include "game/render.h"
 #include "game/graphics.h"
@@ -163,7 +164,7 @@ HNSceneResult hn_preset_apply(HNMemory *m,GameAddr callback)
     case 0x080CD2B8:ok=apply(m,0x080CCF38)&&animation(m,16,0x088BA456,true);break;
     case 0x080CD2D0:ok=apply(m,0x080CCF08)&&animation(m,13,0x088B4002,true);break;
     case 0x080CD2E8:ok=apply(m,0x080CCF08)&&animation(m,13,0x088B79D7,true)&&linked(m,12,13,0x088B79F3,0xB0);break;
-    default:return HN_SCENE_UNKNOWN;
+    default:return hn_actor_presets_apply(m,callback);
     }
     return ok&&!m->fault?HN_SCENE_OK:HN_SCENE_RESOURCE;
 }

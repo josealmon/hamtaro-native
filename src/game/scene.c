@@ -15,6 +15,9 @@
 #include "game/map_choice.h"
 #include "game/bank2.h"
 #include "game/wander.h"
+#include "game/scene_actor.h"
+#include "game/records.h"
+#include "game/raster.h"
 #include "game/particles.h"
 
 static unsigned menu_kind(HNMemory *m)
@@ -503,7 +506,10 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         hn_write16(m,0x0201DC40,keys);hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));break;
     }
     default:{
-        HNSceneResult result=hn_wander_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        HNSceneResult result=hn_records_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_raster_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_scene_actor_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_wander_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_bank2_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_map_choice_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_particles_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
