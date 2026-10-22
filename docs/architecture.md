@@ -201,7 +201,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-1,835,252 checks with the independent BIOS and PPU oracles, including separately
+1,975,206 checks with the independent BIOS and PPU oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register

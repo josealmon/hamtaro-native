@@ -199,7 +199,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,835,252 checks,
+GBA machine. The complete run with BIOS and PPU oracles passes 1,975,206 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
