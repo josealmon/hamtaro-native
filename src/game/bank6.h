@@ -19,6 +19,10 @@ bool hn_bank6_target_position(HNMemory *,GameAddr coordinates,uint32_t index);
 /* The no-match legacy path reads the incoming R5 descriptor. */
 bool hn_bank6_restore_targets(HNMemory *,GameAddr arguments,GameAddr retained_r5);
 void hn_bank6_planar_transform(HNMemory *,GameAddr slot,uint32_t x,uint32_t y,uint32_t first,uint32_t second);
+HNSceneResult hn_bank6_chain_callback(HNMemory *,GameAddr callback,GameAddr arguments,uint32_t *consumed);
+HNSceneResult hn_bank6_chain_task(HNMemory *,GameAddr callback);
+HNSceneResult hn_bank6_chain_animation(HNMemory *,GameAddr callback,GameAddr slot,GameAddr arguments,
+                                     uint32_t *consumed,uint32_t *yield);
 #ifdef __cplusplus
 }
 #endif

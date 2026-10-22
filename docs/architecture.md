@@ -57,7 +57,8 @@ statically. A separate clean-machine validation remains pending.
 | Bank-3 main scene/activity family | Adapted | All 282 source functions accounted for across presets, source/spawn entries, pair board, phases/orbits, record text, chains and one shared condition; typed Main/task/animation contracts and helpers compared, including live links, byte wrapping and retained-register paths; complete activity progression and area integration remain pending |
 | Bank-4 scene/path family | Adapted | All 483 map_bank4_callbacks.c functions and the shared screen-indicator family compared; presentation, jump stages/windows, byte counters, audio distance scaling and three path followers retain reviewed Main/task/animation/helper contracts; complete area story/activity and timed scene integration remain pending |
 | Bank-5 scene/mechanism family | Adapted | All 207 map_bank5_callbacks.c functions and the four-function stairs/idle dependency family compared; grid choices, actor mirrors, lane states/outcomes, round timing and a typed VBlank callback; complete area progression and timed desktop integration remain pending |
-| Bank-6 main/final scene families | Adapted | All 243 functions in map_bank6_callbacks.c and map_bank6_final_callbacks.c plus the complete neighbor-pair dependency compared; oscillators/orbits, projected motion, cursor/rectangles, target selection/restore, task patterns and typed helpers; the separate 12-function chain family and full area integration remain pending |
+| Bank-6 main/final scene families | Adapted | All 243 functions in map_bank6_callbacks.c and map_bank6_final_callbacks.c plus the complete neighbor-pair dependency compared; oscillators/orbits, projected motion, cursor/rectangles, target selection/restore, task patterns and typed helpers; full area integration remains pending |
+| Bank-6 chain family | Adapted | All 12 map_bank6_chain_callbacks.c functions compared: three chain transforms, shared position, paired landing, containment/overlap, sine flight, fixed approach, wrapping and a live indicator; five Main, two argument-free task and seven animation contracts; full area/story and timed scene integration remain pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
@@ -71,14 +72,14 @@ statically. A separate clean-machine validation remains pending.
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; complete Items/Gems and timed raster integration remain pending |
-| Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; native empty-inventory entry/return runs, populated inventories and complete activity integration remain pending |
+| Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; empty entry/return and a one-item training-seat SDK view/save/reload run; multi-item inventories and complete activity integration remain pending |
 | Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
 | Status counters and stage sequence | Adapted | All 13 functions in map10_4_counter_sequence.c compared, including the complete 16-bit counter domain, five tile banks, windows, stage/scroll graphics and sequence phases; nine Main and twelve argument-free task contracts; later-stage live integration remains pending |
 | Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Ham-Chat book | Adapted | Acquisition, learned-word order, five language permutations, category/page selection, paired text contexts, counters, markers and cleanup compared; initial book display and return run natively; manual book navigation remains unverified |
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
-| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return and End Game confirmation connected; populated inventories and later activity panels remain incomplete |
+| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | A 144,204-update native input scenario completes the basic lessons/reward, Sunny Peak through Bijou, Ham-lift, Oopsie, Gossip-P and the first reconciliation, Spat/Harmony conversations, Clubhouse return, photo-room greeting, book/status, empty Items/Gems entry/return and eight End Game/Continue roundtrips; host-file/fresh-session validation is recorded below; full story and desktop playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
@@ -139,8 +140,8 @@ x=130.5, z=80.5, the same twenty-one words, ten seeds, Bijou and one rescued lov
 The route then opens Items, exercises direction/read/cancel inputs, returns to
 Status and opens Gems. Closing both panels restores the same photo-room actors,
 position and counters. An eighth End Game/Continue and a fresh host Session
-retain those fields. These inventories are empty in this story save; populated
-inventory and full Sunny Peak/photo-activity coverage remain pending.
+retain those fields. These inventories are empty in the canonical scenario's save;
+multi-item inventory and full Sunny Peak/photo-activity coverage remain pending.
 The scenario counts 144,204 input updates in total; the runtime frame counter resets
 on returning to the title. A separate replay through the actual host Session API writes private
 32 KiB SRAM files, stops the session and starts a fresh one from disk. Continue
@@ -154,6 +155,20 @@ file's exact bytes retained as its backup. Closing and relaunching the executabl
 then choosing Continue, restores the scene and the same three visible counters.
 WASD menu navigation and copied control settings were also reviewed. This establishes
 bounded desktop save/continuation evidence.
+
+An additional private route starts from erased SRAM, repeats the opening through
+the Clubhouse and travels by boat to Arnie. It covers the training-seat request
+and a seventh End Game/Continue roundtrip in map 2:18 at x=249.5, z=56.5, retaining
+21 words, ten seeds, Bijou and one rescued love. It passes 147,635 native updates
+and 155,127 host-session checks, including continuation from private SRAM files
+in a fresh host session. This is separate from the canonical 144,204-update route.
+A subsequent private SDK scout follows the request through an in-game save,
+uses Lookie with Seamore in the photo room and receives the training seat. Items
+shows its icon and description, accepts navigation/read input and returns to the
+scene. A further in-game save and Continue retains that item. The exported original
+SRAM also restores the scene and item in a separate SDK process. These are compiled
+runtime and native PPU observations; the extended desktop route, return of the
+seat to Arnie and completion of that quest remain pending.
 Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
@@ -216,7 +231,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-3,942,143 checks with the independent BIOS and PPU oracles, including separately
+3,976,678 checks with the independent BIOS and PPU oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
@@ -800,7 +815,7 @@ bank6_targets.c. Their 200 presentation presets, 30 Main contracts, 223 task
 targets, six animation contracts and four typed helpers have whole-family
 comparisons. The one-function actor_neighbor_animation_pair.c dependency adds a
 task target through the existing actor preset adapters. Calling-contract counts
-overlap; the separate map_bank6_chain_callbacks.c family remains unadapted.
+overlap; the separate map_bank6_chain_callbacks.c family is described below.
 
 Orbits preserve the low-byte slot and low-halfword class selectors, wrapped phase
 addition, upper-band clamp and signed center coordinates. Projected motion keeps
@@ -818,11 +833,29 @@ adapter accepts that guest address explicitly. The normal Main adapter uses
 0x030005E8, which the original MainScriptInvokeCallback loads into R5 before its
 indirect call. Both the actual Main opcode and arbitrary mapped retained
 descriptors are compared; this does not enable an unreviewed task/animation ABI.
-Area progression, chain animation and timed desktop integration remain pending.
-The three recovered bank-6 script sources declare 528 distinct functions; 526
-have explicit native dispatch. The two remaining declarations belong to the
-12-function chain family. Indirect and literal targets require separate review,
-so this declaration count is neither a remaining-function total nor area coverage.
+Area progression and timed desktop integration remain pending.
+The three recovered bank-6 script sources declare 528 distinct functions, all with
+explicit native dispatch after the chain family. Indirect and literal targets
+require separate review; this declaration count does not establish area coverage.
+
+The complete 12-function chain family uses bank6_chain.c. Its five Main contracts,
+two argument-free task targets and seven animation contracts preserve full-word
+yield values, distinct consumed counts and pointer identity. First-chain phase
+thresholds use the full halfword while interpolation uses its low byte. Phase 65
+retains both attached actors' Y positions. The three transforms preserve wrapped
+products, shared-position capture and live slot/selector reads. Their zero affine
+sentinel can allocate matrix zero again on a later call, and exhausted allocation
+retains the raw index 32 and its usage write.
+
+The second chain captures both argument bytes before allocation. Its null internal
+call discards the original two BIOS reads: those values never enter calculations
+or writes. The private CPU oracle varies synthetic bytes for these reads; the
+native adapter needs no BIOS image and does not model their bus/timing effects.
+Landing and rectangle callbacks retain signed strict boundaries, paired class
+coordinates, original facing animations and pending-script flags. Flight keeps
+halfword counters, invalid-slot class 460, wrapped branch thresholds and flag-based
+continuation; wrapping tests the signed sum before a single Y decrement. Whole
+function-family comparisons do not establish complete timed scene or area play.
 
 A separate private input-only scout completes the initial Ham-Jam conversation,
 No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement

@@ -199,7 +199,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 3,942,143 checks,
+GBA machine. The complete run with BIOS and PPU oracles passes 3,976,678 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -692,7 +692,25 @@ transforms. Target restoration compares matched selectors, explicit retained R5
 descriptors and the real MainScriptInvokeCallback scratch-address convention.
 Public synthetic tests include duplicate identifier removal, phase wrap/clamps,
 raw affine failure writes, signed coordinates, strict rectangle edges and zero
-movement duration. Full bank-6 story, chains and desktop coverage remain pending.
+movement duration. Full bank-6 story and desktop coverage remain pending.
+
+The complete 12-function bank-6 chain family has a separate focused command:
+
+    python -B tools/compare_reference.py --bank6-chain-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+Its 34,535 comparisons cover every source entry, five Main contracts, two reviewed
+F4 targets and seven animation contracts, including actual script command calls
+and rejection through inappropriate interfaces. Fixtures vary the phase's low byte
+and high halfword, allocation sentinel/exhaustion, duplicate/raw slot selectors,
+captured positions, arguments overwritten by affine allocation, live selectors,
+signed rectangle edges, landing overflow, flight flags/counters and Y/Z wrap sums.
+The original second-chain null call performs two unused BIOS byte reads. Only for
+these comparisons, the CPU oracle maps varying synthetic bytes and removes that
+mapping afterward; they are discarded by the native adapter. No BIOS contents are
+embedded, and BIOS bus history/timing is not claimed. Public synthetic checks also
+cover repeated allocation of matrix zero, phase-65 Y retention, preserved yield,
+strict edges, signed division and invalid calling forms. These checks run in the
+full suite; complete scene/story and desktop integration remain pending.
 
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:
@@ -758,3 +776,18 @@ The actual Windows executable also opens both empty panels with keyboard input
 and returns through Status to the photo room. Populated inventory scrolling and
 text paging remain separate gameplay integration checks.
 The complete desktop conversation/activity remains a separate pending check.
+
+A separate private route repeats the erased-SRAM opening through the Clubhouse,
+travels by boat to Arnie and exercises the training-seat request plus a seventh
+End Game/Continue. It passes 147,635 input updates and 155,127 host-session checks,
+including a fresh host session from disk in map 2:18 at x=249.5, z=56.5 with the
+same 21 words, ten seeds, partner and rescued love. The canonical 144,204-update
+scenario and its eight save cycles remain separate.
+Further input-only SDK exploration returns to the photo room, uses Lookie with
+Seamore and receives the training seat. Its populated Items panel displays one
+item's icon and description and accepts navigation/read/cancel. An in-game save,
+Continue and a separate SDK process loaded from the exported original 32 KiB SRAM
+retain that item. The source profile is read-only; the development checkpoint
+has one prior-copy backup. These bounded SDK observations do not establish a
+complete desktop activity or the return of the seat to Arnie. Multiple-item
+scrolling, populated Gems and the rest of the quest remain pending.

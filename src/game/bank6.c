@@ -178,7 +178,8 @@ HNSceneResult hn_bank6_callback(HNMemory *m,GameAddr callback,GameAddr arguments
     }
     case 0x080A3B7C:*consumed=word(m,hn_render_slot(m,19)+0x20)<=0x3A7FFF?5:0;break;
     case 0x080A3BA4:*consumed=word(m,hn_render_slot(m,selected(m,0))+0x20)<word(m,hn_render_slot(m,selected(m,2))+0x20)?5:0;break;
-    default:{HNSceneResult result=hn_bank6_targets_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;return hn_bank6_preset_callback(m,callback,consumed);}
+    default:{HNSceneResult result=hn_bank6_targets_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_bank6_chain_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;return hn_bank6_preset_callback(m,callback,consumed);}
     }
     return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
 }
@@ -193,7 +194,7 @@ HNSceneResult hn_bank6_task(HNMemory *m,GameAddr callback)
     case 0x080A09F0:case 0x080A1070:case 0x080A1E40:case 0x080A1ED4:case 0x080A1F18:
     case 0x080A21D4:case 0x080A2744:case 0x080A2994:case 0x080A2C34:case 0x080A2C90:case 0x080A2CE8:case 0x080A2D74:
     case 0x080A39CC:case 0x080A3B38:case 0x080A3B7C:case 0x080A3BA4:{uint32_t ignored;return hn_bank6_callback(m,callback,0,&ignored);}
-    default:return hn_bank6_presets(m,callback);
+    default:{HNSceneResult result=hn_bank6_chain_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result;return hn_bank6_presets(m,callback);}
     }
     return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
 }
@@ -216,7 +217,8 @@ HNSceneResult hn_bank6_animation(HNMemory *m,GameAddr callback,GameAddr slot,Gam
     }
     case 0x080A2094:
         if(word(m,hn_render_slot(m,10)+0x20)<=0x3FFFFF){hn_write8(m,0x030021E0,hn_read8(m,0x030021E0)|4);hn_write16(m,0x03002A80,9);}*yield=1;break;
-    default:return hn_bank6_targets_animation(m,callback,slot,arguments,consumed,yield);
+    default:{HNSceneResult result=hn_bank6_targets_animation(m,callback,slot,arguments,consumed,yield);if(result!=HN_SCENE_UNKNOWN)return result;
+        return hn_bank6_chain_animation(m,callback,slot,arguments,consumed,yield);}
     }
     return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
 }
