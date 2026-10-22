@@ -60,6 +60,7 @@ statically. A separate clean-machine validation remains pending.
 | Bank-6 main/final scene families | Adapted | All 243 functions in map_bank6_callbacks.c and map_bank6_final_callbacks.c plus the complete neighbor-pair dependency compared; oscillators/orbits, projected motion, cursor/rectangles, target selection/restore, task patterns and typed helpers; full area integration remains pending |
 | Bank-6 chain family | Adapted | All 12 map_bank6_chain_callbacks.c functions compared: three chain transforms, shared position, paired landing, containment/overlap, sine flight, fixed approach, wrapping and a live indicator; five Main, two argument-free task and seven animation contracts; full area/story and timed scene integration remain pending |
 | Shared presentation families | Adapted | All 56 functions across nine bank-7 height/preset, region-motion, background/reset/scroll, window and tilemap-transfer families compared, including two existing modal roots; 28 Main, 40 task, six animation and six helper contracts, with overlaps; complete scene/activity and timed rendering integration remain pending |
+| Bank-7 tile board and scene presets | Adapted | All 32 functions in tile_board_callbacks.c and scene_render_presets.c compared: five Main, 30 argument-free task contracts and one typed helper, with overlaps; byte cursors/cells, special connections, tile motion, arrows and live scene selectors; complete puzzle/area progression remains pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
@@ -175,6 +176,29 @@ Bijou and one rescued love from private 32 KiB SRAM in a fresh host session. An 
 inspection after Continue also shows the empty Items panel after handing over the
 seat. These are compiled runtime, host-file and native PPU observations; the actual
 desktop route and complete Sunny Peak progression remain pending.
+
+A longer private input-only route completes the cave maze, reunites Arnie and his
+brother, learns Hamigos and rescues the second love. From erased SRAM, 218,961
+native updates and 228,856 host-session checks pass. Original End Game/Continue
+and a fresh file-backed session retain map 2:9 at x=96.5, z=80.5, 23 words, one
+seed, Bijou and two rescued loves. This extends compiled-runtime and save evidence;
+the corresponding complete desktop route remains unverified.
+
+Returning to map 2:12 after using the oilcan exposes an original floating-bus
+read: a saved animation variable is reused as the collision-list source. A private
+mGBA replay from the same SRAM retains that list and continues normally. The three
+reviewed record-index LDRH sites read the ROM-prefetched Thumb halfword when the
+record address is above 0x0FFFFFFF, which terminates the list before reading flags.
+The native adapters preserve those reads, including odd-address rotation. Ordinary
+memory accesses and unreviewed record-field reads retain explicit faults. This is
+a bounded calling-site adaptation, not general CPU or floating-bus emulation.
+The extended erased-SRAM route passes 237,173 native input updates through the
+oilcan purchase/use, lever interaction, map 2:12 entry and original End Game/Continue.
+It retains x=32.5, z=128.5, 23 words, two seeds, Bijou and two rescued loves.
+A second replay passes 247,641 host-session checks and restores the same fields
+from private 32 KiB SRAM files in a fresh session.
+This proves the reported return/save path; complete cart activity and remaining
+Sunny Peak progression still require validation.
 Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
@@ -237,7 +261,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-4,015,796 checks with the independent BIOS and PPU oracles, including separately
+4,157,841 checks with the independent BIOS, PPU and floating-bus oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
@@ -889,6 +913,23 @@ of a task absent from the list fails explicitly. These malformed-state guards do
 not establish original caller-stack or invalid-list parity. Source resources remain
 in the player's ROM; complete credits/window sequences and timed desktop presentation
 still require integration checks.
+
+The bank-7 tile-board and scene-preset families use bank7.c. All 32 original
+entries have reviewed contracts: five Main callbacks, 30 argument-free task
+targets and one two-word helper. The move callback clears its outputs before
+reading the direction and consumes one byte. It preserves the special cursor
+connections between 0, 10 and 4, conditional movement into an empty cell, byte
+wrapping, signed scaled velocities and the RAM direction-offset reload after
+the render setter. Arrow coordinates are captured before construction while the
+cursor and neighboring cells are read live after each constructor. Unused arrows
+retain their previous state. Animation, coordinate and vector tables stay in ROM.
+
+The 26 scene presets retain raw class selectors, neighbor wrapping, constructor
+and graphics order, half-cell positions, background resets and the indicator.
+Their void returns acquire only a task contract; Main never invents a consumed
+count. The recovered bank-7 script source now has explicit dispatch for all 141
+declared functions. This is a structural dependency census, not evidence that the
+complete puzzle, final area or story has run natively.
 
 A separate private input-only scout completes the initial Ham-Jam conversation,
 No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement

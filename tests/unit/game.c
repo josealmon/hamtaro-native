@@ -16,6 +16,7 @@
 #include "game/bank4.h"
 #include "game/bank5.h"
 #include "game/bank6.h"
+#include "game/bank7.h"
 #include "game/presentation.h"
 #include "game/save_group3.h"
 #include "game/record_menu.h"
@@ -960,6 +961,23 @@ static void collision_contract(void)
     CHECK(hn_read32(&memory,slots+0x24)==10u*65536&&!hn_read32(&memory,slots+0x2C)&&hn_read8(&memory,0x03001F8C)==3);
     hn_write32(&memory,0x030021F0,record);CHECK(hn_collision_has_record(&memory,100,100,&result)&&result==1);
     hn_write8(&memory,other+0x60,0);CHECK(hn_collision_has_record(&memory,100,100,&result)&&result==0);
+    /* Synthetic Thumb prefetch values terminate floating-bus record scans.
+       Leave the following entry invalid to prove the scan actually stops. */
+    const unsigned prefetch[]={0x7D40,0x7EC8,0x8274};
+    for(unsigned i=0;i<3;i++){rom[prefetch[i]]=0xFF;rom[prefetch[i]+1]=1;}
+    hn_write32(&memory,0x030021F4,0x01000000);
+    const GameAddr unmapped[]={0x10000000,0x20001235,0xFFFFFFFE,0xFFFFFFFF};
+    for(unsigned i=0;i<4;i++){
+        hn_write32(&memory,0x030021F0,unmapped[i]);
+        CHECK(hn_collision_has_record(&memory,100,100,&result)&&result==0);
+        CHECK(hn_collision_records(&memory,0,0,true));CHECK(hn_collision_records(&memory,0,0,false));
+        CHECK(!memory.fault);
+    }
+    /* An index equal to the count still enters the record: other unmapped
+       fields remain unsupported and fail instead of silently disappearing. */
+    rom[0x7D40]=2;rom[0x7D41]=0;hn_write32(&memory,0x030021F0,0x10000000);
+    CHECK(!hn_collision_has_record(&memory,100,100,&result)&&memory.fault);
+    memory.fault=false;memory.fault_address=0;hn_write32(&memory,0x030021F0,record);hn_write32(&memory,0x030021F4,0);
     hn_write16(&memory,HN_KEY_STATE+2,2);hn_write8(&memory,0x030021E0,2);hn_motion_control(&memory);
     CHECK(hn_read8(&memory,0x03000785)==8&&hn_read8(&memory,0x03002C50)==1);
     hn_write16(&memory,HN_KEY_STATE+2,1);hn_write8(&memory,0x030021E0,8);hn_write8(&memory,0x03002C50,7);hn_motion_control(&memory);
@@ -2558,6 +2576,57 @@ static void presentation_contract(void)
     CHECK(hn_presentation_callback(&memory,0x080CC3C9,args,&consumed)==HN_SCENE_OK&&hn_read8(&memory,first+0x64)==32&&hn_read8(&memory,second+0x64)==32);
     CHECK(hn_read8(&memory,HN_AFFINE_USAGE+32)==1&&!memory.fault);free(rom);
 }
+static void bank7_contract(void)
+{
+    uint8_t *rom=calloc(1,0x1000000);CHECK(rom!=NULL);hn_memory_init(&memory,rom,0x1000000);
+    GameAddr base=0x02008000,controls=HN_SCENE_CONTROLS,args=0x0203F000,offsets=0x020018E8;
+    hn_write32(&memory,HN_RENDER_SLOTS,base);hn_write8(&memory,HN_RENDER_INFO+16,64);
+    hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,13);hn_write8(&memory,0x030021B5,32);
+    uint32_t consumed=99;
+    CHECK(hn_bank7_callback(&memory,0x080B91A9,args,&consumed)==HN_SCENE_OK&&!consumed);
+    for(unsigned i=0;i<10;i++)CHECK(hn_read8(&memory,controls+0x1A0+i)==i);
+    CHECK(hn_bank7_callback(&memory,0x080B94B5,args,&consumed)==HN_SCENE_OK&&!hn_read8(&memory,controls));
+    hn_write8(&memory,controls+0x1A9,8);
+    CHECK(hn_bank7_callback(&memory,0x080B94B5,args,&consumed)==HN_SCENE_OK&&hn_read8(&memory,controls)==1);
+    const uint8_t starts[]={0,10,4,10},directions[]={0,1,2,3},ends[]={10,0,10,4};
+    for(unsigned i=0;i<4;i++){
+        hn_write8(&memory,controls+0x1AA,starts[i]);hn_write8(&memory,args,directions[i]);hn_write8(&memory,controls+0x60,99);
+        CHECK(hn_bank7_callback(&memory,0x080B92CD,args,&consumed)==HN_SCENE_OK&&consumed==1);
+        CHECK(hn_read8(&memory,controls+0x1AA)==ends[i]&&hn_read8(&memory,controls)==1&&!hn_read8(&memory,controls+0x60));
+    }
+    hn_write8(&memory,controls+0x1AA,3);hn_write8(&memory,args,1);hn_write32(&memory,base+10*104+0x2C,0x12345678);
+    CHECK(hn_bank7_callback(&memory,0x080B92CD,args,&consumed)==HN_SCENE_OK&&!hn_read8(&memory,controls));
+    CHECK(hn_read32(&memory,base+10*104+0x2C)==0x12345678&&hn_read8(&memory,controls+0x1AA)==3);
+    CHECK(hn_bank7_task(&memory,0x080B92CD)==HN_SCENE_UNKNOWN);
+    hn_write8(&memory,controls+0x1AA,0);hn_write8(&memory,controls,3);
+    CHECK(hn_bank7_callback(&memory,0x080B92CD,controls,&consumed)==HN_SCENE_OK&&hn_read8(&memory,controls+0x1AA)==10);
+    hn_write16(&memory,offsets+6,1);put16(rom+0x6CE1D8+12,(uint16_t)-256);put16(rom+0x6CE1D8+14,1);
+    hn_write8(&memory,controls+0x1A4,2);hn_write8(&memory,controls+0x1A5,0);
+    CHECK(hn_bank7_move_tile(&memory,0x12340004,0xABCD0003));
+    CHECK(!hn_read8(&memory,controls+0x1A4)&&hn_read8(&memory,controls+0x1A5)==2&&hn_read8(&memory,controls+0x60)==1);
+    CHECK(hn_read32(&memory,base+26*104+0x24)==0xFFFF0000&&hn_read32(&memory,base+26*104+0x28)==256&&!hn_read32(&memory,base+26*104+0x2C));
+    hn_write8(&memory,controls+0x1A4,3);hn_write8(&memory,controls+0x60,0);
+    CHECK(hn_bank7_move_tile(&memory,4,3)&&hn_read8(&memory,controls+0x1A4)==3&&!hn_read8(&memory,controls+0x60));
+    hn_write8(&memory,controls+0x1AA,255);hn_write8(&memory,base+35*104+0x60,7);hn_write8(&memory,base+37*104+0x60,9);
+    CHECK(hn_bank7_callback(&memory,0x080B94F1,args,&consumed)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,base+34*104+0x60)==1&&hn_read8(&memory,base+36*104+0x60)==1);
+    CHECK(hn_read8(&memory,base+35*104+0x60)==7&&hn_read8(&memory,base+37*104+0x60)==9);
+    hn_write32(&memory,HN_RENDER_SLOTS,offsets-25*104-0x24);hn_write16(&memory,offsets,3);
+    put16(rom+0x6CE1D8,1);put16(rom+0x6CE1D8+2,2);hn_write8(&memory,controls+0x1A4,1);hn_write8(&memory,controls+0x1A7,0);
+    CHECK(hn_bank7_move_tile(&memory,4,0)&&hn_read16(&memory,offsets)==256);
+    CHECK(hn_read8(&memory,controls+0x1A4+256)==1&&!hn_read8(&memory,controls+0x1A4));
+    hn_write32(&memory,HN_RENDER_SLOTS,base);hn_write8(&memory,0x03002C04,19);hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,19);hn_write8(&memory,0x03002170,0xA5);
+    CHECK(hn_bank7_task(&memory,0x080B98A5)==HN_SCENE_OK&&hn_read32(&memory,base+19*104+4)==0x088C99F4&&hn_read8(&memory,0x03002170)==0xA5);
+    CHECK(hn_bank7_callback(&memory,0x080B98A5,args,&consumed)==HN_SCENE_UNKNOWN);
+    CHECK(hn_bank7_task(&memory,0x080B9701)==HN_SCENE_OK&&hn_bank7_callback(&memory,0x080B9701,args,&consumed)==HN_SCENE_UNKNOWN);
+    CHECK(hn_bank7_task(&memory,0x080B9705)==HN_SCENE_OK);
+    CHECK(hn_read32(&memory,base+16*104+0x18)==0x608000&&hn_read32(&memory,base+16*104+0x20)==0x408000);
+    CHECK(hn_read32(&memory,base+17*104+4)==0x088C97D4&&hn_read8(&memory,base+17*104+0x65)==16);
+    hn_write32(&memory,HN_RENDER_STATES,0x0201A000);hn_write8(&memory,HN_BACKGROUND_COUNT,0);
+    CHECK(hn_bank7_task(&memory,0x080B9AE9)==HN_SCENE_OK&&hn_read32(&memory,0x0201A000+4*80+0x14)==0x088F4E2F);
+    CHECK(hn_read32(&memory,base+25*104+4)==0x088F4AF5&&hn_read8(&memory,base+25*104+0x62)==0x71);
+    CHECK(!memory.fault);free(rom);
+}
 static void runtime_contract(void)
 {
     HNGame *game=malloc(sizeof(*game));CHECK(game!=NULL);
@@ -2596,5 +2665,5 @@ int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
     text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();indicator_contract();book_contract();actor_snapshot_contract();preset_contract();map_choice_contract();particles_contract();scene_motion_contract();bank2_contract();wander_contract();scene_actor_contract();actor_presets_contract();records_contract();wave_contract();counter_scene_contract();shared_motion_contract();runtime_contract();
-    scene_effects_contract();bank3_contract();bank4_contract();bank5_contract();bank6_contract();bank6_chain_contract();presentation_contract();group3_contract();record_menu_contract();item_selection_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
+    scene_effects_contract();bank3_contract();bank4_contract();bank5_contract();bank6_contract();bank6_chain_contract();bank7_contract();presentation_contract();group3_contract();record_menu_contract();item_selection_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

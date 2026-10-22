@@ -9,10 +9,12 @@ import ctypes as C
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import random
 import re
 import struct
+import subprocess
 from contextlib import nullcontext
 from unicorn import (Uc, UC_ARCH_ARM, UC_MODE_THUMB, UC_HOOK_INTR,
                      UC_HOOK_MEM_WRITE, UC_HOOK_MEM_READ, UC_HOOK_CODE)
@@ -38,6 +40,7 @@ def main() -> None:
                         help="Read-only decompilation checkout containing build/function-symbols.json")
     parser.add_argument("--library", type=Path, default=ROOT / "build/Release/hn_reference_probe.dll")
     parser.add_argument("--video-oracle", type=Path, help="Optional separate RGB555 mGBA PPU oracle")
+    parser.add_argument("--bus-oracle", type=Path, help="Optional separate mGBA floating-bus halfword oracle")
     parser.add_argument("--oracle-runtime-dir", type=Path, help="Optional runtime DLL directory for the PPU oracle")
     parser.add_argument("--audio-only", action="store_true", help="Run just the audio function comparisons")
     parser.add_argument("--scenes-only", action="store_true", help="Run scene menus, input, text and transition comparisons")
@@ -67,6 +70,7 @@ def main() -> None:
     parser.add_argument("--bank6-dynamics-only", action="store_true", help="Run bank-6 main/final motion, cursor and target contracts (requires BIOS oracle)")
     parser.add_argument("--bank6-chain-only", action="store_true", help="Run the complete bank-6 chain family (requires BIOS oracle)")
     parser.add_argument("--presentation-only", action="store_true", help="Run complete shared presentation families (requires BIOS oracle)")
+    parser.add_argument("--bank7-only", action="store_true", help="Run complete bank-7 board/preset families (requires BIOS oracle)")
     parser.add_argument("--wander-only", action="store_true", help="Run connected actor-wandering families (requires BIOS oracle)")
     parser.add_argument("--scene-actors-only", action="store_true", help="Run complete cutscene actor/state/panel families")
     parser.add_argument("--actor-presets-only", action="store_true", help="Run all five actor-preset families (requires BIOS oracle)")
@@ -801,6 +805,41 @@ def main() -> None:
                     equal(native("hn_collision_records",3,C.c_bool)(memory,case,10,resolve),True,"native collision records")
                     call(name,case,10);compare("collision record list",ranges)
         equal(response_hits[0]>0,True,"circle response exercised");equal(response_hits[1]>0,True,"rectangle response exercised")
+        if args.bus_oracle:
+            # Independent mGBA bus loads supply the original LDRH results.
+            # The three reviewed ROM sites all stop before reading flags.
+            sites=(0x08007D40,0x08007EC8,0x08008274)
+            addresses=(0x10000000,0x20001235,0xFFFFFFFE,0xFFFFFFFF)
+            requests=[]
+            for site in sites:
+                offset=site-0x08000000
+                previous=int.from_bytes(rom[offset-2:offset],"little")
+                prefetched=int.from_bytes(rom[offset:offset+2],"little")
+                requests.extend((address,previous,prefetched) for address in addresses)
+            environment=os.environ.copy()
+            if args.oracle_runtime_dir:environment["PATH"]=str(args.oracle_runtime_dir)+os.pathsep+environment.get("PATH","")
+            reply=subprocess.run([str(args.bus_oracle.resolve())],input=b"".join(struct.pack("<3I",*r) for r in requests),
+                                 stdout=subprocess.PIPE,check=True,env=environment,timeout=30).stdout
+            equal(len(reply),len(requests)*4,"complete floating-bus oracle response")
+            values=struct.unpack(f"<{len(requests)}I",reply)
+            fixture(0);both(record+6,b"\0\0");both(obstacle+0x60,b"\0")
+            for site_index,site in enumerate(sites):
+                for address_index,address in enumerate(addresses):
+                    expected=values[site_index*len(addresses)+address_index]
+                    equal(expected>255,True,"ROM-prefetched index terminates every u8 render count")
+                    for count in range(256):
+                        both(0x03002DC0,bytes([count]))
+                        for first in (0,1):
+                            both(0x030021F0,struct.pack("<3I",record if first else address,address if first else 0,0))
+                            if site_index==0:
+                                equal(has(memory,100,100,C.byref(output)),True,"native floating-bus collision lookup")
+                                equal(output.value,0,"floating-bus lookup has no hit")
+                            else:
+                                equal(native("hn_collision_records",3,C.c_bool)(memory,0,10,site_index==1),True,"native floating-bus record scan")
+                            compare("floating-bus terminating record preserves RAM",ranges)
+            print("6144 collision-list scans matched independent floating-bus termination, including every render count.")
+        else:
+            print("Floating-bus collision checks skipped; supply --bus-oracle to include them.")
         for case in range(192):
             fixture(case,case%2)
             if case%3:both(0x030021F0,struct.pack("<2I",record,0))
@@ -2324,6 +2363,11 @@ def main() -> None:
         check_presentation(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                            fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    def bank7_checks():
+        from reference_bank7 import check_bank7
+        check_bank7(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
+                     fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
+
     def scene_effects_checks():
         from reference_shared_motion import check_scene_effects
         check_scene_effects(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
@@ -2343,6 +2387,10 @@ def main() -> None:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.bank7_only:
+            bank7_checks()
+            print(f"{checks} private bank-7 comparisons passed; complete puzzle/story remains unverified.")
+            return
         if args.presentation_only:
             presentation_checks()
             print(f"{checks} private presentation comparisons passed; complete story remains unverified.")
@@ -2498,7 +2546,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();bank2_checks();bank3_late_checks();bank3_preset_checks();bank3_game_checks();bank3_chain_checks();bank4_checks();bank5_checks();bank6_checks();bank6_chain_checks();presentation_checks();group3_checks();wander_checks();scene_actor_checks();shared_motion_checks();scene_effects_checks();actor_preset_checks();actor_animation_checks();actor_sequence_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
+        indicator_checks();book_checks();bank2_checks();bank3_late_checks();bank3_preset_checks();bank3_game_checks();bank3_chain_checks();bank4_checks();bank5_checks();bank6_checks();bank6_chain_checks();presentation_checks();bank7_checks();group3_checks();wander_checks();scene_actor_checks();shared_motion_checks();scene_effects_checks();actor_preset_checks();actor_animation_checks();actor_sequence_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

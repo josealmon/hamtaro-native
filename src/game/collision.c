@@ -7,6 +7,18 @@ enum { STATUS=0x03001FA8,RESPONSE=0x03001F8C,CONTACT=0x03002174,RECORDS=0x030021
 static int32_t absolute(int32_t value){return value<0?(int32_t)(0u-(uint32_t)value):value;}
 static GameAddr render_slot(HNMemory *m,unsigned index)
 {return index<=hn_read8(m,HN_RENDER_INFO+16)&&hn_read32(m,HN_RENDER_SLOTS)?hn_render_slot(m,index):0;}
+static uint32_t record_index(HNMemory *m,GameAddr record,GameAddr prefetch)
+{
+    /* These three ROM LDRH sites read the prefetched Thumb halfword on the
+       unmapped bus above 0x0FFFFFFF. Oilcan animation variables can supply
+       such a list entry in the original game. Keep that terminating read;
+       ordinary memory reads and later record fields retain their checks. */
+    if(record>=0x10000000u){
+        uint32_t value=hn_read16(m,prefetch);
+        return record&1?(value>>8)|(value<<24):value;
+    }
+    return hn_read16(m,record);
+}
 uint32_t hn_collision_facing(HNMemory *m,GameAddr slot){return (hn_read8(m,slot+0x60)-1u)&3;}
 static GameAddr cell(HNMemory *m,GameAddr map,int32_t x,int32_t z)
 {
@@ -129,7 +141,7 @@ bool hn_collision_has_record(HNMemory *m,int32_t x,int32_t z,uint32_t *hit)
     *hit=0;
     for(unsigned i=0;i<32;i++){
         GameAddr record=hn_read32(m,RECORDS+i*4);if(!record)return !m->fault;
-        unsigned index=hn_read16(m,record);if(index>hn_read8(m,HN_RENDER_INFO+16))return !m->fault;
+        unsigned index=record_index(m,record,0x08007D40);if(index>hn_read8(m,HN_RENDER_INFO+16))return !m->fault;
         GameAddr slot=render_slot(m,index);if(!slot)return false;
         if((hn_read16(m,record+6)&2)&&hn_read8(m,slot+0x60)){
             if(!hn_collision_contains(m,record,x,z,hit))return false;if(*hit)return true;
@@ -141,7 +153,7 @@ bool hn_collision_records(HNMemory *m,uint32_t control,uint32_t render,bool reso
 {
     for(unsigned i=0;i<32;i++){
         GameAddr record=hn_read32(m,RECORDS+i*4);if(!record)return !m->fault;
-        unsigned index=hn_read16(m,record);if(index>hn_read8(m,HN_RENDER_INFO+16))return !m->fault;
+        unsigned index=record_index(m,record,resolve?0x08007EC8:0x08008274);if(index>hn_read8(m,HN_RENDER_INFO+16))return !m->fault;
         GameAddr slot=render_slot(m,index);if(!slot)return false;unsigned flags=hn_read16(m,record+6);
         if(!hn_read8(m,slot+0x60)||(bool)(flags&2)!=resolve)continue;
         if(resolve){if(!hn_collision_response(m,render,record))return false;}

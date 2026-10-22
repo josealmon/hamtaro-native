@@ -19,7 +19,8 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   stopping, delayed idle animation, asymmetric quantization and circular route bends.
   Collision checks cover signed map wrapping, edge masks, event staging, inclusive
   containment/exclusive interactions, circle/rectangle responses, inactive records,
-  action gating and movement-wait completion/pending-result handling.
+  action gating and movement-wait completion/pending-result handling. Synthetic
+  floating-bus record indices terminate the scan without hiding later memory faults.
   Task checks cover list removal/relinking, synthetic glyphs, independent contexts,
   delay/fast advance, name returns, tile-row scrolling, numeric text, unsupported
   callbacks, cyclic lists, memory faults and command budgets.
@@ -179,7 +180,7 @@ this window review.
 For private function comparisons, use a Python environment with Unicorn 2.1.4
 and the test-only hn_reference_probe.dll built by BUILD_TESTING:
 
-    python -B tools/compare_reference.py --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+    python -B tools/compare_reference.py --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE --video-oracle PATH_TO_HN_VIDEO_ORACLE --bus-oracle PATH_TO_HN_BUS_ORACLE
 
 The reference must contain build/function-symbols.json. Hardware initialization
 is compared at three VCOUNT values, including IRQ dispatcher data and video/IO
@@ -199,7 +200,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 4,015,796 checks,
+GBA machine. The complete run with BIOS, PPU and floating-bus oracles passes 4,157,841 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -392,9 +393,9 @@ EWRAM/IWRAM state is compared. Leader input/collisions remain outside this suite
 
 Leader/collision comparisons use the independent BIOS arithmetic oracle:
 
-    cmake --build "$env:HAMTARO_NATIVE_WORK/mgba-oracle" --target hn-bios-oracle
+    cmake --build "$env:HAMTARO_NATIVE_WORK/mgba-oracle" --target hn-bios-oracle hn-bus-oracle
     python -B tools/compare_bios.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-bios-oracle.exe"
-    python -B tools/compare_reference.py --collisions-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-bios-oracle.exe"
+    python -B tools/compare_reference.py --collisions-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-bios-oracle.exe" --bus-oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-bus-oracle.exe"
 
 Pass --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to either tool if needed.
 The ROM-free math suite compares all 32,769 ArcTan inputs in -16384..16384 and
@@ -403,12 +404,32 @@ mGBA 0.10.5's arithmetic helpers directly; no ROM, BIOS image or CPU execution i
 The native adaptation is isolated in src/gba/bios_math.c with its MPL 2.0 notice.
 Hardware BIOS arithmetic and instruction latency remain unverified.
 
-The collision subset passes 15,362 private comparisons, including 216 independent
+The collision subset with both oracles passes 35,855 private comparisons, including 216 independent
 angular responses. It covers mask classification, sample pointers, shape containment,
 interaction queries, solid-record responses, record lists, map flags/scripts,
 action/reset controls, leader movement, combined updates and Main's movement wait.
 Positive-response assertions require both circle and rectangle contacts. The full
 comparison requires --bios-oracle; other focused suites can run without it.
+
+The isolated bus oracle executes mGBA's halfword-load implementation without a
+ROM, BIOS or CPU instruction loop. It checks the three reviewed ROM prefetch sites
+used by collision-record scans, with even/odd addresses and every byte-sized
+render count. All 6,144 list scans retain RAM and terminate at the same bus-derived
+index, including a preceding mapped inactive record. A separate private input-only
+replay reaches map 2:12 after the oilcan sequence; the original mGBA game also
+continues from the same SRAM and retains the same animation-derived list. The
+adapter covers those reads above 0x0FFFFFFF; other floating-bus sites and detailed
+bus/DMA timing remain unverified. Without --bus-oracle these additional checks are
+explicitly skipped.
+
+The extended private erased-SRAM scenario passes 237,173 native updates through
+Hamigos, the second reconciliation, oilcan purchase/use, lever interaction and
+the previously failing return to map 2:12. Original End Game/Continue restores
+x=32.5, z=128.5, 23 words, two seeds, Bijou and two rescued loves. Its separate
+host-file replay passes 247,641 checks and restores those fields in a fresh session.
+The canonical 144,204-update opening, including empty Items/Gems roundtrips and
+eight saves, also passes with this adapter. These are bounded compiled-runtime
+and save tests; the complete cart activity and desktop story remain unverified.
 
 Text-task checks can be run separately:
 
@@ -729,6 +750,23 @@ DMA3's transient source register is excluded. Public synthetic tests independent
 cover these boundaries and the undefined-style/missing-task failure guards.
 These families run in the full comparison; complete scene/activity and timed PPU
 integration remain pending.
+
+The complete bank-7 tile-board and scene-preset families have a focused command:
+
+    python -B tools/compare_reference.py --bank7-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+Its 121,552 comparisons account for all 32 original functions, five Main contracts,
+30 reviewed F4 targets and one direct helper, including actual Main/F4 command
+calls and rejection of inappropriate interfaces. Cases cover every byte cursor
+with all four directions and both empty/occupied targets, raw word inputs and
+all 256 helper direction selectors with signed mapped offsets. Whole-memory
+comparisons include constructor changes to a later board cell, output/argument
+overlap, cursor changes during motion, offset-table writes during the setter,
+captured arrow coordinates and class changes during graphics or neighbor setup.
+Public synthetic tests additionally check solved/unsolved results, the four
+special cursor links, blocked movement, preserved unused arrows, boot-gate
+behavior and background setup. These families run in the full comparison;
+complete puzzle and area/story integration remain pending.
 
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:
