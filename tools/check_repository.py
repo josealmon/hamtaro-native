@@ -1,6 +1,8 @@
 """Check common private/generated content mistakes; not a copyright classifier."""
 from __future__ import annotations
 import argparse
+import io
+import time
 from pathlib import Path
 import re
 import subprocess
@@ -45,6 +47,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--package", type=Path)
     args = parser.parse_args()
+    started=time.perf_counter()
     failures = []
     names = git("ls-files", "-z", "--cached", "--others", "--exclude-standard").decode().split("\0")
     for name in sorted(set(filter(None, names))):
@@ -53,13 +56,18 @@ def main() -> int:
             failures.append(f"Unexpected symlink: {name}")
         elif path.is_file():
             failures += check_source(name, path.read_bytes())
-    history = git("rev-list", "--objects", "--all").decode().splitlines()
-    for line in history:
-        if " " not in line:
-            continue
-        oid, name = line.split(" ", 1)
-        if git("cat-file", "-t", oid).strip() == b"blob":
-            failures += check_source(name, git("cat-file", "blob", oid))
+    history=[line.split(" ",1) for line in git("rev-list","--objects","--all").decode().splitlines() if " " in line]
+    # One Git process, preserving the same checks of every historical named blob.
+    payload=subprocess.run(["git","-C",str(ROOT),"cat-file","--batch"],
+                           input="".join(oid+"\n" for oid,_ in history).encode("ascii"),
+                           stdout=subprocess.PIPE,check=True).stdout
+    stream=io.BytesIO(payload)
+    for oid,name in history:
+        header=stream.readline().decode("ascii").split()
+        if len(header)!=3 or header[0]!=oid:raise RuntimeError("Invalid Git batch header.")
+        size=int(header[2]);data=stream.read(size)
+        if len(data)!=size or stream.read(1)!=b"\n":raise RuntimeError("Truncated Git batch object.")
+        if header[1]=="blob":failures+=check_source(name,data)
     if args.package:
         package = args.package.resolve(strict=True)
         actual = {p.relative_to(package).as_posix() for p in package.rglob("*") if p.is_file()}
@@ -71,7 +79,7 @@ def main() -> int:
     if failures:
         print("\n".join(sorted(set(failures))), file=sys.stderr)
         return 1
-    print("Repository" + (" and package" if args.package else "") + " content checks passed.")
+    print("Repository" + (" and package" if args.package else "") + f" content checks passed in {time.perf_counter()-started:.2f}s.")
     return 0
 
 if __name__ == "__main__":

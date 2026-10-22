@@ -3,6 +3,9 @@
 Build and run CTest as described in the README. Tests stay active in Release
 builds and use explicit checks rather than assertions removed by NDEBUG.
 
+- probe: RAM snapshots are byte-for-byte equivalent to the original bus reader,
+  including full regions, last bytes, mirrors, IO/ROM fallback, address wrapping,
+  partial faults and pre-existing faults. The fast path is test-only.
 - core: synthetic guest-memory behavior, DMA, BIOS/LZ77, video, timing/IRQ,
   angular axes/quadrants/monotonicity, original button transitions/repeat, PRNG
   arithmetic, heap and Main script control.
@@ -61,6 +64,28 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   SDL renderer and menus for six frames, closes cleanly and removes that profile.
   No graphics, settings, ROM or save files are written in the checkout.
 
+Use CTest for each functional batch and the existing focused `--...-only` reference
+checks during implementation. At a coherent batch boundary, run the complete
+reference comparison with all available independent oracles. Keep functional sources
+unchanged until that run ends. No exhaustive domains, memory regions or comparisons
+are removed to shorten the run.
+
+The optimized complete suite passed the same 4,200,342 assertions, including the
+full 16-bit domains, 30 independent PPU snapshots and the existing floating-bus
+oracle, in 678.102 seconds on the development machine. The preceding log spanned
+approximately 1,238 seconds; that older value comes from file timestamps. Concurrent
+native route replays ran during both executions, so the roughly 45% reduction is
+an observed local comparison, not a portable performance guarantee. Current longest
+named phases are bank 4 (151 s), bank 5 (95 s) and bank 6 (90 s).
+
+`compare_reference.py` prints elapsed time and assertion counts per family and for
+its complete invocation. Optional `--timings-json PATH_OUTSIDE_CHECKOUT` retains a
+private machine-readable report, including failed phases. The total also includes
+setup and coupled checks outside named families. Reports and logs are never versioned.
+Plain RAM snapshots use bounded bulk copies; device IO, mirrors, wrapping and partial
+faults keep the original bus path. Python reuses snapshot buffers by size. The content
+audit reads historical objects with one Git batch process and checks the same blobs.
+
 The optional private ROM check is:
 
     build/Release/hn_storage_tests.exe PATH_TO_YOUR_AH3P_ROM
@@ -87,6 +112,30 @@ The executable also accepts:
 
 Exit code 0 means identity and full SHA-256 match; 2 means the content does not
 match. No profile import is performed by this command.
+
+The longer `tests/scenarios/sunny_peak.json` route retains input/checkpoint evidence
+through the cave reunion, Hamigos, oilcan, cart return and Rubrub. It contains only
+button durations and expected scalar state; players still supply the ROM.
+The full route passes 246,720 SDK updates and 257,437 host-session checks, including
+original in-game saves and fresh-session continuation (24 words, two loves). The shorter
+`opening.json` remains useful for the first reconciliation. These are distinct test
+scopes, not counts of completed areas. Run the longer route with the same command
+below, replacing the scenario filename.
+
+`tests/scenarios/sunny_peak_reunion.json` is a focused continuation, not a new game.
+Supply an original SRAM checkpoint after Libert-T, when map 2:20 is about to show
+the reunion (24 words, two loves, Bijou present). It checks Lovedove and three loves,
+then original End Game/Continue at x=176.5, z=176.5. The 11,161-update SDK replay
+passes, followed by 13,405 host-session checks including persisted SRAM and fresh
+session continuation; a save with different prerequisites fails its initial checkpoint. No save
+or game data is included in this repository.
+
+For a focused continuation, `--save PATH_TO_PRIVATE_SRAM --session-test
+build/Release/hn_session_tests.exe` starts both replays from the same private SRAM
+copy. The host uses a disposable profile, verifies persistence and starts a fresh
+session to compare map, position, words, seeds, partner and love count. The source
+save is checked for unchanged bytes. Omitting `--save` retains erased-SRAM coverage.
+Neither focused replay substitutes for the combined route from erased SRAM.
 
 An input-only native runtime scenario uses the optional test DLL:
 

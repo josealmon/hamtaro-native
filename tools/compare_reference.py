@@ -15,6 +15,9 @@ import random
 import re
 import struct
 import subprocess
+import sys
+import time
+from functools import wraps
 from contextlib import nullcontext
 from unicorn import (Uc, UC_ARCH_ARM, UC_MODE_THUMB, UC_HOOK_INTR,
                      UC_HOOK_MEM_WRITE, UC_HOOK_MEM_READ, UC_HOOK_CODE)
@@ -87,7 +90,13 @@ def main() -> None:
     parser.add_argument("--shared-motion-only", action="store_true", help="Run shared actor geometry/motion families (requires BIOS oracle)")
     parser.add_argument("--scene-effects-only", action="store_true", help="Run complete background/render shake and screen-window families (requires BIOS oracle)")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
+    parser.add_argument("--timings-json",type=Path,help="Optional private per-phase timing report outside the checkout")
     args = parser.parse_args()
+    if args.timings_json:
+        args.timings_json=args.timings_json.resolve()
+        if args.timings_json==ROOT or ROOT in args.timings_json.parents:
+            parser.error("Timing reports must be outside the checkout.")
+    started=time.perf_counter();phases=[]
     if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or args.bank3_late_only or args.bank3_presets_only or args.bank3_games_only or args.bank3_chain_only or args.bank4_only or args.bank4_presets_only or args.bank4_dynamics_only or args.bank5_only or args.bank5_presets_only or args.bank5_dynamics_only or args.bank6_only or args.bank6_presets_only or args.bank6_dynamics_only or args.wander_only or args.actor_presets_only or args.actor_animations_only or args.shared_motion_only or args.scene_effects_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only,args.scene_actors_only,args.records_only,args.wave_only,args.counter_scenes_only,args.group3_only,args.group3_scenes_only,args.actor_sequences_only,args.record_menus_only,args.selection_scenes_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
@@ -298,8 +307,22 @@ def main() -> None:
                 difference = f" (first different byte +{offset:X})"
             raise RuntimeError(f"Native/reference mismatch: {label}{difference}")
 
+    def timed(function):
+        @wraps(function)
+        def run(*arguments,**keywords):
+            begin=time.perf_counter();before=checks;status="failed"
+            try:
+                result=function(*arguments,**keywords);status="passed";return result
+            finally:
+                row=dict(phase=function.__name__,seconds=round(time.perf_counter()-begin,3),checks=checks-before,status=status)
+                phases.append(row)
+                print(f"Timing {row['phase']}: {row['seconds']:.3f}s, {row['checks']} checks, {status}.",flush=True)
+        return run
+
+    buffers={}
     def native_bytes(address: int, size: int) -> bytes:
-        out = C.create_string_buffer(size)
+        out=buffers.get(size)
+        if out is None:out=buffers.setdefault(size,C.create_string_buffer(size))
         if not read(memory, address, out, size):
             raise RuntimeError("Native guest-memory read failed.")
         return out.raw
@@ -326,6 +349,7 @@ def main() -> None:
     def native(name: str, arguments=0, result=None):
         return bind(name, result, C.c_void_p, *([C.c_uint32] * arguments))
 
+    @timed
     def scene_checks():
         fresh()
         both(0x03000820, rng.randbytes(26))
@@ -451,6 +475,7 @@ def main() -> None:
         equal(command(memory, 0x5A, 0x02030000), 1, "native script core reset")
         call("MainScriptResetCoreState", 0x02030000);compare("script core reset", ranges)
 
+    @timed
     def text_checks():
         ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x06000000, 0x18000), (0x040000D4, 12))
         blit = native("hn_text_blit_glyph", 5, C.c_bool)
@@ -533,6 +558,7 @@ def main() -> None:
                     if native_bytes(0x020046C6,1)==b"\xFF":break
                 equal(native_bytes(0x020046C6,1),b"\xFF","panel exit terminates")
 
+    @timed
     def counter_checks():
         ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x05000000,0x400))
         fresh()
@@ -581,6 +607,7 @@ def main() -> None:
                 equal(report[3],call("AnimationInvokeCallback",0x02010000,0x03007010),"counter ticking yield")
                 compare(f"counter ticking {case} {tick}",animated_ranges)
 
+    @timed
     def actor_checks():
         ranges=((0x02000000,0x40000),(0x03000000,0x7000))
         for index in range(17):
@@ -628,6 +655,7 @@ def main() -> None:
             equal(actor_frames(memory,4096,report),1,"native same-frame actor activation")
             call("RunActorScriptFrames",limit=2000000);compare("same-frame actor activation",ranges)
 
+    @timed
     def motion_checks():
         ranges=((0x02000000,0x40000),(0x03000000,0x7000))
         query=bind("hn_motion_route_obstacle",C.c_bool,C.c_void_p,*([C.c_uint32]*4),C.POINTER(C.c_uint32))
@@ -681,6 +709,7 @@ def main() -> None:
             equal(command(memory,0x3D,0x02020000),1,"native Main follower route")
             call("MainScriptRebuildFollowerRoute",0x02020000);compare("Main follower route",ranges)
 
+    @timed
     def motion_live_checks():
         ranges=((0x02000000,0x40000),(0x03000000,0x7000))
         steps=bind("hn_probe_motion_steps",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
@@ -741,6 +770,7 @@ def main() -> None:
             equal(native("hn_motion_update_following",result=C.c_bool)(memory),True,"native gated following")
             call("UpdateRenderXZMotion");compare("gated follower integration",ranges)
 
+    @timed
     def collision_checks():
         ranges=((0x02000000,0x40000),(0x03000000,0x7000))
         output=C.c_uint32();record=0x02023000;leader=0x02017000+10*104;obstacle=0x02017000+11*104
@@ -866,6 +896,7 @@ def main() -> None:
             equal(command(memory,0x21,0x02025000),1,"native Main movement wait")
             call("MainScriptWaitForByte1FA8",0x02025000);compare(f"Main movement wait {case}",ranges)
 
+    @timed
     def task_checks():
         ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x06000000,0x18000),(0x040000D8,8))
         fresh();heap_init(memory);call("InitializeHeap",0)
@@ -1064,6 +1095,7 @@ def main() -> None:
                 equal(tasks_update(memory,4096,report),1,f"native task update {case}/{frame} report {tuple(report)}")
                 call("UpdateTaskContexts",limit=4000000);compare(f"task update {case}/{frame}",ranges)
 
+    @timed
     def choice_checks():
         for opcode,name in ((0x21,"MainScriptWaitForByte1FA8"),(0x24,"MainScriptAwaitWordChoice"),(0x45,"MainScriptConfigureWordChoice")):
             equal(struct.unpack_from("<I",rom,0x58E5D4+opcode*4)[0]&~1,symbols[name],f"original Main dispatch {opcode:02X}")
@@ -1167,6 +1199,7 @@ def main() -> None:
             equal(native("hn_choice_reset",result=C.c_bool)(memory),True,"native choice reset")
             call("ScriptCallbackResetWordChoiceDisplay",0);compare(f"choice reset state {state}",ranges)
 
+    @timed
     def raster_checks():
         ranges = ((0x02000000,0x40000),(0x03000000,0x7000),(0x04000000,0x60),(0x040000B0,12))
         graphics_command = bind("hn_probe_graphics_command", C.c_int, C.c_void_p, C.c_uint32,
@@ -1245,6 +1278,7 @@ def main() -> None:
                 if native_bytes(0x02000398,4)==bytes(4):break
             equal(native_bytes(0x02000398,4),bytes(4),"circle IRQ releases state")
 
+    @timed
     def region_audio_checks():
         fresh();equal(native("hn_audio_driver_init",result=C.c_bool)(memory),True,"region audio initialization")
         call("InitializeAudioDriver",limit=2000000)
@@ -1270,6 +1304,7 @@ def main() -> None:
                                 equal(report[3],call("AnimationInvokeCallback",0x02028000,0x03007010),"region audio yield")
                                 compare("region audio",ranges)
 
+    @timed
     def audio_checks():
         audio_ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x03007FF0, 4),
                         (0x04000060, 0x80), (0x04000100, 4))
@@ -1572,6 +1607,7 @@ def main() -> None:
                 equal(report_animation[3], call(original, slot, 0x03007010), f"animation audio yield {case} {opcode}")
                 compare(f"animation audio {case} {opcode}", audio_ranges)
 
+    @timed
     def indicator_checks():
         local=random.Random(0x494E4449)
         ranges=((0x02000000,0x40000),(0x03000000,0x7000))
@@ -1631,6 +1667,7 @@ def main() -> None:
                     both(0x03001164,local.randbytes(2));invoke("ScriptCallbackMoveSceneIndicator")
         compare("destination navigation audio",ranges+((0x03007FF0,4),(0x04000060,0x80),(0x04000100,4)))
 
+    @timed
     def book_checks():
         local=random.Random(0x48414D)
         def prepare(sorted_mode=0,language=0):
@@ -1701,6 +1738,7 @@ def main() -> None:
             call("RenderPairListNumber",index,value,x,y)
             compare(f"three-digit number {case}",((0x02000000,0x40000),(0x03000000,0x7000)))
 
+    @timed
     def map_choice_checks():
         start_checks=checks;local=random.Random(0x4D434843)
         family=[e for e in entries if e["source"]=="src/scripts/map_choice_callbacks.c"]
@@ -1916,6 +1954,7 @@ def main() -> None:
                 equal(consumed.value,call("ScriptCallbackUpdateMapParticleEffect",0),"particle reset boundaries consumed");compare("particle reset boundaries",ranges)
         print(f"{checks-start_checks} private map-choice/particle comparisons passed (273 map functions and reviewed dependencies).")
 
+    @timed
     def preset_checks():
         start_checks=checks;local=random.Random(0x50525354)
         family=[e for e in entries if e["source"]=="src/scripts/script_callbacks_render_presets.c"]
@@ -1975,6 +2014,7 @@ def main() -> None:
                 call(name);compare("live preset class selector",((0x02000000,0x40000),(0x03000000,0x7000)))
         print(f"{checks-start_checks} private render-preset comparisons passed (77 source functions and 28 actor dependencies).")
 
+    @timed
     def scene_motion_checks():
         start_checks=checks
         local=random.Random(0x53434E45)
@@ -2054,6 +2094,7 @@ def main() -> None:
                 invoke("ScriptCallbackOscillateSceneBackgroundOffset");invoke("ScriptCallbackApproachSceneBackgroundOffset")
         print(f"{checks-start_checks} private scene-motion comparisons passed across two complete source families (40 functions).")
 
+    @timed
     def script_memory_checks():
         local=random.Random(0x414248)
         def invoke_transition(name,payload=b""):
@@ -2263,122 +2304,145 @@ def main() -> None:
                     call("MainScriptInvokeCallback",0x02020000,limit=1000000)
                     compare(f"actor map callback {name} {case}",((0x02000000,0x40000),(0x03000000,0x7000)))
 
+    @timed
     def bank2_checks():
         from reference_bank2 import check_bank2
         check_bank2(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
                     bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
                     native_bytes=native_bytes,command=command)
 
+    @timed
     def wander_checks():
         from reference_wander import check_wander
         check_wander(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,
                      both=both,fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def scene_actor_checks():
         from reference_scene_actor import check_scene_actors
         check_scene_actors(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
                            bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
                            native_bytes=native_bytes,command=command)
 
+    @timed
     def actor_preset_checks():
         from reference_actor_presets import check_actor_presets
         check_actor_presets(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
                             bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes)
 
+    @timed
     def record_checks():
         from reference_records import check_records
         check_records(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,
                       both=both,fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def wave_checks():
         from reference_wave import check_wave
         check_wave(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
                    fresh=fresh,equal=equal,compare=compare,command=command)
 
+    @timed
     def counter_scene_checks():
         from reference_counter_scene import check_counter_scene
         check_counter_scene(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
                             fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def shared_motion_checks():
         from reference_shared_motion import check_shared_motion
         check_shared_motion(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
                             fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def actor_animation_checks():
         from reference_actor_presets import check_actor_presets
         check_actor_presets(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
                             bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
                             native_bytes=native_bytes,animation_families=True)
 
+    @timed
     def actor_sequence_checks():
         from reference_actor_presets import check_actor_presets
         check_actor_presets(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
                             bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
                             native_bytes=native_bytes,sequence_family=True)
 
+    @timed
     def bank3_late_checks():
         from reference_bank3 import check_bank3_late
         check_bank3_late(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
                         bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
                         native_bytes=native_bytes,command=command)
 
+    @timed
     def bank3_preset_checks():
         from reference_bank3 import check_bank3_presets
         check_bank3_presets(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
                             bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
                             native_bytes=native_bytes)
 
+    @timed
     def bank3_game_checks():
         from reference_bank3 import check_bank3_games
         check_bank3_games(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                           fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def bank3_chain_checks():
         from reference_bank3 import check_bank3_chain
         check_bank3_chain(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                           fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def bank4_checks(presets_only=False,dynamics_only=False):
         from reference_bank4 import check_bank4
         check_bank4(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                     fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command,presets_only=presets_only,dynamics_only=dynamics_only)
 
+    @timed
     def bank5_checks(presets_only=False,dynamics_only=False):
         from reference_bank5 import check_bank5
         check_bank5(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                     fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command,presets_only=presets_only,dynamics_only=dynamics_only)
 
+    @timed
     def bank6_checks(presets_only=False,dynamics_only=False):
         from reference_bank6 import check_bank6
         check_bank6(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                     fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command,presets_only=presets_only,dynamics_only=dynamics_only)
 
+    @timed
     def bank6_chain_checks():
         from reference_bank6_chain import check_bank6_chain
         check_bank6_chain(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                          fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def presentation_checks():
         from reference_presentation import check_presentation
         check_presentation(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                            fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def bank7_checks():
         from reference_bank7 import check_bank7
         check_bank7(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                      fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def record_selection_checks():
         from reference_record_selection import check_record_selection
         check_record_selection(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                                fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def scene_effects_checks():
         from reference_shared_motion import check_scene_effects
         check_scene_effects(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
                            fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    @timed
     def group3_checks():
         from reference_group3 import check_group3,check_group3_scenes
         for check in (check_group3,check_group3_scenes):
@@ -3543,8 +3607,17 @@ def main() -> None:
         choice_checks()
         raster_checks()
     finally:
-        destroy(memory)
-        if bios_oracle:bios_oracle.close()
+        status="failed" if sys.exc_info()[0] else "passed"
+        try:
+            destroy(memory)
+            if bios_oracle:bios_oracle.close()
+        except BaseException:
+            status="failed";raise
+        finally:
+            elapsed=round(time.perf_counter()-started,3)
+            print(f"Timing total: {elapsed:.3f}s, {checks} checks, {status}.",flush=True)
+            if args.timings_json:
+                args.timings_json.write_text(json.dumps(dict(seconds=elapsed,checks=checks,status=status,phases=phases),indent=2)+"\n",encoding="utf-8")
     print(f"{checks} private native/reference checks passed (heap, input, scripts, expressions, rendering, maps, saves, audio).")
     print("Function-level evidence only; boot and gameplay remain unverified.")
 

@@ -84,7 +84,7 @@ statically. A separate clean-machine validation remains pending.
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | A 144,204-update native input scenario completes the basic lessons/reward, Sunny Peak through Bijou, Ham-lift, Oopsie, Gossip-P and the first reconciliation, Spat/Harmony conversations, Clubhouse return, photo-room greeting, book/status, empty Items/Gems entry/return and eight End Game/Continue roundtrips; host-file/fresh-session validation is recorded below; full story and desktop playthrough remain pending |
+| New game, movement, in-game save/load | Partial | The versioned Sunny Peak scenario passes 246,720 updates from erased SRAM through two reconciliations, Hamigos, oilcan/cart return and Rubrub (24 words, two loves); original End Game/Continue and host-file/fresh-session checks are recorded below. A separate post-Libert-T continuation verifies Lovedove and three loves; merging that branch into the full route, optional activities and full desktop story coverage remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -602,19 +602,47 @@ fresh-session continuation. A separate Windows process also restores the exporte
 scene and status counters. Invalid
 group selectors are rejected; the unused group-0 record write/load path is not exposed.
 
+The versioned `tests/scenarios/sunny_peak.json` now reproduces the complete route
+from erased SRAM through the cave reunion, Hamigos, oilcan/cart return and Rubrub:
+246,720 native updates, 24 learned words and two rescued loves. Original End Game/
+Continue checkpoints retain position, seeds and Bijou. The same 246,720 inputs also
+pass 257,437 host-session checks, including file persistence and a fresh-session
+continuation with the same story, position and partner fields. The shorter opening scenario
+remains the first-reconciliation regression. This is integration coverage of that
+route, not completion of Sunny Peak or its optional activities.
+
+A separate input-only continuation reviews the missing-partner conversation's
+flag 0x187 in map 2:20, the two Hamigos confrontations in map 2:14 and Pakapaka's
+Libert-T lesson. The native scout reaches the automatic reunion and Lovedove,
+then restores map 2:20 at x=176.5, z=176.5 with 25 words, two seeds, three loves and
+Bijou through original End Game/Continue. That branch has not yet been merged into
+the erased-SRAM scenario above. It skips Rubrub, so its word count describes a
+different route. No guest state or progress flags were injected.
+
+`tests/scenarios/sunny_peak_reunion.json` separately reproduces the reunion from
+an original private post-Libert-T save (map 2:20, 24 words, two loves). Its 11,161
+updates check Lovedove, the third love and original save/Continue; 13,405 host checks
+also verify file persistence and fresh-session continuation. The input save
+is required explicitly and is never shipped. Full Sunny Peak optional activities,
+later return visits and actual-window story coverage remain pending.
+
 ## Remaining integration order
 
-1. Review remaining area and shared scene families with their dependencies, then adapt
-   complete groups of story/scene callbacks, scanline effects and timed CPU transfers.
-2. Extend the post-Harmony Clubhouse route through the photo room and SaveGroup3
-   UI, then the remaining Sunny Peak and later-area routes; validate story effects and their save state in
-   the actual Windows window.
-3. Expand coverage through the remaining story, secondary activities and minigames;
-   establish input scenarios and compare story state and save effects with the reference.
-4. Compare canonical RGBA, state, SRAM and pre-device PCM. Keep original
-   frame cadence, original resolution and gameplay; host display refresh is independent.
-5. Verify the packaged app on a Windows machine without development tools.
-   Public CI remains ROM-free; the private reference suite takes a user path.
+1. Merge the missing-partner/Spat/Libert-T/Lovedove branch into the erased-SRAM
+   Sunny Peak scenario and verify the return to the Clubhouse. Select complete
+   source families along this reachable dependency path; later-area function counts
+   do not take priority over this milestone.
+2. Keep the current Sunny Peak input route reproducible from erased SRAM. Use
+   read-only private saves for focused continuations, then verify the combined route,
+   original in-game saves and fresh host-session continuation.
+3. Extend actual-window coverage of the same route and its Items/Gems/photo UI.
+   Complete Sunny Peak story coverage does not imply all optional activities or
+   later return visits have been tested.
+4. Continue later story areas, secondary activities and minigames by their reachable
+   dependencies. Compare canonical RGBA, state, SRAM and pre-device PCM alongside
+   timed raster/IRQ and audio integration.
+5. Verify physical controllers and the packaged app on Windows without development
+   tools. Public CI stays ROM-free; private reference checks take user paths.
 
 ## Adaptation workflow
 

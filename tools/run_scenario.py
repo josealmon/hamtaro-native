@@ -103,8 +103,6 @@ def main():
     parser.add_argument("--session-test",type=Path,help="Also replay through the host session executable and verify SRAM-file continuation")
     parser.add_argument("--desktop-profile",type=Path,help="Retain validated ROM and tested SRAM in a new private profile for desktop review")
     args=parser.parse_args()
-    if args.session_test and args.save:
-        parser.error("The host-session replay starts from erased SRAM; do not combine --session-test with --save.")
     if args.desktop_profile:
         if not args.session_test:parser.error("--desktop-profile requires --session-test.")
         args.desktop_profile=args.desktop_profile.resolve()
@@ -145,6 +143,12 @@ def main():
             trace.write_text("".join(f"{frames} {keys}\n" for frames,keys in inputs(scenario["steps"])),encoding="ascii")
             arguments=[str(args.session_test.resolve()),str(args.rom.resolve()),"--replay",str(trace)]
             if args.desktop_profile:arguments.append(str(args.desktop_profile))
+            if saved is not None:
+                initial=Path(temporary)/"initial.sav";initial.write_bytes(saved)
+                arguments.extend(["--initial-save",str(initial)])
+            host_start=time.perf_counter()
             subprocess.run(arguments,check=True)
+            print(f"Host replay and SRAM continuation: {time.perf_counter()-host_start:.2f}s.",flush=True)
+    if args.save and args.save.read_bytes()!=saved:raise RuntimeError("Source SRAM changed during replay.")
 
 if __name__=="__main__":main()

@@ -54,6 +54,23 @@ int hn_probe_seed(HNMemory *m,GameAddr address,const uint8_t *data,size_t count)
 }
 int hn_probe_read(HNMemory *m,GameAddr address,uint8_t *out,size_t count)
 {
+    /* Test snapshots of plain RAM need no per-byte bus lookup. Keep the bus
+       path for IO, mirrors, wrapping and partial/faulting reads. */
+    const uint8_t *source=NULL;size_t capacity=0;
+    switch(address&0xFF000000u){
+    case 0x02000000:source=m->ewram;capacity=sizeof(m->ewram);break;
+    case 0x03000000:source=m->iwram;capacity=sizeof(m->iwram);break;
+    case 0x05000000:source=m->palette;capacity=sizeof(m->palette);break;
+    case 0x06000000:source=m->vram;capacity=sizeof(m->vram);break;
+    case 0x07000000:source=m->oam;capacity=sizeof(m->oam);break;
+    case 0x0E000000:source=m->sram;capacity=sizeof(m->sram);break;
+    default:break;
+    }
+    size_t offset=address&0xFFFFFFu;
+    if(!m->fault&&source&&offset<capacity&&count<=capacity-offset){
+        if(count)memcpy(out,source+offset,count);
+        return 1;
+    }
     for(size_t i=0;i<count && !m->fault;i++)out[i]=hn_read8(m,address+(GameAddr)i);
     return !m->fault;
 }
