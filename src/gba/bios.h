@@ -13,6 +13,7 @@ int32_t hn_runtime_divide(int32_t numerator, int32_t denominator);
 int32_t hn_runtime_remainder(int32_t numerator, int32_t denominator);
 int16_t hn_bios_arctan(int32_t value);
 uint16_t hn_bios_arctan2(int32_t x,int32_t y);
+uint32_t hn_bios_sqrt(uint32_t value);
 #ifdef __cplusplus
 }
 #endif

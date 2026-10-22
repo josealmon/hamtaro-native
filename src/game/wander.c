@@ -231,8 +231,8 @@ HNSceneResult hn_wander_callback(HNMemory *m,GameAddr callback,GameAddr argument
         hn_write32(m,0x03001134,target==0x0801C5B4?2:0);
         first=hn_read8(m,target==0x0801C5B4?arguments:HN_SCENE_CONTROLS);
         second=hn_read8(m,target==0x0801C5B4?arguments+1:HN_SCENE_CONTROLS+1);
-        hn_write8(m,HN_SCENE_CONTROLS,(uint8_t)hn_render_direction_between(m,(uint8_t)first,(uint8_t)second,false));
-        hn_write8(m,HN_SCENE_CONTROLS+1,(uint8_t)hn_render_direction_between(m,(uint8_t)second,(uint8_t)first,false));
+        hn_write8(m,HN_SCENE_CONTROLS,(uint8_t)hn_render_direction_raw(m,(uint8_t)first,(uint8_t)second,false));
+        hn_write8(m,HN_SCENE_CONTROLS+1,(uint8_t)hn_render_direction_raw(m,(uint8_t)second,(uint8_t)first,false));
         *consumed=target==0x0801C5B4||target==0x0801C5F4?hn_read32(m,0x03001134):1;break;
     }
     case 0x0801C66C:{

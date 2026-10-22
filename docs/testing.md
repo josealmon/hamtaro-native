@@ -143,7 +143,7 @@ actual SRAM-file persistence, add:
 The host replay performs all 134,892 input updates in a disposable private profile, verifies
 that the saved 32 KiB file equals the game's SRAM, stops and starts a fresh Session,
 then selects Continue. Clubhouse map/position, twenty-one words, ten seeds, one
-rescued love, the joined-partner flag and follower slot 13 are unchanged; 142,035
+rescued love, the joined-partner flag and follower slot 13 are unchanged; 142,033
 host-session checks pass. The partner checkpoints describe the
 returned overworld state; UI scenes can reuse the same render-class slots.
 The original ROM and player's profile are untouched; temporary input traces and
@@ -158,6 +158,7 @@ in that new directory. The directory must
 be outside the checkout and must not already exist. Start the actual application
 with --data-dir PATH_TO_NEW_PRIVATE_PROFILE to inspect the same saved scene.
 This explicit private export differs from the default disposable test profile.
+It adds two profile-export checks to the default replay's count.
 
 A real-window review launched the Windows executable with the exported twenty-one-word
 profile, selected Continue and restored the Clubhouse scene. Select, assigned to V
@@ -195,7 +196,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,541,636 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 1,820,023 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -571,4 +572,41 @@ Audio cases initialize actual song/player records, ten active/inactive tracks,
 the eight-bit mask and player identity, then compare continuous callback sequences.
 Synthetic public tests independently check pan/tempo values, upper mirror bits,
 affine allocation/exhaustion, raw snapshot behavior and rejected calling contracts.
-The separate 282-function bank-3 main family and minigame progression remain pending.
+The complete 282-function bank-3 main family is split into focused groups:
+
+    python -B tools/compare_reference.py --bank3-presets-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+    python -B tools/compare_reference.py --bank3-games-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+    python -B tools/compare_reference.py --bank3-chain-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+The preset group passes 78,329 comparisons for 212 scene functions and all 23 base-actor dependencies,
+including randomized PRNG seeds, mapped inactive slots, live class aliases,
+graphics mode 0, follower boot gates and strict Main versus task return contracts.
+The game group passes 147,719 comparisons for source/spawn records, all four
+collision effects with score/time wrapping, a full pool's mapped slot-10 alias,
+constructor-byte versus velocity-word indexing, pair-board selection/removal,
+phase/orbit updates, score/record text and strict endpoint collision. Square-root
+checks cover all 65,536 unsigned halfwords plus 32-bit boundaries against a
+result-only BIOS model; native public tests independently check floor inequalities.
+These do not prove BIOS timing or volatile scratch-register behavior.
+
+The chain group passes 52,339 checks for all 28 source functions, including typed Main/F4/animation
+contracts, high argument words, all kind bytes, capture modes, live linked-entry
+rereads, index 255, self and out-of-chain neighbors, sound priority, all 512
+combinations of grid flags and continuous spawning/background updates. Missing-kind
+lookups check retained incoming R4. Direct flag-initializer probes explicitly pass
+the original old-flags stack address for invalid flag bytes. Normal gameplay task
+dispatch retains the source invariant of flag values 0..9; invalid values whose
+legacy frame is unavailable fail explicitly. Corrupt-state rejection loops and
+recursive graphs are bounded, as described in architecture.md.
+Deliberately inconsistent neighbor graphs that hit the native depth bound are
+checked separately: tracing the original demonstrates its stack descending into
+the chain records. Their native refusal is a corrupt-state guard, not an original
+state-parity claim.
+
+All three groups compare EWRAM, IWRAM below the oracle stack, palette, VRAM, OAM
+and SRAM. Synthetic public regressions separately check lookup fallback, byte
+selectors, preserved unknown record bytes, speed reversal predicates, all-eight
+versus single completed grid lines, unchanged-line signaling, tile byte wrapping
+and rejected calling contracts. Function-family checks and the existing long
+opening scenario do not establish complete bank-3 activity progression, rendering
+timing, save effects or a desktop playthrough of those activities.

@@ -14,9 +14,11 @@ bool hn_graphics_configure(HNMemory *m,uint8_t index,GameAddr data)
     return hn_graphics_configure_raw(m,index,data);
 }
 bool hn_graphics_configure_raw(HNMemory *m,uint8_t index,GameAddr data)
+{return hn_graphics_initialize_raw(m,index,1,data);}
+bool hn_graphics_initialize_raw(HNMemory *m,uint8_t index,uint8_t mode,GameAddr data)
 {
     GameAddr s=hn_read32(m,HN_GRAPHICS_SCRIPTS)+index*44;
-    hn_write32(m,s+0x18,data);hn_write8(m,s,1);hn_write8(m,s+1,0);hn_write8(m,s+2,0);
+    hn_write32(m,s+0x18,data);hn_write8(m,s,mode);hn_write8(m,s+1,0);hn_write8(m,s+2,0);
     hn_write16(m,s+0x1C,0);hn_write16(m,s+0x1E,0);hn_write16(m,s+0x20,0);
     for(unsigned i=0;i<4;i++){hn_write8(m,s+3+i,0);hn_write32(m,s+8+i*4,0);}
     return !m->fault;

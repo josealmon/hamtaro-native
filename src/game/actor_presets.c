@@ -25,6 +25,112 @@ static bool priority(HNMemory *m,uint8_t index,uint8_t value)
 
 /* Void/F4 presets. These functions have no defined Main consumed count.
    Constants identify resources in the player's ROM; no resource data is here. */
+static HNSceneResult base_actor_presets(HNMemory *m,GameAddr callback)
+{
+    switch(callback&~1u){
+    case 0x08012D78:{ /* ActorPresetNoop12D78 */
+
+        break;
+    }
+    case 0x08012D7C:{ /* SetActorAnimationPreset12D7C */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088AC08F)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012D94:{ /* SetActorAnimationPreset12D94 */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088AC0C6)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012DAC:{ /* SetActorAnimationPreset12DAC */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088B0A5F)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012DC4:{ /* SetActorAnimationPreset12DC4 */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088ACAF7)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012DDC:{ /* ConfigureActorPreviousSlot12DDC */
+        do {if(!(hn_render_configure_raw(m,hn_read8(m,0x03002C0C) - 1, 1, 0xB0, 0, 0, 0, 0x088E1740)))return HN_SCENE_RESOURCE;} while(0);
+        do {if(!(hn_render_modes_raw(m,hn_read8(m,0x03002C0C) - 1, 2, 3, hn_read8(m,0x03002C0C))))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012E20:{ /* SetActorAnimationPreset12E20 */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088ACC20)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012E38:{ /* SetActorAnimationPreset12E38 */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088AECA8)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012E50:{ /* SetActorAnimationPreset12E50 */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088ACB54)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012E68:{ /* SetActorAnimationPreset12E68 */
+        do {if(!(animation(m,hn_read8(m,0x03001F50), 0x088ACB54)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012E80:{ /* SetActorAnimationPreset12E80 */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088AD1F9)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012E98:{ /* SetActorAnimationPreset12E98 */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088AD381)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012EB0:{ /* SetActorAnimationPreset12EB0 */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088AC134)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012EC8:{ /* SetActorAnimationPreset12EC8 */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088AD98E)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012EE0:{ /* SetActorAnimationPreset12EE0 */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088AD9DC)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012EF8:{ /* SetActorAnimationPreset12EF8 */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088ADA0E)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012F10:{ /* SetActorAnimationPreset12F10 */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088ADE4C)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012F28:{ /* SetActorAnimationPreset12F28 */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088B0CA0)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012F40:{ /* SetActorAnimationPreset12F40 */
+        do {if(!(animation(m,hn_read8(m,0x03002C0C), 0x088B08D3)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012F58:{ /* SetActorAnimationPreset12F58 */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088AD641)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012F70:{ /* SetActorAnimationPreset12F70 */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088AD680)))return HN_SCENE_RESOURCE;} while(0);
+        break;
+    }
+    case 0x08012F88:{ /* SetActorAnimationAndIndicator12F88 */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088A5724)))return HN_SCENE_RESOURCE;} while(0);
+        indicator(m,hn_read8(m,0x03002C0C), 0x088A5724);
+        break;
+    }
+    case 0x08012FAC:{ /* ConfigureActorNextSlot12FAC */
+        do {if(!(raw_animation(m,hn_read8(m,0x03002C0C), 0x088A5788)))return HN_SCENE_RESOURCE;} while(0);
+        do {if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E135C)))return HN_SCENE_RESOURCE;} while(0);
+        do {if(!(hn_render_configure_raw(m,hn_read8(m,0x03002C0C) + 1, 1, 0xB0, 0, 0, 0, 0x088E1ADF)))return HN_SCENE_RESOURCE;} while(0);
+        do {if(!(hn_render_modes_raw(m,hn_read8(m,0x03002C0C) + 1, 2, 3, hn_read8(m,0x03002C0C))))return HN_SCENE_RESOURCE;} while(0);
+        indicator(m,hn_read8(m,0x03002C0C), 0x088A5788);
+        break;
+    }
+    default:return HN_SCENE_UNKNOWN;
+    }
+    return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+}
+
 HNSceneResult hn_actor_presets_apply(HNMemory *m,GameAddr callback)
 {
     switch(callback&~1u){
@@ -4129,7 +4235,7 @@ HNSceneResult hn_actor_presets_apply(HNMemory *m,GameAddr callback)
         if(!hn_render_configure_raw(m,hn_read8(m,0x03002C00) - 1,1,0xB0,0,0,0,0x088D48C5))return HN_SCENE_RESOURCE; if(!hn_render_configure_raw(m,hn_read8(m,0x03002C00) + 1,1,0xB0,0,0,0,0x088D48D6))return HN_SCENE_RESOURCE; if(!hn_render_modes_raw(m,hn_read8(m,0x03002C00) - 1,2,3,hn_read8(m,0x03002C00)))return HN_SCENE_RESOURCE; if(!hn_render_modes_raw(m,hn_read8(m,0x03002C00) + 1,2,3,hn_read8(m,0x03002C00)))return HN_SCENE_RESOURCE;
         break;
     }
-    default:return HN_SCENE_UNKNOWN;
+    default:return base_actor_presets(m,callback);
     }
     return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
 }

@@ -537,6 +537,8 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
     HNSceneResult wander=hn_wander_animation(m,callback,slot,arguments,consumed,yield);if(wander!=HN_SCENE_UNKNOWN)return wander;
     HNSceneResult bank=hn_bank2_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     bank=hn_bank3_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
+    bank=hn_bank3_games_animation(m,callback,slot,arguments,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
+    bank=hn_bank3_chain_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     HNSceneResult map=hn_map_choice_animation(m,callback,slot,arguments,consumed,yield);if(map!=HN_SCENE_UNKNOWN)return map;
     HNSceneResult motion=hn_scene_motion_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;
     switch(callback&~1u){

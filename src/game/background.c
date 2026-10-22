@@ -78,6 +78,10 @@ bool hn_background_motion(HNMemory *m,GameAddr state)
 bool hn_background_configure(HNMemory *m,uint8_t slot,uint8_t mask,GameAddr script)
 {
     if(slot>=hn_read8(m,HN_BACKGROUND_COUNT))return false;
+    return hn_background_configure_raw(m,slot,mask,script);
+}
+bool hn_background_configure_raw(HNMemory *m,uint8_t slot,uint8_t mask,GameAddr script)
+{
     if(mask&128)mask&=127;else hn_background_layers_reset(m,mask);
     GameAddr state=hn_read32(m,HN_RENDER_STATES)+slot*80;
     if(!hn_transfer_fill_words(m,state,0,20))return false;

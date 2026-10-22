@@ -1,6 +1,17 @@
 #include "gba/bios.h"
 #include <limits.h>
 #include <math.h>
+uint32_t hn_bios_sqrt(uint32_t value)
+{
+    uint32_t root=0,bit=1u<<30;
+    while(bit>value)bit>>=2;
+    while(bit){
+        if(value>=root+bit){value-=root+bit;root=(root>>1)+bit;}
+        else root>>=1;
+        bit>>=2;
+    }
+    return root;
+}
 void hn_bios_obj_matrix(int16_t x,int16_t y,uint16_t angle,int16_t out[4])
 {
     float radians=(float)(((angle>>8)/128.0f)*3.14159265358979323846);

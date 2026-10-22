@@ -279,6 +279,14 @@ static void script_contract(void)
 }
 int main(void)
 {
+    for(uint32_t value=0;value<65536;value++){
+        uint32_t root=hn_bios_sqrt(value);
+        CHECK(root*root<=value&&(root+1)*(root+1)>value);
+    }
+    const uint32_t roots[]={65536,65537,0x7FFFFFFF,0x80000000,0xFFFFFFFE,0xFFFFFFFF};
+    for(unsigned i=0;i<sizeof(roots)/sizeof(*roots);i++){
+        uint64_t root=hn_bios_sqrt(roots[i]);CHECK(root*root<=roots[i]&&(root+1)*(root+1)>roots[i]);
+    }
     memory_contract();dma_and_bios();angular_contract();video_contract();game_contract();timing_contract();heap_contract();script_copy_contract();script_contract();
     printf("%d native-core checks passed.\n",checks);return 0;
 }

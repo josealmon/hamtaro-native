@@ -35,7 +35,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, brief taps retained for one game update, deadzone, remapping, disconnect; physical models not tested |
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session retains twenty-one words, ten seeds, Bijou and one rescued love in the Clubhouse; actual-window End Game preserves its previous backup, and closing/relaunching the executable restores the same scene and counters |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
-| BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division, ObjAffine and native angular math; 37,009 angular cases compared with mGBA, hardware conformance remains unverified |
+| BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division, integer square root, ObjAffine and native angular math; 37,009 angular cases compared with mGBA; square root checked throughout the 16-bit domain and at 32-bit boundaries; hardware conformance remains unverified |
 | Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 30 private ROM snapshots compared, including directional movement; raster timing still pending |
 | Video timing and IRQ | Foundation | Scanline/VBlank/HBlank, timers, IRQ flags, FIFO DMA and native VBlank service connected; 9,000 clocked native updates completed; full-machine cadence and DMA bus contention remain unverified |
 | Native game helpers | Adapted | Original guest input layout, directions/repeat/query semantics and integer PRNG/ranges compared; host controls and per-frame PRNG connected |
@@ -51,12 +51,13 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Shared scene actor control | Adapted | All 40 functions in class_anchor_presets.c and scene_control_callbacks.c compared: anchors/modes, vectors, signed rectangles/corridors, aiming, background alignment/offsets and clone phases; later-activity runtime integration remains pending |
 | Scene render presets | Adapted | All 77 functions in script_callbacks_render_presets.c and 28 required actor helpers compared; typed F4/task calls and 35 defined-zero Main callbacks, linked slots, indicators, graphics and live class selectors; full area/activity integration remains pending |
 | Bank-2 actor and scene families | Adapted | All 120 functions in map_bank2_render_callbacks.c, map_bank2_scene_control.c, map_bank2_scene_presets.c and map_bank2_height_callbacks.c compared; 116 argument-free task targets, 70 Main contracts, panel stages, randomized motion, height latches and one full-word animation yield; complete Sunny Peak integration remains pending |
-| Bank-3 late scene family | Adapted | All 31 functions in map_bank3_late_callbacks.c compared: 25 void presets, four animation callbacks and two Main modal callbacks; 27 F4 targets, song pan/tempo, mirror/affine scales and raw actor snapshot roundtrips; the separate 282-function main family and full area/minigame integration remain pending |
+| Bank-3 late scene family | Adapted | All 31 functions in map_bank3_late_callbacks.c compared: 25 void presets, four animation callbacks and two Main modal callbacks; 27 F4 targets, song pan/tempo, mirror/affine scales and raw actor snapshot roundtrips; full area integration remains pending |
+| Bank-3 main scene/activity family | Adapted | All 282 source functions accounted for across presets, source/spawn entries, pair board, phases/orbits, record text, chains and one shared condition; typed Main/task/animation contracts and helpers compared, including live links, byte wrapping and retained-register paths; complete activity progression and area integration remain pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
 | Scene actor state and panels | Adapted | 35 functions across 13 source families plus one shared cross-bank condition compared: snapshots, forward copy/swap, signed accelerations, class-target approach, panel presets and direction constructors; 27 reviewed argument-free task contracts; complete scene integration remains pending |
-| Actor render presets | Adapted | All 922 functions across eight linked/neighbor/class/secondary/render-setup/graphics/directional/extended families compared; void/task ABI, captured auxiliary arguments, live selectors, inactive mapped slots, byte-sized neighbors and direction sectors preserved; these functions are rejected as Main callbacks; later-area integration remains pending |
+| Actor render presets | Adapted | All 945 functions across nine base/linked/neighbor/class/secondary/render-setup/graphics/directional/extended families compared; task ABI, captured auxiliary arguments, live selectors, inactive mapped slots, byte-sized neighbors and direction sectors preserved; only the base family's defined-zero no-op also accepts Main; later-area integration remains pending |
 | Map-choice scene control | Adapted | All 273 functions in map_choice_callbacks.c compared: 93 Main contracts, 253 argument-free task targets, five animation contracts and four slot helpers, including cursor skips/jumps, packed choices, motion, regions, phases and presets; complete area/activity integration remains pending |
 | Map particles | Adapted | All four functions in map_particles.c and the alternate parameter selection compared; initialization, reset boundaries, live parameter reads, scaling and field60-only hiding; timed scene integration remains pending |
 | Motion and collision | Adapted | Leader input/walk/run, action priority, map edge sampling/sliding, collision responses, event staging, follower routes, actor-position snapshots, transition animation/position selection and wrapped facing interpolation compared; full-game coverage remains pending |
@@ -129,7 +130,7 @@ The scenario counts 134,892 input updates in total; the runtime frame counter re
 on returning to the title. A separate replay through the actual host Session API writes private
 32 KiB SRAM files, stops the session and starts a fresh one from disk. Continue
 restores the same nine story/position/partner/counter fields; this replay passes
-142,035 host-session checks. A separate review launches the actual Windows
+142,033 host-session checks without a retained profile export. A separate review launches the actual Windows
 executable with that private exported profile. Continue restores the Clubhouse
 scene; Select, assigned to V, displays twenty-one learned words, ten seeds and one rescued
 love. End Game returns to the title and writes the 32 KiB file, with the preceding
@@ -199,7 +200,8 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-1,541,636 comparisons with the independent BIOS and PPU oracles.
+1,820,023 checks with the independent BIOS and PPU oracles, including separately
+identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -666,7 +668,36 @@ preserves its adjacent usage-byte alias. Modal save/restore accepts mapped inact
 byte-selected actor slots and retains the original script cursor and map controls.
 Focused comparisons cover 26,464 checks, including active ten-track audio players,
 the eight-bit track mask, all byte counters/mirror values, inactive slots and
-SRAM/video memory. Bank 3's four script sources still declare 233 functions without
-explicit dispatch out of 512; the separate main family has 282 functions and only
-one previously adapted shared condition. These are planning counts, not area or
-minigame completion.
+SRAM/video memory.
+
+The 282-function main family uses bank3.c for 212 argument-free scene presets,
+bank3_games.c for 28 Main callbacks, seven animation callbacks and five typed
+helpers, and bank3_chain.c for 28 chain functions. One neighbor-hiding helper and
+one previously adapted shared condition complete the source inventory. The 23
+base-actor dependencies share actor_presets.c. These are complete-family function
+comparisons, not completed activities or a full bank-3 playthrough.
+
+Source/spawn records preserve unknown bytes and timer fields. A full ten-slot pool
+retains the original mapped slot-10 alias; a byte selector of 255 wraps the actor
+constructor index but not the subsequent full-width velocity address. Phase modes
+outside 0..4 retain incoming R4 through an explicit native parameter. Box collision
+uses the original strict endpoint tests, including containment and touching edges.
+The native square root returns floor(sqrt(value)) for uint32_t; its test oracle
+models the BIOS result, without BIOS timing or volatile scratch-register evidence.
+
+Chain effects reload neighbor links after every operation that can change them,
+including a mapped index-255 reread. Reversal preserves link fields and inverts
+velocities only for entries selected by the original kind predicate. Kind lookup
+preserves incoming R4 when absent. Its wrappers retain either their byte value or
+loop index. On invalid saved flag values, the original flag initializer instead
+retains an old-flags guest stack address. Direct probes pass that frame explicitly;
+the normal task path requires the gameplay invariant of flag values 0..9 and
+fails explicitly on an unresolved invalid value. Invalid random rejection loops
+are bounded at 4,096 attempts, and pathological recursive effect graphs at depth
+64, rather than hanging the host. These limits do not establish original behavior
+for corrupt game state.
+
+Bank 3's five recovered script sources declare 512 functions, six without explicit
+dispatch after this family: record-batch allocation, a saved actor-pair restore,
+three shared screen presets and song-43 restart. Helpers need separate review;
+these structural counts prove neither runtime reachability nor area completion.

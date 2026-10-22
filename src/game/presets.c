@@ -122,7 +122,7 @@ HNSceneResult hn_preset_callback(HNMemory *m,GameAddr callback,uint32_t *consume
     /* These source functions explicitly return zero. Void helpers are reachable
        only through the task ABI; Main must never invent a consumed count. */
     switch(callback&~1u){
-    case 0x080CC878:case 0x080CCF68:case 0x080CCF6C:case 0x080CCF84:case 0x080CCFA8:case 0x080CCFEC:
+    case 0x08012D78:case 0x080CC878:case 0x080CCF68:case 0x080CCF6C:case 0x080CCF84:case 0x080CCFA8:case 0x080CCFEC:
     case 0x080CD004:case 0x080CD01C:case 0x080CD034:case 0x080CD09C:case 0x080CD0B4:case 0x080CD104:
     case 0x080CD108:case 0x080CD10C:case 0x080CD150:case 0x080CD154:case 0x080CD16C:case 0x080CD170:
     case 0x080CD198:case 0x080CD1B0:case 0x080CD1B4:case 0x080CD1CC:case 0x080CD1D0:case 0x080CD1E8:
