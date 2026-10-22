@@ -3,6 +3,7 @@
 #include "game/map_choice.h"
 #include "game/bank2.h"
 #include "game/bank3.h"
+#include "game/save_group3.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
 #include "game/scene_motion.h"
@@ -196,6 +197,7 @@ static bool task_callback(HNMemory *m,GameAddr callback)
         uint32_t ignored;return hn_scene_motion_callback(m,callback,0,&ignored)==HN_SCENE_OK;}
     case 0x0802E22C:case 0x0802E258:{uint32_t ignored;return hn_raster_callback(m,callback,&ignored)==HN_SCENE_OK;}
     default:{HNSceneResult result=hn_bank3_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
+        result=hn_group3_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_counter_scene_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_scene_actor_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_bank2_apply(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;

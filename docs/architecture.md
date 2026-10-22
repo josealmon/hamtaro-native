@@ -64,6 +64,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
+| SaveGroup3 pairs and lists | Adapted | All 59 functions across six field/catalog/pair/graphics/list families compared, including 43 Main callbacks and reviewed task contracts; photo-room entry/exit runs natively; complete selection UI, activity and save integration remain pending |
 | Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
 | Status counters and stage sequence | Adapted | All 13 functions in map10_4_counter_sequence.c compared, including the complete 16-bit counter domain, five tile banks, windows, stage/scroll graphics and sequence phases; nine Main and twelve argument-free task contracts; later-stage live integration remains pending |
 | Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
@@ -715,9 +716,37 @@ counts prove neither runtime reachability nor area completion. Longer story,
 activity and save-state routes remain required.
 
 A separate private input-only scout completes the initial Ham-Jam conversation,
-No-P response and return to Clubhouse. Entering the photo room (map 1:3) then stops
-explicitly at ScriptCallbackUpdateSaveGroup3CompletedFieldMask (0x080CA7AC),
-outside the adapted bank-3 families. Its complete 33-function pair/render source
-family and supporting helpers are the next integration dependency. The scout is
-not part of the canonical opening scenario and does not establish either activity
-as complete.
+No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement
+and return to Clubhouse also run natively after the SaveGroup3 batch below.
+The greeting then stops explicitly at SetFixedSlot19AnimationAndIndicator221CC
+(0x080221CC), in the 48-function actor_render_sequence_presets.c family. Review
+that complete family and its dependencies next. This scout is not part of the
+canonical opening scenario and does not establish either activity as complete.
+
+The SaveGroup3 batch covers the complete 33-function pair/render family, four
+pair-selection functions, six graphics helpers, eight field helpers, the catalog
+scanner and seven list functions. It preserves byte-sized selection/count wraps,
+live catalog and record aliases, the completed-mask category-25 exception,
+original palette prefix sums, five-variant scans, forward tile-map copies and
+record backgrounds for all eight styles and empty slots. Void helpers retain
+typed task-only contracts; argument-dependent Main callbacks are not enabled as F4.
+The separate eight-function save_group3_list_selection.c family remains pending.
+A native End Game save made in the photo room is also restored by a separate
+Windows application process. Its status screen retains 21 words, ten seeds and
+one rescued love; this does not establish complete photo activity progression.
+
+ConfigureSaveGroup3PairRenderSlot leaves its local Z uninitialized for category
+255. Direct helper comparisons supply that retained source word explicitly.
+Consecutive calls in the native roots carry the last defined Z; the first empty
+entry uses canonical zero rather than host undefined behavior. Its default original
+OBJ frame has zero parts. Root comparisons seed the corresponding undefined
+source input with zero; they do not establish arbitrary stack-history identity.
+
+The list-text callback passes a 20-byte local array to a task that retains its
+pointer. The native adapter moves that object to reserved guest storage at
+HN_GROUP3_LIST_TEXT, outside host-used game data, so it survives callback return.
+Comparisons verify the original escaped-stack pointer, native stable pointer and
+identical terminated text, then exclude only that relocated pointer word from
+whole-memory equality. A prefix that exceeds the original buffer and allocation
+failure stop explicitly. These are explicit lifetime/bounds adaptations, not
+evidence that the original stack address or corrupt-state behavior is reproduced.

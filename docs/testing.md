@@ -28,6 +28,9 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   result preservation during background-controlled closure.
   Scene actor checks cover four render snapshots, inactive-slot retention and
   animation execution-flag clearing.
+  SaveGroup3 checks cover list shifting, field masks, halfword underflow, mask
+  cursor wrapping, stable temporary-text lifetime, incremental prefixes, end-of-text
+  signaling, allocation failure and rejected task contracts.
 - render: animation repeat/call/delay flow, typed callback guards, physics,
   affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
   PPU regressions for tile mapping, transparency, mosaic/window phase and effects;
@@ -618,3 +621,31 @@ versus single completed grid lines, unchanged-line signaling, tile byte wrapping
 and rejected calling contracts. Function-family checks and the existing long
 opening scenario do not establish complete bank-3 activity progression, rendering
 timing, save effects or a desktop playthrough of those activities.
+
+The six complete SaveGroup3 families can be compared separately:
+
+    python -B tools/compare_reference.py --group3-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+The helper portion passes 84,181 comparisons. The 43 Main callbacks and their
+reviewed F4 contracts pass 55,773 comparisons, including typed returns and Main
+argument cursors, all byte mask cursors, skipped completion fields, overlapping
+record/catalog writes, all eight record styles and empty backgrounds. Both portions
+also run in the full comparison suite. --group3-scenes-only selects the latter.
+
+Direct helper checks cover all byte categories and arbitrary retained Z, aliased
+coordinate outputs, byte constructor versus full-word animation indices, palette
+prefix wrapping, forward overlapping tile copies, stable insertion and ten-row
+catalog scans whose output can overlap their input. The first empty-category root
+Z is canonicalized to zero, as documented in architecture.md; corresponding root
+fixtures establish that undefined input explicitly. Temporary list text uses a
+verified pointer relocation: its text and all other covered state still compare.
+Neither adaptation establishes exact original stack-history behavior.
+
+Private native input checks now enter and leave the photo room without a fault.
+The greeting reaches a separate actor-sequence dependency. Complete photo-list
+navigation, the training-seat quest and activity/save integration remain pending.
+A separate Windows process restores the native photo-room End Game save and
+opens Status with the existing 21 words, ten seeds and one rescued love. The
+reference profile remains read-only; the desktop test uses a private copied profile.
+Reading all 81 list entries in five languages confirms a maximum text length of
+18 bytes, within the original 20-byte buffer.

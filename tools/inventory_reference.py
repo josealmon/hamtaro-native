@@ -75,6 +75,8 @@ def dispatches() -> dict[int, list[str]]:
         ("text-task", "bank3_chain.c", "hn_bank3_chain_task"),
         ("animation", "bank3_chain.c", "hn_bank3_chain_animation"),
         ("main", "records.c", "hn_records_callback"),
+        ("main", "save_group3.c", "hn_group3_callback"),
+        ("text-task", "save_group3.c", "hn_group3_task"),
         ("main", "raster.c", "hn_raster_callback"),
         ("main", "counter_scene.c", "hn_counter_scene_callback"),
         ("text-task", "counter_scene.c", "hn_counter_scene_task"),
