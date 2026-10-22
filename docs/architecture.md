@@ -52,13 +52,13 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
-| Word-choice dialogs | Adapted | Nine text contexts, expression-filtered options, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
+| Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Ham-Chat book | Adapted | Acquisition, learned-word order, five language permutations, category/page selection, paired text contexts, counters, markers and cleanup compared; initial book display and return run natively; manual book navigation remains unverified |
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; later scene callbacks remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | An 18,736-update native input scenario completes the basic lessons/reward, opens the destination map and reaches player control in Sunny Peak; function-level save comparisons and atomic host persistence verified; live-window story and in-game save/reload playthrough remain pending |
+| New game, movement, in-game save/load | Partial | A 20,663-update native input scenario completes the basic lessons/reward, opens the destination map, reaches Sunny Peak and exercises river dialogue and word choices; function-level save comparisons and atomic host persistence verified; live-window story and in-game save/reload playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -76,9 +76,10 @@ Hamha, Tack-Q, Hif-hif and Digdig, including a rejected word and successful retr
 and receives ten sunflower seeds. It exercises native clocked updates from fresh
 SRAM with fixed input and script/position/counter checkpoints, without state injection.
 It then opens the destination map, checks both directions between Clubhouse and
-Sunny Peak, confirms travel and reaches control in map 2:1. Walking north toward
-the stream reaches the unsupported ScriptCallbackConfigureSceneActorMotion
-(0x0802D191) after 18,764 completed updates. The opening remains incomplete.
+Sunny Peak, confirms travel and reaches control in map 2:1. Walking north then enters
+the river scene, advances its dialogue, performs Hamha and opens the bridge's
+filtered word menu. Selecting Tack-Q returns to player control in map 2:11.
+This does not establish bridge progression, a reconciliation or a complete opening.
 Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
@@ -141,7 +142,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-581,019 comparisons with the independent BIOS and PPU oracles.
+683,040 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -190,6 +191,17 @@ families, original boot-gate ownership, fractional positions, secondary-slot ali
 and run-speed delay adjustments. Facing interpolation uses wrapped 32-bit fixed-point
 division/multiplication and original eight-unit rounding, including negative inputs.
 
+River scene adapters preserve the original piecewise actor-position remapping,
+live control aliases, saved-position restoration, bounded approach velocities,
+render-mode ownership and linked slot setup. Eight argument-free callbacks have
+explicit Main and animation bindings; the animation ABI preserves the yield word.
+Surface-height updates retain unsigned region boundaries, one-step overshoot and
+leader/follower aliases. Region audio reads its records from the player's ROM,
+preserves inclusive signed bounds, truncated volume products and song suppression.
+The original clamped-approach zero-duration path and inside-region audio modes
+above two read uninitialized source values; these cases fail explicitly until a
+defined caller contract is established. They are not silently replaced with host data.
+
 The native Main interpreter keeps cursor, scratch, variables and return stack
 in their original 32-bit memory views. Callback bindings accept a specific typed
 Main signature, never a cast of a ROM address to a host function pointer. Unknown
@@ -227,7 +239,9 @@ without interpreting guest instructions.
 
 Word-choice dialogs retain nine twelve-byte records and allocate nine independent
 text tasks, including unused cells. Conditions advance the original expression
-cursor; labels select ROM language bundles or adjusted-initial buffers. Opening
+cursor for up to 255 candidates before enforcing the nine-visible-option limit;
+candidate IDs above 16 have no disabled bit in the 16-bit mask. Labels select ROM
+language bundles or adjusted-initial buffers. Opening
 waits for background ownership, then initializes both cursor slots and tile palette
 highlights. Input preserves directional priority, vertical disabled-row skipping,
 the backward correction from empty cells, blocked cancellation and original songs.
@@ -411,3 +425,33 @@ are rejected; the unused group-0 record write/load path is not exposed.
    frame cadence, original resolution and gameplay; host display refresh is independent.
 5. Verify the packaged app on a Windows machine without development tools.
    Public CI remains ROM-free; the private reference suite takes a user path.
+
+## Adaptation workflow
+
+The reference's current progress report verifies 4,214 C functions (332,660 bytes),
+4,252 assembly bytes and 45 unidentified bytes in a byte-identical ROM build.
+Reconstructed data and padding are separate from recovered executable code.
+This is a strong source reference, not a Windows coverage percentage.
+
+Use tools/inventory_reference.py before choosing a batch. It groups the original
+functions by source family and identifies callback-named candidates with explicit
+native dispatch entries. Names miss some indirect targets; a dispatch entry alone
+does not establish correctness, ABI compatibility or execution coverage. Helpers
+can be consolidated in native functions, so unmatched helpers are not automatically
+missing implementations. The coverage matrix above remains the behavioral record.
+
+| Batch order | Source families and purpose | Completion evidence |
+| --- | --- | --- |
+| 1 | Shared actor presets, scene control and map-choice callbacks: class_anchor_presets.c, script_callbacks_render_presets.c, scene_control_callbacks.c and map_choice_callbacks.c | Review each family's entry points, helpers, live aliases and calling contracts; adapt related callbacks together, then compare the complete family |
+| 2 | Area scripts, beginning with the remaining bank-2 families, then bank-3/4/5/6 and later areas in dependency order | Whole source families and their script dependencies compared before longer area scenarios; story flags and secondary routes checked explicitly |
+| 3 | Selection, pair lists, save-group displays and single-player modal activities | Native UI/state roundtrips, original save effects and activity outcomes; Cable Link remains excluded |
+| 4 | Remaining raster/IRQ callbacks and full-game audio behavior, alongside the areas that use them | Function comparisons plus timed native video/audio integration; static images alone are insufficient |
+| 5 | Complete story, secondary activities, minigames and in-game save/reload | Longer input scenarios and actual-window playthroughs, with completion state and compatible SRAM verified |
+
+For every batch, enumerate all entry points and dependencies before implementation,
+record undefined/unresolved contracts, adapt a coherent family, and run its focused
+comparisons. Run the full differential suite once at the batch boundary unless a
+failure needs isolation. Then extend long native scenarios and inspect affected
+desktop behavior. Gameplay discovers integration faults; it is not the primary
+inventory of functions still to port. Keep generated inventories private or on stdout,
+update these existing documents and retain no per-function reports in the repository.

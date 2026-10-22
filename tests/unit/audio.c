@@ -1,6 +1,7 @@
 #include "game/audio.h"
 #include "game/state.h"
 #include "game/script.h"
+#include "game/scene.h"
 #include <stdio.h>
 #include <stdlib.h>
 static HNMemory memory;
@@ -192,6 +193,37 @@ static void psg_and_scripts(void)
     hn_memory_init(&memory,rom,0x800000);hn_script_init(&script,&memory,NULL,0);
     CHECK(!hn_main_command(&script,0x0A,0x02021000));CHECK(script.fault==HN_SCRIPT_RESOURCE&&!memory.fault);
 }
+static void region(void)
+{
+    reset();rom_word(HN_AUDIO_REGION_RECORDS,0x03006000,4);rom_word(HN_AUDIO_REGION_RECORDS+4,3,2);
+    hn_write32(&memory,HN_RENDER_SLOTS,0x02028000);hn_write8(&memory,HN_RENDER_INFO+16,1);
+    for(unsigned i=0;i<2;i++)hn_write8(&memory,0x02010000+i*80,0x80);
+    const uint8_t arguments[]={0x80,0,0,255,255,0,2,1,0,1,8,0x60,0};
+    for(unsigned i=0;i<sizeof(arguments);i++)hn_write8(&memory,0x02020000+i,arguments[i]);
+    hn_write32(&memory,0x02028018,0x00118000);hn_write32(&memory,0x02028020,0x8000);
+    uint32_t consumed=0,yield=0xABCDFFFF;
+    CHECK(hn_scene_animation_callback(&memory,0x0801E801,0,0x02020000,&consumed,&yield)==HN_SCENE_OK);
+    CHECK(consumed==13&&yield==1&&hn_read8(&memory,HN_SCENE_CONTROLS+0x60)==1);
+    CHECK(hn_read8(&memory,0x02010013)==34&&hn_read8(&memory,0x02010000)==0x83);
+    CHECK(hn_read8(&memory,0x02010000+80+0x13)==34);
+    hn_write32(&memory,0x02028018,0x02008001);
+    CHECK(hn_audio_region(&memory,0x02020000,&yield)&&!hn_read8(&memory,HN_SCENE_CONTROLS+0x60)&&hn_read8(&memory,0x02010013)==64);
+    hn_write32(&memory,0x02028018,0x02008000);
+    CHECK(hn_audio_region(&memory,0x02020000,&yield)&&hn_read8(&memory,HN_SCENE_CONTROLS+0x60)==1);
+    hn_write16(&memory,0x02020001,32768);hn_write16(&memory,0x02020005,32767);
+    hn_write8(&memory,0x0202000A,2);hn_write32(&memory,0x02028018,0x8000);
+    CHECK(hn_audio_region(&memory,0x02020000,&yield)&&!hn_read8(&memory,0x02010013)); /* Product truncates before clamping. */
+    hn_write8(&memory,0x02020009,2);hn_write8(&memory,0x0202000A,255);
+    CHECK(hn_audio_region(&memory,0x02020000,&yield)&&hn_read8(&memory,0x02010013)==63);
+    hn_write8(&memory,0x02020009,0);
+    CHECK(hn_audio_region(&memory,0x02020000,&yield)&&hn_read8(&memory,0x02010013)==63);
+    hn_write8(&memory,0x02020009,3);yield=0xA5;
+    CHECK(!hn_audio_region(&memory,0x02020000,&yield)&&yield==0xA5&&!memory.fault);
+    hn_write32(&memory,0x02028020,0x00018001);
+    CHECK(hn_audio_region(&memory,0x02020000,&yield)&&yield==1&&!hn_read8(&memory,HN_SCENE_CONTROLS+0x60));
+    hn_write8(&memory,HN_RENDER_CLASS_LEADER,1);
+    CHECK(!hn_audio_region(&memory,0x02020000,&yield)&&!memory.fault);
+}
 int main(void)
 {
     rom=calloc(1,0x800000);CHECK(rom!=NULL);
@@ -207,6 +239,6 @@ int main(void)
         rom_word(HN_AUDIO_PLAYER_RECORDS+i*12+8,2,4);
     }
     rom_word(HN_AUDIO_SONG_RECORDS+8,0x02020000,4);
-    initialization();player_and_parameters();channels();commands();notes_and_player();mixing();psg_and_scripts();free(rom);
+    initialization();player_and_parameters();channels();commands();notes_and_player();mixing();psg_and_scripts();region();free(rom);
     printf("%u native audio checks passed.\n",checks);return 0;
 }

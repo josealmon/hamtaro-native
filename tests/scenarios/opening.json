@@ -1,5 +1,5 @@
 {
-  "name": "New game, basic Ham-Chat lessons, destination selection and Sunny Peak entry",
+  "name": "New game, basic Ham-Chat lessons and Sunny Peak river interactions",
   "steps": [
     {"frames": 100},
     {"repeat": 8, "steps": [{"frames": 1, "buttons": ["A"]}, {"frames": 119}]},
@@ -86,6 +86,31 @@
     {"frames": 60},
     {"frames": 1, "buttons": ["A"]},
     {"frames": 600},
-    {"label": "Sunny Peak control", "expect": {"frame": 18736, "map_bank": 2, "map_index": 1, "opcode": 33, "main_cursor": "0x08033208", "leader_x": 72.5, "leader_z": 232.5, "learned_words": 10, "seeds": 10}}
+    {"label": "Sunny Peak control", "expect": {"frame": 18736, "map_bank": 2, "map_index": 1, "opcode": 33, "main_cursor": "0x08033208", "leader_x": 72.5, "leader_z": 232.5, "learned_words": 10, "seeds": 10}},
+    {"frames": 80, "buttons": ["Up"]},
+    {"frames": 240},
+    {"label": "River scene", "expect": {"frame": 19056, "map_bank": 2, "map_index": 11, "opcode": 2, "main_cursor": "0x0803E684", "leader_x": 112.5, "leader_z": 256.5}},
+    {"frames": 240},
+    {"label": "River dialogue", "expect": {"frame": 19296, "opcode": 26, "main_cursor": "0x0803E69B"}},
+    {"repeat": 3, "steps": [{"frames": 1, "buttons": ["A"]}, {"frames": 119}]},
+    {"label": "River action choice", "expect": {"frame": 19656, "opcode": 36, "main_cursor": "0x0803E469"}},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 479},
+    {"label": "Hamha action", "expect": {"frame": 20136, "opcode": 0, "main_cursor": "0x085A49C4"}},
+    {"frames": 1, "buttons": ["B"]},
+    {"frames": 60},
+    {"frames": 16, "buttons": ["Up"]},
+    {"frames": 60},
+    {"label": "River control", "expect": {"frame": 20273, "map_bank": 2, "map_index": 11, "opcode": 33, "main_cursor": "0x0803E38E", "leader_x": 112.5, "leader_z": 240.5, "learned_words": 10, "seeds": 10}},
+    {"frames": 16, "buttons": ["Right"]},
+    {"frames": 40, "buttons": ["Up"]},
+    {"frames": 10},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 60},
+    {"label": "Filtered bridge word choice", "expect": {"frame": 20400, "map_bank": 2, "map_index": 11, "opcode": 36, "main_cursor": "0x0803E4EF", "leader_x": 128.5, "leader_z": 200.5}},
+    {"repeat": 2, "steps": [{"frames": 1, "buttons": ["Down"]}, {"frames": 10}]},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 240},
+    {"label": "River control after Tack-Q", "expect": {"frame": 20663, "map_bank": 2, "map_index": 11, "opcode": 33, "main_cursor": "0x0803E38E", "leader_x": 128.5, "leader_z": 200.5, "learned_words": 10, "seeds": 10}}
   ]
 }

@@ -246,6 +246,32 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x08011C8C:if(!hn_motion_approach_clamped(m,arguments))return HN_SCENE_RESOURCE;*consumed=2;break;
+    case 0x08011DC0:{
+        unsigned index,count=hn_read8(m,HN_RENDER_INFO+16);if(!hn_read32(m,HN_RENDER_SLOTS))return HN_SCENE_RESOURCE;
+        for(index=0;index<count;index++)if(hn_read32(m,hn_render_slot(m,index)+4)==HN_APPROACH_ANIMATION)break;
+        if(index==count||!hn_render_modes(m,(uint8_t)index,1,3,hn_read8(m,HN_SCENE_CONTROLS+0xE7))||
+           !hn_render_modes(m,hn_read8(m,HN_SCENE_CONTROLS+0xE4),0,3,hn_read8(m,HN_SCENE_CONTROLS+0xE8)))return HN_SCENE_RESOURCE;
+        break;
+    }
+    case 0x08011E3C:
+        if(!hn_render_configure(m,9,1,0xB0,20,-8,0,hn_read32(m,0x03002BB0))||
+           !hn_render_modes(m,9,2,3,hn_read8(m,HN_RENDER_CLASS_LEADER)))return HN_SCENE_RESOURCE;break;
+    case 0x08011E7C:
+        if(hn_read8(m,HN_RENDER_INFO+16)<=9||!hn_read32(m,HN_RENDER_SLOTS))return HN_SCENE_RESOURCE;
+        if(hn_read8(m,HN_RENDER_CLASS_FOLLOWER)==9)hn_write8(m,0x03002170,0);
+        hn_render_set_animation(m,9,hn_read32(m,0x03002BB4));
+        if(!hn_render_modes(m,9,2,3,hn_read8(m,HN_RENDER_CLASS_LEADER)))return HN_SCENE_RESOURCE;break;
+    case 0x08011EA4:case 0x08011EEC:case 0x08011EF0:case 0x08011F08:break;
+    case 0x08011EA8:{
+        unsigned first=hn_read8(m,arguments);GameAddr result=HN_SCENE_CONTROLS+hn_read8(m,arguments+1);unsigned second=hn_read8(m,result);
+        if(first>=hn_read8(m,HN_RENDER_INFO+16)||second>=hn_read8(m,HN_RENDER_INFO+16)||!hn_read32(m,HN_RENDER_SLOTS))return HN_SCENE_RESOURCE;
+        int32_t left=(int32_t)hn_read32(m,hn_render_slot(m,first)+0x20),right=(int32_t)hn_read32(m,hn_render_slot(m,second)+0x20);
+        hn_write8(m,result,(uint8_t)(left==right?0:left>right?1:2));*consumed=2;break;
+    }
+    case 0x08011EF4:hn_write8(m,HN_SAVED_CALL_DEPTH,hn_read8(m,0x03002BF0));break;
+    case 0x0802D190:if(!hn_motion_scene_actor(m,arguments))return HN_SCENE_RESOURCE;*consumed=1;break;
+    case 0x0802D2EC:if(!hn_motion_restore_actors(m))return HN_SCENE_RESOURCE;break;
     case 0x0801D414:{
         unsigned index=hn_read8(m,HN_RENDER_CLASS_LEADER);
         if(index>=hn_read8(m,HN_RENDER_INFO+16)||!hn_read32(m,HN_RENDER_SLOTS))return HN_SCENE_RESOURCE;
@@ -482,6 +508,32 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
                                          uint32_t *consumed,uint32_t *yield)
 {
     (void)slot;(void)arguments;
+    switch(callback&~1u){
+    /* These script callbacks ignore their argument register. Animation streams
+       also invoke them; their zero return consumes no bytes and preserves yield. */
+    case 0x08011DC0:case 0x08011E3C:case 0x08011E7C:case 0x08011EA4:
+    case 0x08011EEC:case 0x08011EF0:case 0x08011EF4:case 0x08011F08:
+        return hn_scene_callback(m,callback,0,consumed);
+    default:break;
+    }
+    if((callback&~1u)==0x0802FFF4){
+        hn_write32(m,slot+0x24,(uint32_t)((int32_t)(0x00E08000u-hn_read32(m,slot+0x18))/48));
+        hn_write32(m,slot+0x2C,(uint32_t)((int32_t)(0x00B88000u-hn_read32(m,slot+0x20))/48));
+        *consumed=0;*yield=0;return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+    }
+    if((callback&~1u)==0x0803002C){
+        unsigned leader=hn_read8(m,HN_RENDER_CLASS_LEADER),count=hn_read8(m,HN_RENDER_INFO+16);
+        if(leader>=count||!hn_read32(m,HN_RENDER_SLOTS)||!hn_motion_map_height(m,hn_render_slot(m,leader)))return HN_SCENE_RESOURCE;
+        if(hn_read8(m,0x03002182)&1){
+            unsigned follower=hn_read8(m,HN_RENDER_CLASS_FOLLOWER);
+            if(follower>=count||!hn_motion_map_height(m,hn_render_slot(m,follower)))return HN_SCENE_RESOURCE;
+        }
+        *consumed=0;*yield=1;return HN_SCENE_OK;
+    }
+    if((callback&~1u)==0x0801E800){
+        if(!hn_audio_region(m,arguments,yield))return HN_SCENE_RESOURCE;
+        *consumed=13;return HN_SCENE_OK;
+    }
     if((callback&~1u)==0x0801E348){
         if(!hn_text_counter_update(m,yield))return HN_SCENE_RESOURCE;
         *consumed=0;return HN_SCENE_OK;

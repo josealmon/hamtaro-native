@@ -19,6 +19,7 @@ int32_t hn_render_class(HNMemory *,GameAddr slot);
 void hn_render_error(HNMemory *,uint16_t code);
 void hn_render_set_animation(HNMemory *,uint32_t index,GameAddr animation);
 void hn_render_flags(HNMemory *,uint32_t index,uint8_t clear_mask,uint8_t value);
+bool hn_render_modes(HNMemory *,uint8_t index,uint8_t mode,uint8_t value,uint8_t field65);
 bool hn_render_configure(HNMemory *,uint8_t index,uint8_t field60,uint8_t field62,
                          int32_t x,int32_t y,int32_t z,GameAddr animation);
 void hn_render_physics(HNMemory *,GameAddr slot);

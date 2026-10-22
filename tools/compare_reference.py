@@ -1019,6 +1019,14 @@ def main() -> None:
             equal(dialog(memory,count,0x02020000,0x02021000,C.byref(selected)),True,f"native choice {label}")
             equal(selected.value,call("UpdateWordChoiceDialog",count,0x02020000,0x02021000,limit=6000000),f"choice result {label}")
             compare(f"choice dialog {label}",ranges)
+        for count in (10,16,17,31,32,33,64,127,255):
+            for variant in range(4):
+                fixture(variant);enabled=4 if count==10 else 9
+                both(0x02020000,bytes([1])*count)
+                both(0x02021000,struct.pack("<"+"H"*count,*([0xBE00]*(count-enabled)+[0xBE01]*enabled)))
+                both(0x030021E4,struct.pack("<H",0xA55A))
+                update(count|0xA5000000,"long filtered candidate list")
+                both(0x02018038,b"\0");update(count,"long list initial selection")
         for case in range(96):
             fixture(case)
             for follower,name in ((False,"SetLeaderIdleRenderAnimations"),(True,"RefreshWordChoiceAnimations")):
@@ -1158,6 +1166,31 @@ def main() -> None:
                     if native_bytes(0x02000398,4)==bytes(4):break
                 if native_bytes(0x02000398,4)==bytes(4):break
             equal(native_bytes(0x02000398,4),bytes(4),"circle IRQ releases state")
+
+    def region_audio_checks():
+        fresh();equal(native("hn_audio_driver_init",result=C.c_bool)(memory),True,"region audio initialization")
+        call("InitializeAudioDriver",limit=2000000)
+        both(0x03002D98,struct.pack("<I",0x02028000));both(0x03002DC0,b"\x01")
+        animation=bind("hn_probe_animation",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        report=(C.c_uint32*4)();case=0
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x03007FF0,4),(0x04000060,0x80),(0x04000100,4),(0x03007010,4))
+        for record in range(3):
+            for no_song in (0,128):
+                for mode in range(3):
+                    for factor in (0,1,2,255):
+                        for bounds in ((-32,-16,128,96),(-32768,-32768,-32767,-32767),(128,96,-32,-16),(-32768,-32768,32767,32767),(7,-3,7,-3)):
+                            low_x,low_z,high_x,high_z=[(v<<16)+0x8000 for v in bounds]
+                            positions=((low_x-1,low_z),(low_x,low_z),(low_x+1,low_z+1),(high_x,high_z),
+                                       (high_x+1,high_z),(high_x,high_z+1),((low_x+high_x)//2,(low_z+high_z)//2),(0x8000,0x8000))
+                            for x,z in positions:
+                                both(0x02028018,struct.pack("<I",x&0xFFFFFFFF));both(0x02028020,struct.pack("<I",z&0xFFFFFFFF))
+                                flag=(0,1,0x60,0x180,0x1FF,65535)[case%6];case+=1
+                                payload=struct.pack("<B4HBBH",record|no_song,*(v&65535 for v in bounds),mode,factor,flag)
+                                both(0x02020000,b"\x8D"+struct.pack("<I",symbols["AnimationCallbackRegionAudio"]|1)+payload)
+                                both(0x03007010,struct.pack("<I",0x02020000))
+                                equal(animation(memory,0x02028000,0x8D,0x03007010,report),1,"native region audio")
+                                equal(report[3],call("AnimationInvokeCallback",0x02028000,0x03007010),"region audio yield")
+                                compare("region audio",ranges)
 
     def audio_checks():
         audio_ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x03007FF0, 4),
@@ -1597,6 +1630,91 @@ def main() -> None:
             equal(command(memory,0x1C,0x02020000),1,f"native transition {name}")
             call("MainScriptInvokeCallback",0x02020000)
             compare(f"transition {name}",((0x02000000,0x40000),(0x03000000,0x7000)))
+        modes=native("hn_render_modes",4,C.c_bool)
+        scene_animation=bind("hn_scene_animation_callback",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32),C.POINTER(C.c_uint32))
+        for case in range(1024):
+            fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+            both(0x02010000,local.randbytes(40*104));index=case%40;mode=case%256;value=case//256;extra=(case*37)&255
+            equal(modes(memory,index,mode,value,extra),True,"native render mode bytes")
+            call("SetRenderModeBytes",index,mode,value,extra)
+            compare("render mode bytes",((0x02000000,0x40000),(0x03000000,0x7000)))
+        for case in range(1024):
+            fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
+            both(0x02010000,local.randbytes(40*104));both(0x02004520,local.randbytes(512));both(0x03002180,local.randbytes(96))
+            index=case%4;source=(case//4)%4;leader=(case//16)%4
+            both(0x03002C0C,bytes([case%4]));both(0x03001F50,bytes([9 if case&1 else case%4]))
+            both(0x02004604,bytes([leader]));both(0x0201DCAE,struct.pack("<H",(1,2,16,32,255,32768,65535)[case%7]))
+            bounds=((0,384,0,384),(200,0,200,0),(-32768,32767,-32768,32767),(128,512,-128,512))[case%4]
+            both(0x030034B0,struct.pack("<4h",*bounds))
+            invoke_transition("ScriptCallbackApproachClampedLeader",bytes([index,source]))
+            invoke_transition("ScriptCallbackTransferLeaderRenderModes")
+            both(0x03002BB0,struct.pack("<II",0x08000100,0x08000110))
+            invoke_transition("ScriptCallbackInitializeLinkedScreenSlot9")
+            invoke_transition("ScriptCallbackSetLinkedScreenSlot9Animation")
+            offset=case%256;both(0x02004520+offset,bytes([(case//16)%4]))
+            invoke_transition("ScriptCallbackCompareRenderZ",bytes([case%4,offset]))
+            both(0x03002BF0,struct.pack("<I",local.getrandbits(32)))
+            for name in ("ScriptCallbackSaveField2BF0","ScriptCallbackReturn0_11EA4","ScriptCallbackReturn0_11EEC","ScriptCallbackReturn0_11EF0","ScriptCallbackReturn0_11F08"):
+                invoke_transition(name)
+            if case<64:
+                for name in ("ScriptCallbackTransferLeaderRenderModes","ScriptCallbackInitializeLinkedScreenSlot9","ScriptCallbackSetLinkedScreenSlot9Animation",
+                             "ScriptCallbackSaveField2BF0","ScriptCallbackReturn0_11EA4","ScriptCallbackReturn0_11EEC","ScriptCallbackReturn0_11EF0","ScriptCallbackReturn0_11F08"):
+                    consumed=C.c_uint32(0xA5);yielded=C.c_uint32(local.getrandbits(32));both(0x0203FFF0,struct.pack("<I",yielded.value))
+                    equal(scene_animation(memory,symbols[name]|1,0x02010000,0x02020000,C.byref(consumed),C.byref(yielded)),1,"native shared callback signature")
+                    equal(consumed.value,call(name,0x02010000,0x02020000,0x0203FFF0),"shared callback consumption")
+                    equal(yielded.value,struct.unpack("<I",cpu.mem_read(0x0203FFF0,4))[0],"shared callback retains yield")
+                    compare("shared callback signature",((0x02000000,0x40000),(0x03000000,0x7000)))
+        height=native("hn_motion_map_height",1,C.c_bool);fresh()
+        edges_x=(0x00407FFF,0x00408000,0x005C8000,0x005C8001,0x007C7FFF,0x007C8000,0x00948000,0x00948001)
+        edges_z=(0x00407FFF,0x00408000,0x00768000,0x00768001,0x00877FFF,0x00878000,0x00BF8000,0x00BF8001)
+        for x in edges_x:
+            for z in edges_z:
+                for flags in range(4):
+                    for control in (0,1,255):
+                        for y in (-0x80000000,-0x88001,-0x88000,-0x87FFF,-0x80000,0,0x7FFF,0x8000,0x7FFFFFFF):
+                            both(0x02010018,struct.pack("<III",x,y&0xFFFFFFFF,z));both(0x03002194,bytes([2 if flags&1 else 0]))
+                            both(0x030021A2,bytes([2 if flags&2 else 0]));both(0x02004544,bytes([control]))
+                            equal(height(memory,0x02010000),True,"native map surface height")
+                            call("UpdateMapChoiceRenderHeight",0x02010000)
+                            compare("map surface height",((0x02000000,0x40000),(0x03000000,0x7000)))
+        animation=bind("hn_probe_animation",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        report=(C.c_uint32*4)()
+        for case in range(256):
+            fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x04")
+            both(0x02010000,local.randbytes(4*104));both(0x03002C0C,bytes([case%4]));both(0x03001F50,bytes([(case//4)%4]))
+            both(0x03002182,bytes([(case//16)%2]));both(0x03002194,bytes([(case//32)%2*2]))
+            both(0x030021A2,bytes([(case//64)%2*2]));both(0x02004544,bytes([(case//128)%2]))
+            for name in ("AnimationCallbackSetMapChoiceTargetVelocity","AnimationCallbackUpdateMapChoiceClassHeights"):
+                both(0x02020000,b"\x8D"+struct.pack("<I",symbols[name]|1));both(0x03007010,struct.pack("<I",0x02020000))
+                equal(animation(memory,0x02010000,0x8D,0x03007010,report),1,f"native map animation {name}")
+                equal(report[3],call("AnimationInvokeCallback",0x02010000,0x03007010),"map animation yield")
+                compare("map animation",((0x02000000,0x40000),(0x03000000,0x7000),(0x03007010,4)))
+        for case in range(3072):
+            fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x04")
+            both(0x02010000,local.randbytes(4*104));both(0x0201DC40,local.randbytes(96))
+            leader=case%4;follower=(case//4)%4
+            both(0x03002C0C,bytes([leader]));both(0x03001F50,bytes([follower]))
+            pivot=(0,1,64,128,255)[case%5];begin=(0,pivot,(pivot+1)&255,255,local.randrange(256))[(case//5)%5]
+            end=(0,pivot,(pivot+1)&255,255,local.randrange(256))[(case//25)%5]
+            enabled=(0,1,2,255)[(case//125)%4]
+            both(0x02004580,bytes([pivot,begin,end,local.randrange(256),local.randrange(256),enabled]))
+            x=(0,1,63,64,127,128,255,256,32767,32768,65535,local.randrange(65536))[case%12]
+            slot=0x02010000+(follower if enabled else leader)*104
+            both(slot+0x18,struct.pack("<I",(x<<16)|local.randrange(65536)))
+            invoke_transition("ScriptCallbackConfigureSceneActorMotion",bytes([(0,1,255)[case%3]]))
+            both(0x03002182,bytes([case%2]));invoke_transition("ScriptCallbackRestoreSceneActorPositions")
+        scene_actor=native("hn_motion_scene_actor",1,C.c_bool)
+        for offset in (0,2,4):
+            for case in range(24):
+                fresh();position=0x02004580+offset
+                both(0x03002D98,struct.pack("<I",position-0x18));both(0x03002DC0,b"\x04")
+                control=bytes([128,3,4 if offset==0 else 200,0 if offset==0 else 32,10,0 if offset==2 else 1,10,0])
+                both(0x02004580,control);both(0x02020000,bytes([case%2]))
+                arguments=(0x02020000,0x0201DC84,0x0201DC86)[case%3]
+                both(arguments,bytes([case%2]))
+                equal(scene_actor(memory,arguments),True,"native live scene-control aliases")
+                equal(call("ScriptCallbackConfigureSceneActorMotion",arguments),1,"scene-control consumed byte")
+                compare("live scene-control aliases",((0x02000000,0x40000),(0x03000000,0x7000)))
         for case in range(1024):
             fresh();both(0x03002D98,struct.pack("<I",0x02010000));both(0x03002DC0,b"\x28")
             index=(0,1,2,39)[case%4];both(0x03002C0C,bytes([index]));both(0x02010000+index*104,local.randbytes(104))
@@ -1753,7 +1871,7 @@ def main() -> None:
             print(f"{checks} private actor/motion comparisons passed; live movement and gameplay remain unverified.")
             return
         if args.audio_only:
-            audio_checks()
+            audio_checks();region_audio_checks()
             print(f"{checks} private audio comparisons passed; hardware output and gameplay remain unverified.")
             return
         if args.scenes_only:
@@ -2738,7 +2856,7 @@ def main() -> None:
         equal(len(movement_positions)>=32,True,"coupled leader visibly changes world position")
         print(f"{len(movement_positions)} distinct leader positions matched during directional input.")
         print(f"{hblank_calls} sampled HBlank callbacks matched; scanline DMA/PPU timing remains unverified.")
-        audio_checks()
+        audio_checks();region_audio_checks()
         scene_checks()
         text_checks()
         counter_checks()

@@ -1,10 +1,34 @@
 #include "game/audio.h"
 #include "game/state.h"
+#include "game/render.h"
 enum {NOTE_ENTRY=0x080EA891,PLAYER_ENTRY=0x080EA5B5,NOOP_ENTRY=0x080EC0B5};
 static GameAddr core(HNMemory *m){return hn_read32(m,HN_AUDIO_CORE_POINTER);}
 static void clear(HNMemory *m,GameAddr address,unsigned bytes)
 {for(unsigned i=0;i<bytes&&!m->fault;i++)hn_write8(m,address+i,0);}
 static bool identified(HNMemory *m,GameAddr p){return hn_read32(m,p+0x34)==HN_AUDIO_IDENT;}
+bool hn_audio_region(HNMemory *m,GameAddr arguments,uint32_t *yield)
+{
+    unsigned index=hn_read8(m,HN_RENDER_CLASS_LEADER);
+    if(index>=hn_read8(m,HN_RENDER_INFO+16)||!hn_read32(m,HN_RENDER_SLOTS))return false;
+    GameAddr slot=hn_render_slot(m,index),record=HN_AUDIO_REGION_RECORDS+(hn_read8(m,arguments)&127)*8;
+    int32_t min_x=(int32_t)(((uint32_t)hn_read16(m,arguments+1)<<16)|0x8000),min_z=(int32_t)(((uint32_t)hn_read16(m,arguments+3)<<16)|0x8000);
+    int32_t max_x=(int32_t)(((uint32_t)hn_read16(m,arguments+5)<<16)|0x8000),max_z=(int32_t)(((uint32_t)hn_read16(m,arguments+7)<<16)|0x8000);
+    unsigned flag=hn_read16(m,arguments+11);
+    int32_t x=(int32_t)hn_read32(m,slot+0x18),z=(int32_t)hn_read32(m,slot+0x20);
+    bool inside=x>=min_x&&x<=max_x&&z>=min_z&&z<=max_z;
+    unsigned mode=hn_read8(m,arguments+9);
+    if(mode){
+        unsigned volume=256;
+        if(inside){
+            if(mode>2)return false; /* The source has no defined distance for other modes. */
+            uint32_t distance=mode==1?((uint32_t)x-(uint32_t)min_x)>>16:((uint32_t)z-(uint32_t)min_z)>>16;
+            volume=(uint16_t)(distance*hn_read8(m,arguments+10));if(volume>256)volume=256;
+        }
+        hn_audio_track_parameter(m,hn_read32(m,record),hn_read16(m,record+4),volume,0);
+    }
+    if(!(hn_read8(m,arguments)&128)&&!hn_audio_song(m,hn_read16(m,record+6),inside?HN_SONG_CHANGE:HN_SONG_STOP))return false;
+    hn_write8(m,HN_SCENE_CONTROLS+flag,(uint8_t)inside);*yield=1;return !m->fault;
+}
 void hn_audio_init(HNAudio *a,HNMemory *m)
 {a->memory=m;a->fault=HN_AUDIO_OK;a->fault_opcode=0;a->fault_address=0;}
 bool hn_audio_ready(HNMemory *m)

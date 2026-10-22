@@ -102,12 +102,12 @@ bool hn_choice_update(HNMemory *m,uint32_t count_word,GameAddr labels,GameAddr c
     if(!background||!hn_read8(m,HN_BACKGROUND_COUNT))return false;
     if(state==0){
         if(hn_read8(m,background+0x38))return !m->fault;
-        unsigned count=count_word&255;if(count>9)return false;
+        unsigned count=count_word&255;
         hn_write8(m,HN_CHOICE_COUNT,0);hn_write32(m,0x03000798,conditions);
         for(unsigned index=0;index<count;index++){
             uint32_t allowed;if(!hn_expression_evaluate(m,hn_read32(m,0x03000798),false,&allowed))return false;
-            if(allowed){unsigned current=hn_read8(m,HN_CHOICE_COUNT);hn_write32(m,record(current),index+1);
-                hn_write32(m,record(current)+4,(hn_read16(m,HN_CHOICE_OPTIONS)>>index)&1);hn_write8(m,HN_CHOICE_COUNT,(uint8_t)(current+1));}
+            if(allowed){unsigned current=hn_read8(m,HN_CHOICE_COUNT);if(current>=9)return false;hn_write32(m,record(current),index+1);
+                hn_write32(m,record(current)+4,index<16?(hn_read16(m,HN_CHOICE_OPTIONS)>>index)&1:0);hn_write8(m,HN_CHOICE_COUNT,(uint8_t)(current+1));}
         }
         unsigned enabled=hn_read8(m,HN_CHOICE_COUNT);for(unsigned index=enabled;index<9;index++)hn_write32(m,record(index),0);
         GameAddr descriptor=descriptor_for(m,enabled);unsigned columns,rows;if(!descriptor||!geometry(m,descriptor,&columns,&rows))return false;

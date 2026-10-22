@@ -88,12 +88,15 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 18,736 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 20,663 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
 then select Sunny Peak, return the highlight to Clubhouse, select Sunny Peak again
-and confirm travel to player control in map 2:1. The
+and confirm travel to player control in map 2:1. The route then enters the river
+scene, advances dialogue, executes Hamha, opens the bridge's filtered word menu,
+selects Tack-Q and returns to player control. Bridge progression and reconciliation
+are not established. The
 JSON contains only button inputs and metadata checkpoints. The runner writes no
 save or capture, rejects unknown inputs and fails on any native runtime fault or
 checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
@@ -124,7 +127,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 581,019 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 683,040 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -135,7 +138,7 @@ The Main memory and scene-transition group can also run separately:
 
     python -B tools/compare_reference.py --scripts-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-This passes 17,993 comparisons: byte/halfword pointer copies, zero/max counts,
+This passes 96,361 comparisons: byte/halfword pointer copies, zero/max counts,
 variable indirection and overlap, graphics disable-except, display-layer flags,
 and 96 actor snapshot/modal-map roundtrips across six map callbacks. Cases include
 optional/absent actors, all direction variants, retained cursor and first/third
@@ -146,6 +149,9 @@ including leader/follower aliases and preserved opposite-direction state.
 Actor transition cases cover coordinate snapshots, both reposition selectors,
 primary/secondary slot aliases, animation retention, boot-gate ownership, running
 delays and signed fixed-point facing interpolation with wrapped products/rounding.
+Scene cases additionally cover piecewise actor remapping/restoration with live
+aliases, surface-height region boundaries and overshoot, clamped approach/mode
+transfers, linked slot setup and explicit Main/animation callback ABI sharing.
 
 The destination-map group can run separately:
 
@@ -171,14 +177,16 @@ The audio part can be run independently with the same private ROM and reference:
 
     python -B tools/compare_reference.py --audio-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-It passes 57,988 function/state comparisons, including 300 song-control selections,
+It passes 81,029 function/state comparisons, including 300 song-control selections,
 240 synthetic note-allocation cases and 120 player updates for each of 12 actual
 ROM sequences. It also compares 1,440 complete mixer/PSG-service calls over those
 12 sequences, including the eight-bit PCM DMA planes and relevant sound/timer
 register images. Of those snapshots, 349 contain nonzero PCM. Synthetic cases cover
 PSG envelopes, PCM loop/end/interpolation boundaries and reverberation; Main and
-animation audio commands are compared separately. The CPU oracle supplies only
-the frequency initializer's VCOUNT boundary. It does not model elapsed audio time,
+animation audio commands are compared separately. Region callback cases cover
+state transitions, signed boundaries, volume truncation, song suppression and
+yield semantics. These do not establish audible area mixing. The CPU oracle supplies
+only the frequency initializer's VCOUNT boundary. It does not model elapsed audio time,
 FIFO/DAC mixing or PSG waveform generation. Native menu playback and SDL delivery
 have separate session/listening evidence; full stereo parity and complete-song
 duration remain unverified.
@@ -276,11 +284,13 @@ Word-choice comparisons can be run separately:
 
     python -B tools/compare_reference.py --choices-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-This passes 15,850 private comparisons. It checks leader/follower idle animations,
+This passes 16,462 private comparisons. It checks leader/follower idle animations,
 96 synthetic descriptor layouts, selection/highlighting, 45 complete dialog state
 scenarios, expression-filtered options, directional priorities, confirmation,
 blocked/allowed cancellation, requested/delayed closure, Main configuration/await
 protocols, concurrent updates of all nine text tasks and all seven reset states.
+Long candidate lists cover up to 255 entries filtered to nine visible options,
+expression-cursor advancement, high candidate IDs and 16-bit disabled-mask limits.
 Main handler indexes are checked against the
 ROM dispatch table before direct function comparisons. Dialog state, linked tasks,
 graphics/background state, audio state, VRAM and DMA effects are compared; no
@@ -317,3 +327,16 @@ Repository checks:
 
 These catch common accidental private/generated files and source encodings.
 They do not determine the copyright status of reconstructed source code.
+
+Before adapting a source family, inspect its read-only planning inventory:
+
+    python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP
+    python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP --source "src/actors/*.c" --json
+
+The default table groups C/ASM functions and callback-named candidates by original
+source. JSON additionally lists function names, addresses and explicit native
+dispatch ABIs. It reads metadata and native source only, writes no report and never
+loads a ROM or executes reference code. A missing dispatch candidate needs review;
+an existing one still needs contract and behavior checks. This is neither a complete
+indirect-call inventory nor a completion percentage. Follow the batch order and
+validation boundaries in architecture.md; keep any redirected output outside Git.

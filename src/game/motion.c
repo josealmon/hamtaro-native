@@ -63,6 +63,79 @@ bool hn_motion_interpolate(HNMemory *m,uint8_t selector)
     }
     return !m->fault;
 }
+bool hn_motion_scene_actor(HNMemory *m,GameAddr arguments)
+{
+    unsigned enabled=hn_read8(m,HN_SCENE_CONTROLS+0x65);
+    GameAddr slot=motion_slot(m,enabled?HN_RENDER_CLASS_FOLLOWER:HN_RENDER_CLASS_LEADER);if(!slot)return false;
+    GameAddr position=slot+0x18,velocity=slot+0x24;
+    unsigned x=hn_read16(m,position+2);hn_write16(m,enabled?0x0201DC86:0x0201DC84,(uint16_t)x);
+    unsigned pivot=hn_read8(m,HN_SCENE_CONTROLS+0x60);int32_t speed;
+    if(x<=pivot){
+        unsigned begin=hn_read8(m,HN_SCENE_CONTROLS+0x61),target=hn_read8(m,HN_SCENE_CONTROLS+0x63);
+        unsigned span=(uint16_t)(x-begin);
+        unsigned interpolated=(uint16_t)hn_runtime_divide(((int32_t)pivot-(int32_t)target)*(int32_t)span,(int32_t)pivot-(int32_t)begin);
+        if(hn_read8(m,arguments)){
+            hn_write32(m,position,(interpolated+target)<<16);
+            int32_t difference=(int32_t)(interpolated+hn_read8(m,HN_SCENE_CONTROLS+0x63))-(int32_t)(span+hn_read8(m,HN_SCENE_CONTROLS+0x61));
+            speed=hn_runtime_divide((int32_t)(0u-((uint32_t)difference<<16)),hn_read8(m,HN_SCENE_CONTROLS+0x65)*24+32);
+        }else{
+            int32_t difference=(int32_t)(interpolated+target)-(int32_t)(span+begin);
+            speed=hn_runtime_divide((int32_t)((uint32_t)difference<<16),hn_read8(m,HN_SCENE_CONTROLS+0x65)*24+32);
+        }
+    }else{
+        unsigned span=(uint16_t)(x-pivot);
+        unsigned interpolated=(uint16_t)hn_runtime_divide(((int32_t)hn_read8(m,HN_SCENE_CONTROLS+0x64)-(int32_t)pivot)*(int32_t)span,
+                                                       (int32_t)hn_read8(m,HN_SCENE_CONTROLS+0x62)-(int32_t)pivot);
+        uint32_t difference=(span-interpolated)<<16;
+        if(hn_read8(m,arguments)){hn_write32(m,position,(interpolated+pivot)<<16);speed=(int32_t)difference;}
+        else speed=(int32_t)(0u-difference);
+        speed=hn_runtime_divide(speed,hn_read8(m,HN_SCENE_CONTROLS+0x65)*24+32);
+    }
+    hn_write32(m,velocity,(uint32_t)speed);return !m->fault;
+}
+bool hn_motion_restore_actors(HNMemory *m)
+{
+    GameAddr slot=motion_slot(m,HN_RENDER_CLASS_LEADER);if(!slot)return false;
+    hn_write32(m,slot+0x18,((uint32_t)hn_read16(m,0x0201DC84)<<16)+0x8000);
+    if(hn_read8(m,0x03002182)&1){
+        slot=motion_slot(m,HN_RENDER_CLASS_FOLLOWER);if(!slot)return false;
+        hn_write32(m,slot+0x18,((uint32_t)hn_read16(m,0x0201DC86)<<16)+0x8000);
+    }
+    return !m->fault;
+}
+bool hn_motion_map_height(HNMemory *m,GameAddr slot)
+{
+    uint32_t x=hn_read32(m,slot+0x18),z=hn_read32(m,slot+0x20),height=hn_read32(m,slot+0x1C);
+    bool enabled=(!(hn_read8(m,0x03002194)&2)&&!hn_read8(m,HN_SCENE_CONTROLS+0x24))||(hn_read8(m,0x030021A2)&2);
+    bool lower=(enabled&&x-0x007C8000u<=0x00180000u&&z-0x00878000u<=0x00380000u)||
+               (x-0x00408000u<=0x001C0000u&&z-0x00408000u<=0x00360000u);
+    if(lower)height=(int32_t)height<=-0x88000?(uint32_t)-0x88000:height-0x20000u;
+    else height=(int32_t)height>0x7FFF?0x8000:height+0x20000u;
+    hn_write32(m,slot+0x1C,height);return !m->fault;
+}
+static int32_t approach_coordinate(int32_t value,int32_t minimum,int32_t maximum)
+{return value<minimum?minimum:maximum>=value?value:maximum;}
+bool hn_motion_approach_clamped(HNMemory *m,GameAddr arguments)
+{
+    unsigned index=hn_read8(m,arguments),source_index=hn_read8(m,arguments+1),leader_index=hn_read8(m,HN_SCENE_CONTROLS+0xE4);
+    unsigned duration=hn_read16(m,HN_SCENE_DURATION),count=hn_read8(m,HN_RENDER_INFO+16);
+    /* The source's zero-duration path reads uninitialized stack coordinates. */
+    if(!duration||index>=count||source_index>=count||leader_index>=count||!hn_read32(m,HN_RENDER_SLOTS))return false;
+    GameAddr actor=hn_render_slot(m,index),source=hn_render_slot(m,source_index),leader=hn_render_slot(m,leader_index);
+    int32_t min_x=(int32_t)((uint32_t)((int16_t)hn_read16(m,HN_BACKGROUND_BOUNDS)+104)<<16);
+    int32_t max_x=(int32_t)((uint32_t)((int16_t)hn_read16(m,HN_BACKGROUND_BOUNDS+2)-136)<<16);
+    int32_t min_z=(int32_t)((uint32_t)((int16_t)hn_read16(m,HN_BACKGROUND_BOUNDS+4)+64)<<16);
+    int32_t max_z=(int32_t)((uint32_t)((int16_t)hn_read16(m,HN_BACKGROUND_BOUNDS+6)-96)<<16);
+    if(!hn_render_modes(m,(uint8_t)source_index,1,3,hn_read8(m,HN_SCENE_CONTROLS+0xE7))||
+       !hn_render_configure(m,(uint8_t)index,1,(uint8_t)(0x30|(hn_read8(m,HN_SCENE_CONTROLS+0xE8)&15)),0,0,0,HN_APPROACH_ANIMATION))return false;
+    int32_t x=approach_coordinate((int32_t)hn_read32(m,source+0x18),min_x,max_x);
+    int32_t z=approach_coordinate((int32_t)(hn_read32(m,source+0x1C)+hn_read32(m,source+0x20)),min_z,max_z);
+    int32_t leader_x=approach_coordinate((int32_t)hn_read32(m,leader+0x18),min_x,max_x);
+    int32_t leader_z=approach_coordinate((int32_t)(hn_read32(m,leader+0x1C)+hn_read32(m,leader+0x20)),min_z,max_z);
+    hn_write32(m,actor+0x24,(uint32_t)hn_runtime_divide((int32_t)((uint32_t)leader_x-(uint32_t)x),(int32_t)duration));
+    hn_write32(m,actor+0x28,0);hn_write32(m,actor+0x2C,(uint32_t)hn_runtime_divide((int32_t)((uint32_t)leader_z-(uint32_t)z),(int32_t)duration));
+    hn_write32(m,actor+0x18,(uint32_t)x);hn_write32(m,actor+0x1C,0x8000);hn_write32(m,actor+0x20,(uint32_t)z);return !m->fault;
+}
 void hn_motion_reset(HNMemory *m)
 {
     hn_write16(m,0x03001FBC,0);hn_write8(m,0x030021E0,hn_read8(m,0x030021E0)&0xFB);
