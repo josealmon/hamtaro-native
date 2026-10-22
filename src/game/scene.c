@@ -14,6 +14,7 @@
 #include "game/presets.h"
 #include "game/map_choice.h"
 #include "game/bank2.h"
+#include "game/bank3.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
 #include "game/records.h"
@@ -195,26 +196,26 @@ static bool record_menu(HNMemory *m)
     hn_render_flags(m,27,12,0);return !m->fault;
 }
 static const GameAddr actor_classes[]={HN_RENDER_CLASS_LEADER,0x03002274,HN_RENDER_CLASS_FOLLOWER,0x03002270};
-static bool save_actor_slots(HNMemory *m)
+static bool save_actor_slots_impl(HNMemory *m,bool bounded)
 {
     for(unsigned i=0;i<4;i++){
-        unsigned index=hn_read8(m,actor_classes[i]);if(index>=hn_read8(m,HN_RENDER_INFO+16))return false;
+        unsigned index=hn_read8(m,actor_classes[i]);if(bounded&&index>=hn_read8(m,HN_RENDER_INFO+16))return false;
         if(!hn_memory_copy(m,HN_ACTOR_RENDER_SNAPSHOT+i*104,hn_render_slot(m,index),104))return false;
     }
     return true;
 }
-static bool restore_actor_slots(HNMemory *m,bool idle)
+static bool restore_actor_slots_impl(HNMemory *m,bool idle,bool bounded)
 {
     unsigned variant=0;
     for(unsigned i=0;i<4;i++){
         GameAddr saved=HN_ACTOR_RENDER_SNAPSHOT+i*104;unsigned index=hn_read8(m,actor_classes[i]);
         if(i&&(!hn_read8(m,saved+96)||(idle&&!index)))continue;
-        if(index>=hn_read8(m,HN_RENDER_INFO+16))return false;
+        if(bounded&&index>=hn_read8(m,HN_RENDER_INFO+16))return false;
         GameAddr animation=0;
         if(idle){
             unsigned primary=hn_read8(m,0x03001F60),secondary=hn_read8(m,0x03001F90),family;
             if(i==0||i==2)variant=(uint8_t)((hn_read8(m,saved+96)&15)-1);
-            if(variant>=4)return false;
+            if(bounded&&variant>=4)return false;
             if(!(i&1)){
                 family=(i==2?(primary^1):primary)*2+1;
                 animation=hn_read32(m,hn_read32(m,HN_PRIMARY_ANIMATION_FAMILIES+family*4)+variant*4);
@@ -228,6 +229,10 @@ static bool restore_actor_slots(HNMemory *m,bool idle)
     }
     return !m->fault;
 }
+static bool save_actor_slots(HNMemory *m){return save_actor_slots_impl(m,true);}
+static bool restore_actor_slots(HNMemory *m,bool idle){return restore_actor_slots_impl(m,idle,true);}
+bool hn_scene_save_actor_slots_raw(HNMemory *m){return save_actor_slots_impl(m,false);}
+bool hn_scene_restore_actor_slots_raw(HNMemory *m){return restore_actor_slots_impl(m,true,false);}
 static bool class_screen_side(HNMemory *m,bool store_result)
 {
     unsigned index=hn_read8(m,HN_SCENE_CONTROLS+0x12),count=hn_read8(m,HN_RENDER_INFO+16);
@@ -513,6 +518,7 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         result=hn_scene_actor_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_wander_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_bank2_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_bank3_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_map_choice_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_particles_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_scene_motion_callback(m,callback,arguments,consumed);
@@ -530,6 +536,7 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
     (void)slot;(void)arguments;
     HNSceneResult wander=hn_wander_animation(m,callback,slot,arguments,consumed,yield);if(wander!=HN_SCENE_UNKNOWN)return wander;
     HNSceneResult bank=hn_bank2_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
+    bank=hn_bank3_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     HNSceneResult map=hn_map_choice_animation(m,callback,slot,arguments,consumed,yield);if(map!=HN_SCENE_UNKNOWN)return map;
     HNSceneResult motion=hn_scene_motion_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;
     switch(callback&~1u){

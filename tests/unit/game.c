@@ -12,6 +12,8 @@
 #include "game/map_choice.h"
 #include "game/particles.h"
 #include "game/bank2.h"
+#include "game/bank3.h"
+#include "game/audio.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
 #include "game/records.h"
@@ -1861,6 +1863,57 @@ static void scene_effects_contract(void)
     }
     CHECK(!memory.fault);free(rom);
 }
+static void bank3_contract(void)
+{
+    uint8_t *rom=calloc(1,0x700000);CHECK(rom!=NULL);if(!rom)return;
+    hn_memory_init(&memory,rom,0x700000);hn_write32(&memory,HN_RENDER_SLOTS,0x02010000);hn_write8(&memory,HN_RENDER_INFO+16,1);
+    hn_write32(&memory,HN_GRAPHICS_SCRIPTS,0x02018000);hn_write8(&memory,HN_GRAPHICS_COUNT,1);
+    hn_write8(&memory,0x03002C04,16);hn_write8(&memory,0x03002C00,19);
+    CHECK(hn_bank3_task(&memory,0x08051525)==HN_SCENE_OK);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,29)+0x20)==0xFFF08000);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,30)+0x18)==0xFFC08000&&hn_read8(&memory,hn_render_slot(&memory,31)+0x65)==16);
+    CHECK(hn_read32(&memory,0x02018000+4*44+0x18)==0x088E1412);
+    GameAddr player=0x02020000,tracks=0x02021000;
+    for(unsigned i=0;i<4;i++)rom[HN_AUDIO_PLAYER_RECORDS-HN_ROM_BASE+i]=(uint8_t)(player>>(i*8));
+    hn_write32(&memory,player+0x34,HN_AUDIO_IDENT);hn_write8(&memory,player+8,10);hn_write32(&memory,player+0x2C,tracks);
+    for(unsigned i=0;i<10;i++){hn_write8(&memory,tracks+i*80,128);hn_write8(&memory,tracks+i*80+0x15,0x55);}
+    uint32_t consumed=99,yield=99;hn_write8(&memory,0x02001658,22);
+    CHECK(hn_scene_animation_callback(&memory,0x0805110D,0,0,&consumed,&yield)==HN_SCENE_OK&&consumed==0&&yield==0);
+    for(unsigned i=0;i<10;i++)CHECK(hn_read8(&memory,tracks+i*80+0x15)==(i<8?83:0x55));
+    hn_write8(&memory,0x02001658,1);
+    CHECK(hn_bank3_animation(&memory,0x0805110D,&consumed,&yield)==HN_SCENE_OK&&hn_read8(&memory,0x02001658)==22);
+    CHECK(hn_read8(&memory,tracks+0x15)==83);
+    hn_write8(&memory,0x02001658,0);
+    CHECK(hn_bank3_animation(&memory,0x0805110D,&consumed,&yield)==HN_SCENE_OK&&hn_read8(&memory,tracks+0x15)==119);
+    hn_write8(&memory,0x02001659,2);hn_write16(&memory,player+0x1C,150);
+    CHECK(hn_bank3_animation(&memory,0x08051169,&consumed,&yield)==HN_SCENE_OK&&hn_read16(&memory,player+0x1E)==128&&hn_read16(&memory,player+0x20)==75);
+    hn_write16(&memory,player+0x1E,77);
+    CHECK(hn_bank3_animation(&memory,0x08051169,&consumed,&yield)==HN_SCENE_OK&&hn_read16(&memory,player+0x1E)==77);
+    hn_write8(&memory,HN_SCENE_CONTROLS+0x57,0xFE);
+    CHECK(hn_bank3_animation(&memory,0x080516F1,&consumed,&yield)==HN_SCENE_OK&&hn_read8(&memory,HN_SCENE_CONTROLS+0x57)==0xFF&&yield==0);
+    GameAddr source=hn_render_slot(&memory,27);hn_write16(&memory,source+0x3C,256);hn_write16(&memory,source+0x3E,320);
+    for(unsigned i=0;i<32;i++)hn_write8(&memory,HN_AFFINE_USAGE+i,255);
+    for(unsigned i=29;i<32;i++)hn_write8(&memory,hn_render_slot(&memory,i)+0x64,255);
+    CHECK(hn_bank3_animation(&memory,0x08051709,&consumed,&yield)==HN_SCENE_OK&&consumed==0&&yield==1);
+    for(unsigned i=29;i<32;i++){
+        GameAddr slot=hn_render_slot(&memory,i);
+        CHECK(hn_read16(&memory,slot+0x3C)==0xFF00&&hn_read16(&memory,slot+0x3E)==320);
+        CHECK(hn_read8(&memory,slot+0x64)==i-29&&hn_read8(&memory,HN_AFFINE_USAGE+i-29)==1);
+    }
+    for(unsigned i=0;i<32;i++)hn_write8(&memory,HN_AFFINE_USAGE+i,0);
+    hn_write8(&memory,hn_render_slot(&memory,29)+0x64,255);
+    CHECK(hn_bank3_animation(&memory,0x08051709,&consumed,&yield)==HN_SCENE_OK&&hn_read8(&memory,hn_render_slot(&memory,29)+0x64)==32&&hn_read8(&memory,HN_AFFINE_USAGE+32)==1);
+    hn_write8(&memory,HN_RENDER_CLASS_LEADER,255);hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,0);
+    hn_write8(&memory,hn_render_slot(&memory,255)+0x60,1);hn_write32(&memory,hn_render_slot(&memory,255)+0x18,0x12345678);
+    CHECK(hn_scene_save_actor_slots_raw(&memory)&&hn_read32(&memory,HN_ACTOR_RENDER_SNAPSHOT+0x18)==0x12345678);
+    for(unsigned i=0;i<4;i++)rom[HN_PRIMARY_ANIMATION_FAMILIES-HN_ROM_BASE+4+i]=(uint8_t)(0x02030000u>>(i*8));
+    hn_write32(&memory,0x02030000,0x08500000);hn_write32(&memory,hn_render_slot(&memory,255)+0x18,0);
+    CHECK(hn_scene_restore_actor_slots_raw(&memory)&&hn_read32(&memory,hn_render_slot(&memory,255)+0x18)==0x12345678&&hn_read32(&memory,hn_render_slot(&memory,255)+4)==0x08500000);
+    CHECK(hn_bank3_task(&memory,0x0805110D)==HN_SCENE_UNKNOWN&&hn_bank3_task(&memory,0x080511AD)==HN_SCENE_OK);
+    CHECK(hn_scene_callback(&memory,0x08050FC9,0,&consumed)==HN_SCENE_UNKNOWN);
+    CHECK(hn_scene_animation_callback(&memory,0x08051799,0,0,&consumed,&yield)==HN_SCENE_UNKNOWN&&!memory.fault);
+    free(rom);
+}
 static void runtime_contract(void)
 {
     HNGame *game=malloc(sizeof(*game));CHECK(game!=NULL);
@@ -1887,5 +1940,5 @@ int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
     text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();indicator_contract();book_contract();actor_snapshot_contract();preset_contract();map_choice_contract();particles_contract();scene_motion_contract();bank2_contract();wander_contract();scene_actor_contract();actor_presets_contract();records_contract();wave_contract();counter_scene_contract();shared_motion_contract();runtime_contract();
-    scene_effects_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
+    scene_effects_contract();bank3_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

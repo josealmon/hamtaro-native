@@ -88,7 +88,7 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 114,613 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 134,892 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
@@ -121,7 +121,11 @@ retains that state at map 2:17, x=168.5, z=80.5. Returning by boat reaches the H
 lesson. The pair lowers Pepper from the vine, chooses Bluhoo, learns Oopsie and
 Gossip-P and completes the first reconciliation. Control returns in map 2:2 at
 x=112.5, z=88.5 with twenty words and one rescued love. Select/status and a fifth
-End Game/Continue retain the map, position, ten seeds and Bijou as well. The runtime
+End Game/Continue retain the map, position, ten seeds and Bijou as well. The later
+Spat conversation leads to Harmony and the destination map. Returning to Clubhouse
+and a sixth End Game/Continue restore map 1:1 at x=144.5, z=256.5, twenty-one words,
+ten seeds, the joined partner and one rescued love. The checkpoints establish the
+word count rather than the exact dialogue line that teaches it. The runtime
 frame counter resets at the title, while the runner's update total stays cumulative.
 Complete Sunny Peak coverage remains unverified. The JSON contains only button inputs
 and metadata checkpoints. The default replay writes no
@@ -136,10 +140,11 @@ actual SRAM-file persistence, add:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json --session-test build/Release/hn_session_tests.exe
 
-The host replay performs all 114,613 input updates in a disposable private profile, verifies
+The host replay performs all 134,892 input updates in a disposable private profile, verifies
 that the saved 32 KiB file equals the game's SRAM, stops and starts a fresh Session,
-then selects Continue. Map, position, twenty words, ten seeds, one rescued love,
-the joined-partner flag and follower slot 13 are unchanged. The partner checkpoints describe the
+then selects Continue. Clubhouse map/position, twenty-one words, ten seeds, one
+rescued love, the joined-partner flag and follower slot 13 are unchanged; 142,035
+host-session checks pass. The partner checkpoints describe the
 returned overworld state; UI scenes can reuse the same render-class slots.
 The original ROM and player's profile are untouched; temporary input traces and
 SRAM files are removed. Trace scratch uses HAMTARO_NATIVE_WORK or the private
@@ -154,9 +159,9 @@ be outside the checkout and must not already exist. Start the actual application
 with --data-dir PATH_TO_NEW_PRIVATE_PROFILE to inspect the same saved scene.
 This explicit private export differs from the default disposable test profile.
 
-A real-window review launched the Windows executable with the exported twenty-word
-profile, selected Continue and restored the Sunny Peak scene with both Hamtaro and
-Bijou. Select, assigned to V in the copied test settings, displayed twenty words,
+A real-window review launched the Windows executable with the exported twenty-one-word
+profile, selected Continue and restored the Clubhouse scene. Select, assigned to V
+in the copied test settings, displayed twenty-one words,
 ten seeds and one rescued love. End Game returned to the title and updated the
 private 32 KiB SRAM file; its previous bytes exactly matched the backup. The
 executable was then closed and relaunched. Continue restored the same scene and
@@ -164,7 +169,8 @@ Select displayed the same three counters. The review used Z/X and WASD bindings;
 the fresh host-session replay separately checks all nine story/position/partner/
 counter fields from disk.
 This is bounded desktop evidence, not a full playthrough or a physical-controller
-test; the default Right Shift binding was not established by this window review.
+test; the default Right Shift binding and physical arrow keys were not established by
+this window review.
 
 For private function comparisons, use a Python environment with Unicorn 2.1.4
 and the test-only hn_reference_probe.dll built by BUILD_TESTING:
@@ -189,7 +195,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,515,172 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 1,541,636 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -549,3 +555,20 @@ with byte selectors at 0, 1, 254 and 255 while only one actor/graphics record is
 active. Synthetic public checks also verify wrapped neighbors, the missing-sector
 no-op, asymmetric animation/indicator classes and preservation of the general
 APIs' active-count guards. Full later-area integration remains unverified.
+
+The complete bank-3 late scene family uses:
+
+    python -B tools/compare_reference.py --bank3-late-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+This group passes 26,464 comparisons for all 31 source functions: 25 void presets,
+four animation callbacks and two Main modal callbacks, with 27 reviewed F4 targets.
+It compares EWRAM, IWRAM excluding the oracle stack, palette, VRAM, OAM and SRAM.
+Cases cover mapped inactive byte-selected actors, signed centered positions, all
+256 pan/tempo counters and mirror bytes, captured scale X versus live scale Y,
+matrix exhaustion returning 32 and its adjacent usage-byte alias, and modal actor
+snapshots with optional slots, both animation families and script-cursor restoration.
+Audio cases initialize actual song/player records, ten active/inactive tracks,
+the eight-bit mask and player identity, then compare continuous callback sequences.
+Synthetic public tests independently check pan/tempo values, upper mirror bits,
+affine allocation/exhaustion, raw snapshot behavior and rejected calling contracts.
+The separate 282-function bank-3 main family and minigame progression remain pending.
