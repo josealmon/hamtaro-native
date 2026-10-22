@@ -127,7 +127,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 683,040 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 719,753 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -138,7 +138,7 @@ The Main memory and scene-transition group can also run separately:
 
     python -B tools/compare_reference.py --scripts-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-This passes 96,361 comparisons: byte/halfword pointer copies, zero/max counts,
+This passes 133,074 comparisons: byte/halfword pointer copies, zero/max counts,
 variable indirection and overlap, graphics disable-except, display-layer flags,
 and 96 actor snapshot/modal-map roundtrips across six map callbacks. Cases include
 optional/absent actors, all direction variants, retained cursor and first/third
@@ -152,6 +152,14 @@ delays and signed fixed-point facing interpolation with wrapped products/roundin
 Scene cases additionally cover piecewise actor remapping/restoration with live
 aliases, surface-height region boundaries and overshoot, clamped approach/mode
 transfers, linked slot setup and explicit Main/animation callback ABI sharing.
+The shared scene-motion families add 36,713 comparisons covering all 40 functions
+in class_anchor_presets.c and scene_control_callbacks.c. Cases include strict and
+wrapped rectangle/corridor boundaries, signed aiming and alignment, both animation
+callbacks, render/control overlays, complete clone phase sequences, signed payload bytes,
+background offset boundaries and 512 PRNG seed triples with signed/overflow values.
+The public game suite also covers missing-slot guards, clone countdown wrapping,
+retained slot-37 state and argument/save-flag alias order. Full activity playthroughs
+remain outside this family-level evidence.
 
 The destination-map group can run separately:
 

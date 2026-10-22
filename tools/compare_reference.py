@@ -1623,6 +1623,85 @@ def main() -> None:
             call("RenderPairListNumber",index,value,x,y)
             compare(f"three-digit number {case}",((0x02000000,0x40000),(0x03000000,0x7000)))
 
+    def scene_motion_checks():
+        start_checks=checks
+        local=random.Random(0x53434E45)
+        families={"src/actors/class_anchor_presets.c","src/scripts/scene_control_callbacks.c"}
+        mains=[e["name"] for e in entries if e["source"] in families and not e["name"].startswith("AnimationCallback")]
+        animations=[e["name"] for e in entries if e["source"] in families and e["name"].startswith("AnimationCallback")]
+        equal((len(mains),len(animations)),(38,2),"complete scene-motion family inventory")
+        random_word=native("hn_random_memory_next",result=C.c_uint32)
+        seed_edges=(0,1,30269,30323,0x7FFFFFFF,0x80000000,0xFFFFFFFE,0xFFFFFFFF)
+        for a in seed_edges:
+            for b in seed_edges:
+                for c in seed_edges:
+                    fresh();both(0x03000000,struct.pack("<III",a,b,c))
+                    equal(random_word(memory),call("NextRandom"),"signed wrapped PRNG result")
+                    compare("signed wrapped PRNG seeds",((0x03000000,12),))
+        def fixture(case,base=0x02010000):
+            fresh();both(0x03002D98,struct.pack("<I",base));both(0x03002DC0,b"\x28")
+            both(base,local.randbytes(40*104));both(0x02004520,local.randbytes(512))
+            both(0x03002C90,local.randbytes(256));both(0x03001158,struct.pack("<H",local.randrange(65536)))
+            both(0x03002C0C,bytes([case%40]));both(0x03001F50,bytes([(case//2)%40]))
+            both(0x03002180,local.randbytes(96));both(0x03000000,local.randbytes(12))
+            both(0x02004584,bytes([case%10,(0,1,2,255)[case%4]]))
+        def invoke(name,payload=b"",address=0x02020000):
+            both(address,struct.pack("<I",symbols[name]|1)+payload);both(0x03000010,b"\x1C"+bytes(15))
+            equal(command(memory,0x1C,address),1,f"native scene-motion {name}")
+            call("MainScriptInvokeCallback",address)
+            compare(f"scene-motion {name}",((0x02000000,0x40000),(0x03000000,0x7000)))
+        for name in mains:
+            for case in range(64):
+                fixture(case)
+                payload=bytes([case%40,case%8])+local.randbytes(4)
+                if name=="ScriptCallbackCheckSceneSlotRectangle":payload=bytes([case%40])+local.randbytes(4)
+                invoke(name,payload)
+        scene_animation=bind("hn_scene_animation_callback",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32),C.POINTER(C.c_uint32))
+        for name in animations:
+            for case in range(512):
+                fixture(case);yielded=C.c_uint32(local.getrandbits(32));consumed=C.c_uint32(99)
+                both(0x0203FFF0,struct.pack("<I",yielded.value))
+                equal(scene_animation(memory,symbols[name]|1,0x02010000,0x02020000,C.byref(consumed),C.byref(yielded)),1,"native scene alignment")
+                equal(consumed.value,call(name,0x02010000,0x02020000,0x0203FFF0),"scene alignment consumption")
+                equal(yielded.value,struct.unpack("<I",cpu.mem_read(0x0203FFF0,4))[0],"scene alignment yield")
+                both(0x0203FFF0,struct.pack("<I",yielded.value))
+                compare("scene alignment",((0x02000000,0x40000),(0x03000000,0x7000)))
+        # Dense contacts include strict edges, wrapped halfwords, midpoint rounding,
+        # absent/aliased actor classes and independent scene-outside flags.
+        for case in range(1536):
+            fixture(case);leader=(0,1,26)[case%3];follower=(0,2,26)[(case//3)%3]
+            both(0x03002C0C,bytes([leader]));both(0x03001F50,bytes([follower]))
+            x=(-32768,-48,-1,0,16,100,216,320,32767)[case%9];z=(-32768,-8,0,100,216,217,32767)[(case//9)%7]
+            for index,ox,oz in ((leader,0,0),(follower,(case%17)-8,(case%9)-4),(26,(-29,-28,-27,0,15,16,17)[case%7],(-9,-8,-7,0,7,8,9)[(case//7)%7])):
+                both(0x02010000+index*104+0x18,struct.pack("<III",((x+ox)<<16)&0xFFFFFFFF,local.getrandbits(32),((z+oz)<<16)&0xFFFFFFFF))
+            invoke("ScriptCallbackCheckSceneActorRectangles")
+            invoke("ScriptCallbackCheckSceneCorridor")
+        # Shared state can overlay render data, and callback payloads can point at
+        # fields they mutate. Preserve source read/write order in these cases.
+        for case in range(128):
+            for name in ("ScriptCallbackCheckSceneActorRectangles","ScriptCallbackCheckSceneSlotRectangle","ScriptCallbackConfigureSceneCloneSources","ScriptCallbackCopySceneClonePair","ScriptCallbackCheckSceneCorridor"):
+                fixture(case,0x02004580-(case%4)*104)
+                payload=bytes([case%40,128,128,127,127]);invoke(name,payload)
+        direct=bind("hn_scene_callback",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        for case in range(256):
+            fixture(case);both(0x030021E0,bytes([case]));consumed=C.c_uint32(99)
+            equal(direct(memory,symbols["ScriptCallbackSetSceneSignedSaveValue"]|1,0x030021E0,C.byref(consumed)),1,"native aliased signed scene result")
+            equal(consumed.value,call("ScriptCallbackSetSceneSignedSaveValue",0x030021E0),"signed scene result consumption")
+            compare("aliased signed scene result",((0x02000000,0x40000),(0x03000000,0x7000)))
+        for low in range(256):
+            for high_byte in (0,1,127,128,255):
+                fixture(low);invoke("ScriptCallbackSetSceneBackgroundOffsetBytes",bytes([low,high_byte]))
+        for case in range(256):
+            fixture(case)
+            invoke("ScriptCallbackConfigureSceneCloneSources")
+            for _ in range(8):invoke("ScriptCallbackCopySceneClonePair")
+        edges=(0,1,2,31,32,63,64,65,66,0x7FFF,0x8000,0x8001,0xFF88,0xFF89,0xFF8A,0xFFE0,0xFFE1,0xFFE2,0xFFFE,0xFFFF)
+        for value in edges:
+            for flag_value in (0,1,255):
+                fixture(value);both(0x03001158,struct.pack("<H",value));both(0x02004582,bytes([flag_value]))
+                invoke("ScriptCallbackOscillateSceneBackgroundOffset");invoke("ScriptCallbackApproachSceneBackgroundOffset")
+        print(f"{checks-start_checks} private scene-motion comparisons passed across two complete source families (40 functions).")
+
     def script_memory_checks():
         local=random.Random(0x414248)
         def invoke_transition(name,payload=b""):
@@ -1845,7 +1924,7 @@ def main() -> None:
             print(f"{checks} private Ham-Chat acquisition/page comparisons passed; full gameplay remains unverified.")
             return
         if args.scripts_only:
-            script_memory_checks()
+            scene_motion_checks();script_memory_checks()
             print(f"{checks} private Main memory/scene-transition comparisons passed; full gameplay remains unverified.")
             return
         if args.collisions_only:
@@ -1881,7 +1960,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();script_memory_checks()
+        indicator_checks();book_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

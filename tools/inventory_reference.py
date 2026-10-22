@@ -37,6 +37,8 @@ def dispatches() -> dict[int, list[str]]:
         ("animation", "scene.c", "hn_scene_animation_callback"),
         ("text-task", "task_text.c", "task_callback"),
         ("hblank", "raster.c", "hn_raster_hblank"),
+        ("main", "scene_motion.c", "hn_scene_motion_callback"),
+        ("animation", "scene_motion.c", "hn_scene_motion_animation"),
     )
     for abi, filename, function in definitions:
         text = body((ROOT / "src/game" / filename).read_text(encoding="utf-8"), function)

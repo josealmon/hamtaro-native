@@ -48,6 +48,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
 | Scene actor snapshots | Adapted | Four 104-byte render snapshots, active-slot restoration and six modal map roundtrips compared; idle animation variants, optional slots and script cursor retention preserved |
+| Shared scene actor control | Adapted | All 40 functions in class_anchor_presets.c and scene_control_callbacks.c compared: anchors/modes, vectors, signed rectangles/corridors, aiming, background alignment/offsets and clone phases; later-activity runtime integration remains pending |
 | Motion and collision | Adapted | Leader input/walk/run, action priority, map edge sampling/sliding, collision responses, event staging, follower routes, actor-position snapshots, transition animation/position selection and wrapped facing interpolation compared; full-game coverage remains pending |
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
@@ -142,7 +143,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-683,040 comparisons with the independent BIOS and PPU oracles.
+719,753 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -201,6 +202,15 @@ preserves inclusive signed bounds, truncated volume products and song suppressio
 The original clamped-approach zero-duration path and inside-region audio modes
 above two read uninitialized source values; these cases fail explicitly until a
 defined caller contract is established. They are not silently replaced with host data.
+
+Shared scene motion is grouped in scene_motion.c. Its two complete source families
+retain strict rectangle edges, signed-half coordinate wrapping, midpoint rounding,
+fixed-point aiming, background alignment and phase/countdown overlays in shared
+RAM. Clone slot pairs and animation/frame resources are read from the player's ROM;
+full 104-byte slot copies preserve aliases and source mutation order. Signed scene
+results are loaded before setting the save flag, including aliased arguments.
+The PRNG uses signed remainders after wrapped 32-bit products, matching the source
+even when the seed words fall outside their normal initialized ranges.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
 in their original 32-bit memory views. Callback bindings accept a specific typed
@@ -455,3 +465,10 @@ failure needs isolation. Then extend long native scenarios and inspect affected
 desktop behavior. Gameplay discovers integration faults; it is not the primary
 inventory of functions still to port. Keep generated inventories private or on stdout,
 update these existing documents and retain no per-function reports in the repository.
+
+Within batch 1, class_anchor_presets.c and scene_control_callbacks.c have complete
+function-level comparisons for their 40 functions. script_callbacks_render_presets.c
+and the remaining map_choice_callbacks.c functions are still pending. Render presets
+also depend on actor setup, directional and secondary-animation helpers; include
+these in the next family's dependency review. This batch
+status does not establish completion of any later story area or activity.

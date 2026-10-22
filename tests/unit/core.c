@@ -159,6 +159,9 @@ static void game_contract(void)
     CHECK(rng.seed[0]==(0x3AC2u*171u)%30269u);
     CHECK(rng.seed[1]==(0x4DF3u*172u)%30307u && rng.seed[2]==176);
     CHECK(value==rng.seed[0]*70946u+rng.seed[1]*70857u+176u*70820u);
+    rng.seed[0]=rng.seed[1]=rng.seed[2]=0xFFFFFFFF;value=hn_random_next(&rng);
+    CHECK(rng.seed[0]==0u-171&&rng.seed[1]==0u-172&&rng.seed[2]==0u-176);
+    CHECK(value==(0u-171)*70946u+(0u-172)*70857u+(0u-176)*70820u);
 }
 typedef struct { HNMemory *memory; unsigned vblank,hblank,vcount; } IRQCounts;
 static void irq(void *context,uint16_t mask)

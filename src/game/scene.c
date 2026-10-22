@@ -10,6 +10,7 @@
 #include "game/world.h"
 #include "game/book.h"
 #include "game/motion.h"
+#include "game/scene_motion.h"
 
 static unsigned menu_kind(HNMemory *m)
 {
@@ -498,7 +499,9 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         hn_write16(m,0x0201DC40,keys);hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));break;
     }
     default:{
-        HNSceneResult result=hn_scene_text_callback(m,callback,arguments,consumed);
+        HNSceneResult result=hn_scene_motion_callback(m,callback,arguments,consumed);
+        if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_scene_text_callback(m,callback,arguments,consumed);
         return result==HN_SCENE_UNKNOWN?hn_book_callback(m,callback,arguments,consumed):result;
     }
     }
@@ -508,6 +511,7 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
                                          uint32_t *consumed,uint32_t *yield)
 {
     (void)slot;(void)arguments;
+    HNSceneResult motion=hn_scene_motion_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;
     switch(callback&~1u){
     /* These script callbacks ignore their argument register. Animation streams
        also invoke them; their zero return consumes no bytes and preserves yield. */
