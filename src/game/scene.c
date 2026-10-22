@@ -16,6 +16,7 @@
 #include "game/bank2.h"
 #include "game/bank3.h"
 #include "game/bank4.h"
+#include "game/bank5.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
 #include "game/records.h"
@@ -525,6 +526,7 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         result=hn_bank2_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_bank3_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_bank4_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_bank5_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_map_choice_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_particles_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_scene_motion_callback(m,callback,arguments,consumed);
@@ -546,9 +548,15 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
     bank=hn_bank3_games_animation(m,callback,slot,arguments,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     bank=hn_bank3_chain_animation(m,callback,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     bank=hn_bank4_animation(m,callback,slot,arguments,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
+    bank=hn_bank5_animation(m,callback,slot,arguments,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     HNSceneResult map=hn_map_choice_animation(m,callback,slot,arguments,consumed,yield);if(map!=HN_SCENE_UNKNOWN)return map;
     HNSceneResult motion=hn_scene_motion_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;
     switch(callback&~1u){
+    case 0x08020260:{
+        GameAddr target=hn_render_slot(m,hn_read16(m,0x0201DC40+56*2));
+        hn_write32(m,target+0x24,0);hn_write32(m,target+0x28,0);hn_write32(m,target+0x2C,0);hn_write32(m,target+0x34,0);
+        *consumed=0;return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+    }
     /* These script callbacks ignore their argument register. Animation streams
        also invoke them; their zero return consumes no bytes and preserves yield. */
     case 0x08011DC0:case 0x08011E3C:case 0x08011E7C:case 0x08011EA4:

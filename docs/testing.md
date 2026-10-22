@@ -199,7 +199,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 2,595,147 checks,
+GBA machine. The complete run with BIOS and PPU oracles passes 3,782,413 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -652,6 +652,27 @@ packed writes with aliased destinations, projected-bound side effects, final
 counter reset, byte-wrapped actor clearing, accumulator carry, bounds aliases and
 the early-wait SL distinction. Full bank-4 story/activity and timed desktop
 integration remain pending.
+
+The complete 207-function bank-5 family and its stairs/idle dependencies use:
+
+    python -B tools/compare_reference.py --bank5-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+--bank5-presets-only selects all 172 presentation presets and shared VM contracts;
+--bank5-dynamics-only
+selects grid/mirror logic, motion, mechanism lanes/outcomes and timing. The
+checker inventories every source function and its Main/task/animation/VBlank or
+indexed-helper contract. It also covers all four functions in
+script_callbacks_stairs_residual.c and rejects unreviewed calling forms.
+The combined bank-5 group adds 1,187,266 comparisons to the full suite.
+
+Focused fixtures exercise all phase/count bytes, primary and partner lane states,
+signed depth/spawn-count boundaries, byte outcome sums, every mirror source-image
+index and coordinate edges, overlapping mirror actors, raw grid cell/kind bytes,
+mixed occupied cells and all 65,536 depth/time halfword values. Opcode 0x4E checks
+include variable references, the null sentinel and aliased forward copies. Public
+synthetic tests additionally deliver the registered mechanism through the actual
+native clock's VBlank handler and reject an unreviewed IRQ target. These checks
+do not establish a full bank-5 story/activity or desktop playthrough.
 
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:

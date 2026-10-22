@@ -56,6 +56,7 @@ statically. A separate clean-machine validation remains pending.
 | Bank-3 late scene family | Adapted | All 31 functions in map_bank3_late_callbacks.c compared: 25 void presets, four animation callbacks and two Main modal callbacks; 27 F4 targets, song pan/tempo, mirror/affine scales and raw actor snapshot roundtrips; full area integration remains pending |
 | Bank-3 main scene/activity family | Adapted | All 282 source functions accounted for across presets, source/spawn entries, pair board, phases/orbits, record text, chains and one shared condition; typed Main/task/animation contracts and helpers compared, including live links, byte wrapping and retained-register paths; complete activity progression and area integration remain pending |
 | Bank-4 scene/path family | Adapted | All 483 map_bank4_callbacks.c functions and the shared screen-indicator family compared; presentation, jump stages/windows, byte counters, audio distance scaling and three path followers retain reviewed Main/task/animation/helper contracts; complete area story/activity and timed scene integration remain pending |
+| Bank-5 scene/mechanism family | Adapted | All 207 map_bank5_callbacks.c functions and the four-function stairs/idle dependency family compared; grid choices, actor mirrors, lane states/outcomes, round timing and a typed VBlank callback; complete area progression and timed desktop integration remain pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
@@ -214,7 +215,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-2,595,147 checks with the independent BIOS and PPU oracles, including separately
+3,782,413 checks with the independent BIOS and PPU oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
@@ -763,6 +764,35 @@ dispatch for 502. The four remaining declarations belong to Cable Link, outside
 the first release. This remains a structural inventory: literal indirect targets,
 complete bank-4 progression, activities and actual-window integration need
 separate validation. The existing opening scenario is an earlier-area regression.
+
+The bank-5 family is grouped in bank5_presets.c and bank5.c: 172 presentation
+presets, grid choices, actor mirrors, oscillation/motion, mechanism lanes and
+outcomes, round initialization and time ranking. Its reviewed interfaces expose
+34 Main contracts, 191 argument-free task targets, 13 animation contracts, one
+VBlank contract and two indexed lane helpers. These overlapping counts are not
+an area-completion percentage. Original tables remain in the player's ROM or
+its initialized mutable RAM views.
+
+Grid placement makes exactly three random attempts without retrying occupied
+cells. Raw cell/kind selectors and wrapped slot arguments retain their distinct
+widths. Mirrors preserve unsigned area boundaries, table matching, fallback
+images, live animation offsets and overlapping source/destination actors.
+Mechanism lanes retain signed depth/count comparisons, byte state transitions,
+wrapped spawn counts and eight-bit outcome sums. Time ranking preserves the
+halfword limit, equal-score insertion order and original fractional conversion.
+
+Main opcode 0x4E copies its four argument bytes forward, resolves variable
+references 0..15 and converts the all-ones sentinel to a null callback. VBlank
+dispatch accepts the reviewed void(void) mechanism callback after video commit
+and before transfer/audio service; unsupported targets still fail explicitly.
+The complete shared script_callbacks_stairs_residual.c family adds direction
+configuration, class-selected velocity clearing, idle-animation refresh and
+game-flag setup. Idle refresh uses the existing valid-active-slot contract;
+raw direction configuration and class-selected clearing retain mapped selectors.
+Complete bank-5 story/activity integration remains a separate pending check.
+The four recovered bank-5 script sources declare 394 functions, all with explicit
+native dispatch. This is a structural planning count; literal indirect targets,
+correct calling forms and full area progression still need integration evidence.
 
 A separate private input-only scout completes the initial Ham-Jam conversation,
 No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement

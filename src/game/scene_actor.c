@@ -4,6 +4,7 @@
 #include "game/graphics.h"
 #include "game/wander.h"
 #include "game/video.h"
+#include "game/motion.h"
 #include "gba/bios.h"
 
 static bool flag(HNMemory *m,unsigned id)
@@ -324,6 +325,17 @@ HNSceneResult hn_scene_actor_callback(HNMemory *m,GameAddr callback,GameAddr arg
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x08020198:{
+        int16_t x=(int16_t)hn_read16(m,0x0201DC40+47*2),y=(int16_t)hn_read16(m,0x0201DC40+49*2),z=(int16_t)hn_read16(m,0x0201DC40+51*2);
+        uint8_t direction=hn_read8(m,HN_SCENE_CONTROLS+0x75);GameAddr image;
+        switch(direction){case 1:image=0x088DB59A;break;case 2:image=0x088DB583;break;case 3:image=0x088DB5C5;break;case 4:image=0x088DB5DC;break;default:return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;}
+        if(!hn_render_configure_raw(m,13,direction,0x72,x,y,z,image))return HN_SCENE_RESOURCE;break;
+    }
+    case 0x08020284:
+        if(!hn_motion_idle_render(m,false))return HN_SCENE_RESOURCE;
+        if(hn_read8(m,HN_RENDER_CLASS_FOLLOWER)&&flag(m,16)&&!hn_motion_idle_render(m,true))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080202AC:hn_write8(m,0x03002180,hn_read8(m,0x03002180)|32);break;
     case 0x08011AE0:{
         unsigned index=hn_read8(m,arguments),divisions=hn_read8(m,arguments+1);
         unsigned width=divisions?240/divisions:0,height=divisions?160/divisions:0;
@@ -471,7 +483,7 @@ HNSceneResult hn_scene_actor_task(HNMemory *m,GameAddr callback)
     case 0x0801F4D0:case 0x0801F550:case 0x0801F588:case 0x0801F5C0:case 0x0801F5F8:case 0x0801F684:case 0x0801F6D8:case 0x0801F704:
     case 0x0801F7D8:case 0x0801F8B8:case 0x0801F994:case 0x0801F9CC:case 0x0801FA54:case 0x0801FB20:
     case 0x0801FBA0:case 0x0801FC20:case 0x0801FC58:case 0x0801FCD8:case 0x0801FD48:case 0x0801FDC8:
-    case 0x0801FE54:case 0x0801FF1C:case 0x0801FFE4:case 0x080200AC:{
+    case 0x0801FE54:case 0x0801FF1C:case 0x0801FFE4:case 0x080200AC:case 0x08020198:case 0x08020284:case 0x080202AC:{
         uint32_t ignored;
         if((callback&~1u)==0x0801CDA4||(callback&~1u)==0x0801CE28)return hn_scene_callback(m,callback,0,&ignored);
         return hn_scene_actor_callback(m,callback,0,&ignored);

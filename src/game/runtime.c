@@ -11,6 +11,7 @@
 #include "game/transfer.h"
 #include "game/raster.h"
 #include "game/random.h"
+#include "game/bank5.h"
 #include <string.h>
 
 static bool fail(HNGame *g,HNGameFault fault,unsigned detail,unsigned opcode,GameAddr address)
@@ -48,7 +49,7 @@ static void interrupt(void *context,uint16_t pending)
                 hn_write32(m,0x040000D4,HN_OAM_SHADOW);hn_write32(m,0x040000D8,0x07000000);hn_write32(m,0x040000DC,0x84000100);
                 hn_video_commit(m);
                 GameAddr callback=hn_read32(m,0x03002B90);
-                if(callback)fail(g,HN_GAME_IRQ,0,1,callback);
+                if(callback&&hn_bank5_irq(m,callback)!=HN_SCENE_OK)fail(g,HN_GAME_IRQ,0,1,callback);
                 if(hn_read8(m,HN_CPU_TRANSFER_READ)!=hn_read8(m,HN_CPU_TRANSFER_WRITE))fail(g,HN_GAME_CPU_TRANSFER,0,0,HN_TRANSFER_B);
                 if(!g->fault)hn_transfer_flush(m);
             }

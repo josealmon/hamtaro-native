@@ -469,6 +469,11 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
     }
     case 0x4D:
         scratch(m,args+1,0,4);hn_write32(m,0x030021F0+hn_read8(m,args)*4,resolve_variable(m,0));advance(m,5);break;
+    case 0x4E:{
+        scratch(m,args,0,4);uint32_t callback=resolve_variable(m,0);
+        if(callback==UINT32_MAX){callback=0;hn_write32(m,SCRATCH,0);}
+        hn_write32(m,0x03002B90,callback);advance(m,4);break;
+    }
     case 0x50:{
         for(unsigned i=1;i<=7;i++)hn_write8(m,SCRATCH+i,hn_read8(m,args+i-1));
         unsigned destination=hn_read16(m,SCRATCH+2);
