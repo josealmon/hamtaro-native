@@ -123,7 +123,7 @@ bool hn_motion_map_height(HNMemory *m,GameAddr slot)
     else height=(int32_t)height>0x7FFF?0x8000:height+0x20000u;
     hn_write32(m,slot+0x1C,height);return !m->fault;
 }
-static int32_t approach_coordinate(int32_t value,int32_t minimum,int32_t maximum)
+int32_t hn_motion_clamp_coordinate(int32_t value,int32_t minimum,int32_t maximum)
 {return value<minimum?minimum:maximum>=value?value:maximum;}
 bool hn_motion_approach_clamped(HNMemory *m,GameAddr arguments)
 {
@@ -138,10 +138,10 @@ bool hn_motion_approach_clamped(HNMemory *m,GameAddr arguments)
     int32_t max_z=(int32_t)((uint32_t)((int16_t)hn_read16(m,HN_BACKGROUND_BOUNDS+6)-96)<<16);
     if(!hn_render_modes(m,(uint8_t)source_index,1,3,hn_read8(m,HN_SCENE_CONTROLS+0xE7))||
        !hn_render_configure(m,(uint8_t)index,1,(uint8_t)(0x30|(hn_read8(m,HN_SCENE_CONTROLS+0xE8)&15)),0,0,0,HN_APPROACH_ANIMATION))return false;
-    int32_t x=approach_coordinate((int32_t)hn_read32(m,source+0x18),min_x,max_x);
-    int32_t z=approach_coordinate((int32_t)(hn_read32(m,source+0x1C)+hn_read32(m,source+0x20)),min_z,max_z);
-    int32_t leader_x=approach_coordinate((int32_t)hn_read32(m,leader+0x18),min_x,max_x);
-    int32_t leader_z=approach_coordinate((int32_t)(hn_read32(m,leader+0x1C)+hn_read32(m,leader+0x20)),min_z,max_z);
+    int32_t x=hn_motion_clamp_coordinate((int32_t)hn_read32(m,source+0x18),min_x,max_x);
+    int32_t z=hn_motion_clamp_coordinate((int32_t)(hn_read32(m,source+0x1C)+hn_read32(m,source+0x20)),min_z,max_z);
+    int32_t leader_x=hn_motion_clamp_coordinate((int32_t)hn_read32(m,leader+0x18),min_x,max_x);
+    int32_t leader_z=hn_motion_clamp_coordinate((int32_t)(hn_read32(m,leader+0x1C)+hn_read32(m,leader+0x20)),min_z,max_z);
     hn_write32(m,actor+0x24,(uint32_t)hn_runtime_divide((int32_t)((uint32_t)leader_x-(uint32_t)x),(int32_t)duration));
     hn_write32(m,actor+0x28,0);hn_write32(m,actor+0x2C,(uint32_t)hn_runtime_divide((int32_t)((uint32_t)leader_z-(uint32_t)z),(int32_t)duration));
     hn_write32(m,actor+0x18,(uint32_t)x);hn_write32(m,actor+0x1C,0x8000);hn_write32(m,actor+0x20,(uint32_t)z);return !m->fault;

@@ -100,9 +100,17 @@ def main():
     parser.add_argument("--save",type=Path,help="Optional read-only 32 KiB SRAM input")
     parser.add_argument("--library",type=Path,default=ROOT/"build/Release/hn_reference_probe.dll")
     parser.add_argument("--session-test",type=Path,help="Also replay through the host session executable and verify SRAM-file continuation")
+    parser.add_argument("--desktop-profile",type=Path,help="Retain validated ROM and tested SRAM in a new private profile for desktop review")
     args=parser.parse_args()
     if args.session_test and args.save:
         parser.error("The host-session replay starts from erased SRAM; do not combine --session-test with --save.")
+    if args.desktop_profile:
+        if not args.session_test:parser.error("--desktop-profile requires --session-test.")
+        args.desktop_profile=args.desktop_profile.resolve()
+        if args.desktop_profile==ROOT or ROOT in args.desktop_profile.parents:
+            parser.error("The desktop profile must be outside the checkout.")
+        if args.desktop_profile.exists():parser.error("The desktop profile must be a new directory.")
+        if not args.desktop_profile.parent.is_dir():parser.error("The desktop profile parent must already exist.")
     spec=json.loads((ROOT/"config/rom.json").read_text())
     if args.rom.stat().st_size!=spec["size"]:raise ValueError("A compatible AH3P ROM is required.")
     rom=args.rom.read_bytes()
@@ -134,6 +142,8 @@ def main():
         with tempfile.TemporaryDirectory(prefix="session-replay-",dir=work) as temporary:
             trace=Path(temporary)/"inputs.txt"
             trace.write_text("".join(f"{frames} {keys}\n" for frames,keys in inputs(scenario["steps"])),encoding="ascii")
-            subprocess.run([str(args.session_test.resolve()),str(args.rom.resolve()),"--replay",str(trace)],check=True)
+            arguments=[str(args.session_test.resolve()),str(args.rom.resolve()),"--replay",str(trace)]
+            if args.desktop_profile:arguments.append(str(args.desktop_profile))
+            subprocess.run(arguments,check=True)
 
 if __name__=="__main__":main()

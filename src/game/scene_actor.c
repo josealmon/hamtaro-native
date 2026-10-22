@@ -3,6 +3,8 @@
 #include "game/render.h"
 #include "game/graphics.h"
 #include "game/wander.h"
+#include "game/video.h"
+#include "gba/bios.h"
 
 static bool flag(HNMemory *m,unsigned id)
 {return ((hn_read8(m,0x03002180+(id>>3))>>(id&7))&1)!=0;}
@@ -229,12 +231,29 @@ static void vector(HNMemory *m,unsigned index,uint32_t x,uint32_t y,uint32_t z)
     GameAddr slot=hn_render_slot(m,index);
     hn_write32(m,slot+0x24,x);hn_write32(m,slot+0x28,y);hn_write32(m,slot+0x2C,z);
 }
-static bool approach(HNMemory *m,GameAddr arguments)
+static void read_class_side(HNMemory *m)
 {
-    unsigned selector=hn_read8(m,arguments),target_x=hn_read8(m,arguments+1),target_z=hn_read8(m,arguments+2);
-    unsigned bank=hn_read8(m,arguments+3),index=hn_read8(m,arguments+4);
-    int8_t offset_x=(int8_t)hn_read8(m,arguments+5),offset_z=(int8_t)hn_read8(m,arguments+6);
-    unsigned step=hn_read8(m,arguments+7),prefer_z=hn_read8(m,arguments+8);
+    unsigned index=hn_read8(m,HN_SCENE_CONTROLS+0x12),secondary=hn_read8(m,HN_RENDER_CLASS_FOLLOWER);
+    GameAddr primary=hn_render_slot(m,hn_read8(m,HN_RENDER_CLASS_LEADER)),other=hn_render_slot(m,secondary);
+    int difference=(int)hn_read16(m,primary+0x50)-0x47;
+    if(index<=7){int side=(int)hn_read16(m,other+0x50)-0x47;if(secondary)difference+=side;}
+    else if(difference>-8&&difference<0)difference=(int)hn_read16(m,hn_render_slot(m,index)+0x50)-0x47;
+    hn_write8(m,HN_SCENE_CONTROLS+0x60,(uint8_t)(difference>0?1:2));
+}
+static bool approach(HNMemory *m,GameAddr arguments,bool from_slot)
+{
+    unsigned selector=hn_read8(m,arguments),target_x=0,target_z=0,bank,index,step,prefer_z,target_index=0;
+    int8_t offset_x,offset_z,target_offset_x=0,target_offset_z=0;
+    if(from_slot){
+        bank=hn_read8(m,arguments+1);target_index=hn_read8(m,arguments+2);
+        target_offset_x=(int8_t)hn_read8(m,arguments+3);target_offset_z=(int8_t)hn_read8(m,arguments+4);
+        index=hn_read8(m,arguments+5);offset_x=(int8_t)hn_read8(m,arguments+6);offset_z=(int8_t)hn_read8(m,arguments+7);
+        step=hn_read8(m,arguments+8);prefer_z=hn_read8(m,arguments+9);
+    }else{
+        target_x=hn_read8(m,arguments+1);target_z=hn_read8(m,arguments+2);bank=hn_read8(m,arguments+3);index=hn_read8(m,arguments+4);
+        offset_x=(int8_t)hn_read8(m,arguments+5);offset_z=(int8_t)hn_read8(m,arguments+6);
+        step=hn_read8(m,arguments+7);prefer_z=hn_read8(m,arguments+8);
+    }
     GameAddr state=HN_SCENE_CONTROLS+selector,moving=state+1;uint8_t phase=hn_read8(m,state);
     if(!phase){
         if(index==hn_read8(m,HN_RENDER_CLASS_FOLLOWER))hn_write8(m,0x03002170,0);
@@ -242,11 +261,12 @@ static bool approach(HNMemory *m,GameAddr arguments)
     }
     if(phase>1)return !m->fault;
     /* The source keeps this actor pointer while its callees reload the array. */
-    GameAddr actor=hn_render_slot(m,index);
+    GameAddr target=from_slot?hn_render_slot(m,target_index):0,actor=hn_render_slot(m,index);
+    int16_t tx=from_slot?(int16_t)(((int32_t)(hn_read32(m,target+0x18)+hn_read32(m,target+0x24))>>16)+target_offset_x):(int16_t)hn_read16(m,0x0201DC40+target_x*2);
+    int16_t tz=from_slot?(int16_t)(((int32_t)(hn_read32(m,target+0x20)+hn_read32(m,target+0x2C))>>16)+target_offset_z):(int16_t)hn_read16(m,0x0201DC40+target_z*2);
     int16_t x=(int16_t)((int16_t)hn_read16(m,actor+0x1A)+offset_x);
     int16_t z=(int16_t)((int16_t)hn_read16(m,actor+0x22)+offset_z);
-    int16_t dx=(int16_t)((int16_t)hn_read16(m,0x0201DC40+target_x*2)-x);
-    int16_t dz=(int16_t)((int16_t)hn_read16(m,0x0201DC40+target_z*2)-z);
+    int16_t dx=(int16_t)(tx-x),dz=(int16_t)(tz-z);
     if(dx||dz){
         bool use_z=prefer_z?dz!=0:dx==0;
         int delta=use_z?dz:dx;unsigned direction=use_z?(delta<0?0:1):(delta<0?2:3);
@@ -273,6 +293,75 @@ HNSceneResult hn_scene_actor_callback(HNMemory *m,GameAddr callback,GameAddr arg
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x08011AE0:{
+        unsigned index=hn_read8(m,arguments),divisions=hn_read8(m,arguments+1);
+        unsigned width=divisions?240/divisions:0,height=divisions?160/divisions:0;
+        GameAddr slot=hn_render_slot(m,index);hn_write8(m,HN_SCENE_CONTROLS+0x60,0x80);
+        for(unsigned x=0,right=width;x<divisions;x++,right+=width){
+            for(unsigned y=0,bottom=height;y<divisions;y++,bottom+=height){
+                if(hn_read16(m,slot+0x4E)<right&&hn_read16(m,slot+0x50)<bottom){
+                    hn_write8(m,HN_SCENE_CONTROLS+0x60,(uint8_t)(x*divisions+y));x=divisions;break;
+                }
+            }
+        }
+        *consumed=2;break;
+    }
+    case 0x08011B88:case 0x08011BF4:{
+        unsigned index=hn_read8(m,arguments);GameAddr leader=hn_render_slot(m,hn_read8(m,HN_RENDER_CLASS_LEADER));
+        GameAddr actor=hn_render_slot(m,index);int32_t duration=hn_read16(m,HN_SCENE_DURATION);
+        if((callback&~1u)==0x08011B88){
+            if(duration){
+                hn_write32(m,actor+0x24,(uint32_t)hn_runtime_divide((int32_t)hn_read32(m,HN_SCRIPT_RENDER_OFFSETS),duration));
+                hn_write32(m,actor+0x28,0);
+                hn_write32(m,actor+0x2C,(uint32_t)hn_runtime_divide((int32_t)hn_read32(m,HN_SCRIPT_RENDER_OFFSETS+4),duration));
+            }else{hn_write32(m,actor+0x2C,0);hn_write32(m,actor+0x28,0);hn_write32(m,actor+0x24,0);}
+            hn_write32(m,actor+0x18,hn_read32(m,leader+0x18));hn_write32(m,actor+0x1C,hn_read32(m,leader+0x1C));hn_write32(m,actor+0x20,hn_read32(m,leader+0x20));
+        }else{
+            uint32_t x=hn_read32(m,leader+0x18)+hn_read32(m,HN_SCRIPT_RENDER_OFFSETS);hn_write32(m,actor+0x18,x);
+            uint32_t y=hn_read32(m,leader+0x1C);hn_write32(m,actor+0x1C,y);
+            uint32_t z=hn_read32(m,leader+0x20)+hn_read32(m,HN_SCRIPT_RENDER_OFFSETS+4);hn_write32(m,actor+0x20,z);
+            hn_write32(m,actor+0x24,(uint32_t)hn_runtime_divide((int32_t)(hn_read32(m,leader+0x18)-x),duration));
+            hn_write32(m,actor+0x28,(uint32_t)hn_runtime_divide((int32_t)(hn_read32(m,leader+0x1C)-y),duration));
+            hn_write32(m,actor+0x2C,(uint32_t)hn_runtime_divide((int32_t)(hn_read32(m,leader+0x20)-z),duration));
+        }
+        *consumed=1;break;
+    }
+    case 0x0801C910:{
+        bool eight=hn_read8(m,arguments)!=0;
+        uint8_t forward=(uint8_t)hn_render_direction_raw(m,hn_read8(m,HN_RENDER_CLASS_LEADER),hn_read8(m,HN_RENDER_CLASS_FOLLOWER),eight);
+        uint8_t reverse=(uint8_t)hn_render_direction_raw(m,hn_read8(m,HN_RENDER_CLASS_FOLLOWER),hn_read8(m,HN_RENDER_CLASS_LEADER),eight);
+        hn_write8(m,HN_SCENE_CONTROLS+0xA,forward);hn_write8(m,HN_SCENE_CONTROLS+0xB,reverse);*consumed=1;break;
+    }
+    case 0x0801CE90:{
+        unsigned index=hn_read8(m,HN_RENDER_CLASS_FOLLOWER);
+        if(index<=7)read_class_side(m);
+        int difference=(int)hn_read16(m,hn_render_slot(m,index)+0x50)-0x47;
+        if(!difference){
+            read_class_side(m);
+            hn_write16(m,0x03001FBC,hn_read8(m,HN_SCENE_CONTROLS+0x60));
+        }else hn_write16(m,0x03001FBC,(uint16_t)(difference>0?1:2));
+        break;
+    }
+    case 0x0801D318:{
+        unsigned source_index=hn_read8(m,arguments),destination_index=hn_read8(m,arguments+1);
+        int x_threshold=hn_read8(m,arguments+2),z_threshold=hn_read8(m,arguments+3);
+        GameAddr source=hn_render_slot(m,source_index),destination=hn_render_slot(m,destination_index);
+        int16_t x=(int16_t)((int16_t)hn_read16(m,destination+0x1A)-(int16_t)hn_read16(m,source+0x1A));
+        int16_t z=(int16_t)(((int32_t)(hn_read32(m,destination+0x1C)+hn_read32(m,destination+0x20))>>16)-
+                            ((int32_t)(hn_read32(m,source+0x1C)+hn_read32(m,source+0x20))>>16));
+        x=(int16_t)(x<0?-x:x);z=(int16_t)(z<0?-z:z);
+        if(x>=x_threshold||z>=z_threshold)hn_write8(m,HN_SCENE_CONTROLS+0x60,1);*consumed=4;break;
+    }
+    case 0x0801D754:{
+        GameAddr slot=hn_render_slot(m,hn_read8(m,arguments));
+        for(unsigned axis=0;axis<3;axis++)hn_write32(m,slot+0x18+axis*4,((uint32_t)hn_read16(m,0x0201DC84+axis*2)<<16)|0x8000);
+        *consumed=1;break;
+    }
+    case 0x0801EB34:
+        if(!hn_render_configure(m,11,1,0xB0,0,0,0,0x088E3726)||!hn_render_modes(m,11,2,3,hn_read8(m,HN_SCENE_CONTROLS+0x66))||
+           !hn_render_configure(m,9,1,0xB0,0,0,0,0x088E3756)||!hn_render_modes(m,9,2,3,hn_read8(m,HN_SCENE_CONTROLS+0x67)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x0801EB98:hn_video_set_mode(m,1);break;
     case 0x0801CD4C:{
         GameAddr slot=hn_render_slot(m,hn_read8(m,HN_SCENE_CONTROLS+0x61));
         int32_t current=(int16_t)hn_read16(m,slot+0x1A);uint32_t target=hn_read16(m,0x0201DC88);
@@ -281,7 +370,10 @@ HNSceneResult hn_scene_actor_callback(HNMemory *m,GameAddr callback,GameAddr arg
         hn_write16(m,0x0201DC84,(uint16_t)(target-(uint32_t)difference));uint32_t ignored;
         if(hn_wander_callback(m,0x0801CCE4,0,&ignored)!=HN_SCENE_OK)return HN_SCENE_RESOURCE;break;
     }
-    case 0x0801D120:if(!approach(m,arguments))return HN_SCENE_RESOURCE;*consumed=9;break;
+    case 0x0801CF00:case 0x0801D120:{
+        bool from_slot=(callback&~1u)==0x0801CF00;
+        if(!approach(m,arguments,from_slot))return HN_SCENE_RESOURCE;*consumed=from_slot?10:9;break;
+    }
     case 0x0801D73C:hn_write32(m,HN_RENDER_INFO,(uint32_t)hn_read16(m,arguments)<<16);*consumed=2;break;
     case 0x0801D798:{
         GameAddr indices=HN_SCENE_CONTROLS+0x14;
@@ -342,6 +434,7 @@ HNSceneResult hn_scene_actor_callback(HNMemory *m,GameAddr callback,GameAddr arg
 HNSceneResult hn_scene_actor_task(HNMemory *m,GameAddr callback)
 {
     switch(callback&~1u){
+    case 0x0801CE90:case 0x0801EB34:case 0x0801EB98:
     case 0x0801CD4C:case 0x0801CDA4:case 0x0801CE28:case 0x0801D7E8:case 0x0801ECE8:
     case 0x0801F278:case 0x0801F2DC:case 0x0801F314:case 0x0801F398:case 0x0801F418:case 0x0801F498:
     case 0x0801F7D8:case 0x0801F8B8:case 0x0801F994:case 0x0801F9CC:case 0x0801FA54:case 0x0801FB20:

@@ -33,7 +33,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | ROM import | Implemented | Identity and full hash, invalid imports preserve existing data |
 | Settings and bindings | Implemented | Persistence, bounds, defaults, Unicode paths |
 | Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, brief taps retained for one game update, deadzone, remapping, disconnect; physical models not tested |
-| SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session continues with the same story state |
+| SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session continues with the same story state; actual-window End Game, process restart and Continue retain thirteen words/ten seeds |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division, ObjAffine and native angular math; 37,009 angular cases compared with mGBA, hardware conformance remains unverified |
 | Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 30 private ROM snapshots compared, including directional movement; raster timing still pending |
@@ -52,6 +52,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Scene render presets | Adapted | All 77 functions in script_callbacks_render_presets.c and 28 required actor helpers compared; typed F4/task calls and 35 defined-zero Main callbacks, linked slots, indicators, graphics and live class selectors; full area/activity integration remains pending |
 | Bank-2 actor and scene families | Adapted | All 120 functions in map_bank2_render_callbacks.c, map_bank2_scene_control.c, map_bank2_scene_presets.c and map_bank2_height_callbacks.c compared; 116 argument-free task targets, 70 Main contracts, panel stages, randomized motion, height latches and one full-word animation yield; complete Sunny Peak integration remains pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
+| Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Scene actor state and panels | Adapted | 35 functions across 13 source families plus one shared cross-bank condition compared: snapshots, forward copy/swap, signed accelerations, class-target approach, panel presets and direction constructors; 27 reviewed argument-free task contracts; complete scene integration remains pending |
 | Actor render presets | Adapted | All 476 functions across five linked/neighbor/class/secondary/render-setup families compared; void/task ABI, captured auxiliary arguments, live selectors and direction sectors preserved; these functions are rejected as Main callbacks |
 | Map-choice scene control | Adapted | All 273 functions in map_choice_callbacks.c compared: 93 Main contracts, 253 argument-free task targets, five animation contracts and four slot helpers, including cursor skips/jumps, packed choices, motion, regions, phases and presets; complete area/activity integration remains pending |
@@ -68,7 +69,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status display, left/right navigation and End Game confirmation connected; Items/Gems and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | A 34,039-update native input scenario completes the basic lessons/reward, Sunny Peak interactions, stairs, Heyhoo/book and Select status, then saves through End Game and continues from the title with the same map, position, eleven words and ten seeds; host-file/fresh-session roundtrip also verified; full story and actual-window playthrough remain pending |
+| New game, movement, in-game save/load | Partial | A 43,831-update native input scenario completes the basic lessons/reward, Sunny Peak interactions, Heyhoo, Bluhoo and Gogo, book/status and two End Game/Continue roundtrips; final map, position, thirteen words and ten seeds also survive host-file/fresh-session loading; a separate Windows process restores the scene and displays thirteen words/ten seeds; full story and desktop playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -100,12 +101,20 @@ and returns to movement. This does not establish battery removal, Bijou's rescue
 a reconciliation or a complete opening.
 Select then opens the status display. The route selects End Game, confirms the
 original SRAM write, returns to the title and chooses Continue. The restored state
-has the same map 2:2, position, eleven words and ten seeds. The scenario counts
-34,039 input updates in total; the runtime frame counter resets on returning to
-the title. A separate replay through the actual host Session API writes private
+has the same map 2:2, position, eleven words and ten seeds. It then talks to Oxnard
+to learn Bluhoo, walks east and completes the handkerchief scene to learn Gogo.
+A second End Game/Continue restores map 2:3, position, thirteen words and ten seeds.
+The scenario counts 43,831 input updates in total; the runtime frame counter resets
+on returning to the title. A separate replay through the actual host Session API writes private
 32 KiB SRAM files, stops the session and starts a fresh one from disk. Continue
-restores the same six story/position fields. This is separate from actual
-desktop-window playthrough evidence.
+restores the same six story/position fields. A separate review closes and relaunches
+the actual Windows executable with a private exported profile. Continue restores
+the saved Sunny Peak scene; Select, reassigned to V, displays thirteen learned
+words and ten seeds. The window review then saves through End Game, observes the
+return to the title and the updated 32 KiB file plus its previous backup, closes
+the process and launches a new one. Continue, WASD movement and the same status
+counters work again; the Select remapping also persists. This establishes a
+bounded desktop save/continuation check.
 Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
@@ -168,7 +177,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-1,383,341 comparisons with the independent BIOS and PPU oracles.
+1,395,692 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -475,15 +484,16 @@ cover blank storage, identity repair, checksum failures, primary/backup selectio
 and grouped writes. File persistence remains separate from these in-memory calls;
 the input-only scenario now exercises End Game, reset and Continue with retained
 story state. The host-session replay separately verifies persistence to disk and
-fresh-session continuation. Actual-window validation remains pending. Invalid
+fresh-session continuation. A separate Windows process also restores the exported
+scene and status counters. Invalid
 group selectors are rejected; the unused group-0 record write/load path is not exposed.
 
 ## Remaining integration order
 
 1. Review remaining area and shared scene families with their dependencies, then adapt
    complete groups of story/scene callbacks, scanline effects and timed CPU transfers.
-2. Extend the deterministic opening scenario beyond Sunny Peak's first learned word
-   and verify the same paths, save/reload and file persistence in the actual Windows window.
+2. Extend Sunny Peak through Bijou's rescue and the first reconciliation, then
+   verify the affected routes and save/reload in the actual Windows window.
 3. Expand coverage through the remaining story, secondary activities and minigames;
    establish input scenarios and compare story state and save effects with the reference.
 4. Compare canonical RGBA, state, SRAM and pre-device PCM. Keep original
@@ -579,3 +589,20 @@ functions declared by the four recovered bank-2 script sources. This is a planni
 inventory: declarations can be unused, while literal shared-script targets and
 animation resources can introduce other dependencies. It proves neither a complete
 call graph nor Sunny Peak completion.
+
+The shared geometry batch covers eleven functions across eight additional source
+families. The ten-byte render-slot approach shares the reviewed movement core with
+the nine-byte class-coordinate callback while retaining projected target velocity,
+signed offsets, selector 255's following byte, one-pixel steps and live idle aliases.
+Leader-offset callbacks keep captured pointers and ordered reads even when an actor
+is the leader. Raw direction/secondary-screen callbacks preserve mapped inactive
+byte selectors; the existing bounded direction API retains its guards. Other
+checks cover sequential coordinate aliases, signed-half absolute overflow,
+unsigned screen cells, linked render pairs and video-mode dirty state. Empty
+screen grids have an analytic host check; the CPU probe deliberately rejects BIOS
+division by zero, so that boundary does not establish BIOS behavior.
+
+Use --script-source "shared*main_scripts.c" to inventory common script declarations
+in addition to a map bank. The four recovered shared files declare 103 functions;
+49 still lack explicit dispatch after this batch. This remains structural planning,
+with the same limits on literal targets, ABI correctness and runtime reachability.

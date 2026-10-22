@@ -88,7 +88,7 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 34,039 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 43,831 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
@@ -105,7 +105,10 @@ the word count from ten to eleven; the scenario opens the updated book, enters i
 first page and returns to the same movement position. Select opens the status
 display; the route moves to End Game, confirms the original SRAM write, returns
 to the title and chooses Continue. The same map, position, eleven learned words
-and ten seeds are restored. The runtime frame counter resets at the title, while
+and ten seeds are restored. Oxnard's conversation then teaches Bluhoo, and the
+eastern handkerchief scene teaches Gogo. A second status/End Game/Continue restores
+map 2:3 at the same position with thirteen words and ten seeds.
+The runtime frame counter resets at the title, while
 the runner's update total remains cumulative. Battery removal, Bijou's rescue
 and reconciliation are not established. The
 JSON contains only button inputs and metadata checkpoints. The default replay writes no
@@ -120,15 +123,32 @@ actual SRAM-file persistence, add:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json --session-test build/Release/hn_session_tests.exe
 
-This passes the native checkpoints above and 37,649 host-session checks. The host
-replay performs all 34,039 input updates in a disposable private profile, verifies
+The host replay performs all 43,831 input updates in a disposable private profile, verifies
 that the saved 32 KiB file equals the game's SRAM, stops and starts a fresh Session,
-then selects Continue. Map, position, eleven words and ten seeds are unchanged.
+then selects Continue. Map, position, thirteen words and ten seeds are unchanged.
 The original ROM and player's profile are untouched; temporary input traces and
 SRAM files are removed. Trace scratch uses HAMTARO_NATIVE_WORK or the private
 .hamtaro-native-dev profile outside the checkout. This option starts from erased
 SRAM and cannot be combined with --save. It does not create an SDL gameplay window
-or prove persistence across a separate OS process or a complete desktop playthrough.
+or prove a complete desktop playthrough.
+
+For desktop review, append --desktop-profile PATH_TO_NEW_PRIVATE_PROFILE. The
+verified replay with this option passes 47,776 host-session checks and retains
+the validated user ROM and tested SRAM in that new directory. The directory must
+be outside the checkout and must not already exist. Start the actual application
+with --data-dir PATH_TO_NEW_PRIVATE_PROFILE to inspect the same saved scene.
+This explicit private export differs from the default disposable test profile.
+
+A real-window review closed and relaunched the Windows executable using that
+private profile, selected Continue and restored the saved Sunny Peak scene.
+The controls UI reassigned Select to V; the in-game status then displayed thirteen
+learned words and ten seeds. End Game returned to the title and updated the private
+32 KiB SRAM file while preserving its previous bytes as the backup. After another
+process restart, Continue restored the scene, WASD moved the character and the
+status still displayed thirteen words/ten seeds. The Select remapping persisted.
+The review used Z/X and WASD for game input.
+This is bounded desktop evidence, not a full playthrough or a physical-controller
+test; the default Right Shift binding was not established by this window review.
 
 For private function comparisons, use a Python environment with Unicorn 2.1.4
 and the test-only hn_reference_probe.dll built by BUILD_TESTING:
@@ -153,7 +173,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,383,341 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 1,395,692 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -429,6 +449,7 @@ Before adapting a source family, inspect its read-only planning inventory:
     python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP
     python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP --source "src/actors/*.c" --json
     python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP --area-bank 2
+    python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP --script-source "shared*main_scripts.c"
 
 The default table groups C/ASM functions and callback-named candidates by original
 source. JSON additionally lists function names, addresses and explicit native
@@ -469,3 +490,17 @@ The draw callback's invalid selector retains an incoming R6 pointer in the sourc
 the host rejects that unreviewed contract before changing any tile bank. These
 checks and the opening scenario establish initial Select/status and End Game use;
 later stage animations, Items/Gems and the complete activity UI remain unverified.
+
+Shared actor geometry comparisons use:
+
+    python -B tools/compare_reference.py --shared-motion-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+The group passes 12,351 comparisons across eleven functions in eight complete
+source families, with ten Main and three F4 contracts. It checks projected target
+velocity, target/actor offsets, approach initialization/completion, selector 255,
+one-pixel/zero steps, live render aliases, leader/offset storage overlap, signed
+clamping, inactive raw direction selectors, screen cells/sides, sequential class
+coordinate aliases, signed-half absolute overflow, render pairs and video mode.
+The original nine-byte class approach remains in the full scene-actor comparisons.
+Synthetic public checks cover the empty screen grid separately; the private BIOS
+probe rejects division by zero and does not establish that hardware behavior.
