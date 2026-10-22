@@ -33,7 +33,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | ROM import | Implemented | Identity and full hash, invalid imports preserve existing data |
 | Settings and bindings | Implemented | Persistence, bounds, defaults, Unicode paths |
 | Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, brief taps retained for one game update, deadzone, remapping, disconnect; physical models not tested |
-| SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock |
+| SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session continues with the same story state |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division, ObjAffine and native angular math; 37,009 angular cases compared with mGBA, hardware conformance remains unverified |
 | Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 30 private ROM snapshots compared, including directional movement; raster timing still pending |
@@ -61,13 +61,14 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Gameplay record slots and counters | Adapted | Eight allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and two allocation callbacks; complete inventory UI and save integration remain pending |
+| Status counters and stage sequence | Adapted | All 13 functions in map10_4_counter_sequence.c compared, including the complete 16-bit counter domain, five tile banks, windows, stage/scroll graphics and sequence phases; nine Main and twelve argument-free task contracts; later-stage live integration remains pending |
 | Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Ham-Chat book | Adapted | Acquisition, learned-word order, five language permutations, category/page selection, paired text contexts, counters, markers and cleanup compared; initial book display and return run natively; manual book navigation remains unverified |
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
-| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select reaches map 10:5 and stops on the unadapted counter/sequence family; later scene callbacks remain incomplete |
+| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status display, left/right navigation and End Game confirmation connected; Items/Gems and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | A 31,041-update native input scenario completes the basic lessons/reward, destination-map roundtrip, Sunny Peak river/eastern actor interactions, stairs, Heyhoo acquisition and an eleven-word book roundtrip; function-level save comparisons and atomic host persistence verified; live-window story and in-game save/reload playthrough remain pending |
+| New game, movement, in-game save/load | Partial | A 34,039-update native input scenario completes the basic lessons/reward, Sunny Peak interactions, stairs, Heyhoo/book and Select status, then saves through End Game and continues from the title with the same map, position, eleven words and ten seeds; host-file/fresh-session roundtrip also verified; full story and actual-window playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -97,6 +98,14 @@ stairs to map 2:2 and triggers the stump conversation. It learns Heyhoo, increas
 the word count from ten to eleven, opens the updated book, enters its first page
 and returns to movement. This does not establish battery removal, Bijou's rescue,
 a reconciliation or a complete opening.
+Select then opens the status display. The route selects End Game, confirms the
+original SRAM write, returns to the title and chooses Continue. The restored state
+has the same map 2:2, position, eleven words and ten seeds. The scenario counts
+34,039 input updates in total; the runtime frame counter resets on returning to
+the title. A separate replay through the actual host Session API writes private
+32 KiB SRAM files, stops the session and starts a fresh one from disk. Continue
+restores the same six story/position fields. This is separate from actual
+desktop-window playthrough evidence.
 Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
@@ -159,7 +168,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-1,203,881 comparisons with the independent BIOS and PPU oracles.
+1,383,341 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -346,7 +355,8 @@ The typed HBlank dispatcher supports the circular effect, scanline wave/blend an
 other callback addresses fail explicitly. Static snapshots and sampled callback
 comparisons do not establish raster-image fidelity or the real IRQ cadence. Main save-load
 commands preserve the failure cursor/depth behavior and reload the saved map with
-a white palette on success; file persistence still needs the real game loop.
+a white palette on success. The connected input scenario now verifies End Game's
+SRAM write and Continue; host-file persistence has separate session checks.
 
 Audio uses explicit guest layouts for the driver, six player records, 80-byte
 tracks and 64-byte channels. Initialization reads dispatch and song metadata
@@ -463,15 +473,17 @@ ROM into guest RAM as data. Save operations call typed native functions; the cop
 ARM bytes are never executed by the Windows application. Save compatibility checks
 cover blank storage, identity repair, checksum failures, primary/backup selection
 and grouped writes. File persistence remains separate from these in-memory calls;
-in-game save timing still needs the connected game loop. Invalid group selectors
-are rejected; the unused group-0 record write/load path is not exposed.
+the input-only scenario now exercises End Game, reset and Continue with retained
+story state. The host-session replay separately verifies persistence to disk and
+fresh-session continuation. Actual-window validation remains pending. Invalid
+group selectors are rejected; the unused group-0 record write/load path is not exposed.
 
 ## Remaining integration order
 
 1. Review remaining area and shared scene families with their dependencies, then adapt
    complete groups of story/scene callbacks, scanline effects and timed CPU transfers.
 2. Extend the deterministic opening scenario beyond Sunny Peak's first learned word
-   and in-game save/reload, and verify the same paths in the actual Windows window.
+   and verify the same paths, save/reload and file persistence in the actual Windows window.
 3. Expand coverage through the remaining story, secondary activities and minigames;
    establish input scenarios and compare story state and save effects with the reference.
 4. Compare canonical RGBA, state, SRAM and pre-device PCM. Keep original

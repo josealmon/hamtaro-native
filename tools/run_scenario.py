@@ -1,14 +1,17 @@
 """Run input-only scenarios through the compiled native runtime with a private ROM.
 
-No emulator, captured resource, save output or screenshot is involved. The optional
-test DLL is not shipped with the application. A scenario fault always fails.
+The default replay writes no save or capture. Optional host-session verification
+uses disposable private SRAM files. The test DLL is never shipped. A fault fails.
 """
 from __future__ import annotations
 import argparse
 import ctypes as C
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
+import tempfile
 import time
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -96,7 +99,10 @@ def main():
     parser.add_argument("--scenario",type=Path,required=True)
     parser.add_argument("--save",type=Path,help="Optional read-only 32 KiB SRAM input")
     parser.add_argument("--library",type=Path,default=ROOT/"build/Release/hn_reference_probe.dll")
+    parser.add_argument("--session-test",type=Path,help="Also replay through the host session executable and verify SRAM-file continuation")
     args=parser.parse_args()
+    if args.session_test and args.save:
+        parser.error("The host-session replay starts from erased SRAM; do not combine --session-test with --save.")
     spec=json.loads((ROOT/"config/rom.json").read_text())
     if args.rom.stat().st_size!=spec["size"]:raise ValueError("A compatible AH3P ROM is required.")
     rom=args.rom.read_bytes()
@@ -113,5 +119,21 @@ def main():
     try:run_steps(game,scenario["steps"])
     finally:game.close()
     print(f"{scenario['name']}: {count} native updates passed in {time.perf_counter()-start:.2f}s. Scenario coverage only; full gameplay remains unverified.")
+    if args.session_test:
+        def inputs(steps):
+            for step in steps:
+                if "repeat" in step:
+                    for _ in range(step["repeat"]):yield from inputs(step["steps"])
+                elif "frames" in step:
+                    keys=0
+                    for button in step.get("buttons",[]):keys|=BUTTONS[button]
+                    yield step["frames"],keys
+        work=Path(os.environ.get("HAMTARO_NATIVE_WORK",Path.home()/".hamtaro-native-dev")).resolve()
+        if work==ROOT or ROOT in work.parents:raise ValueError("Host-session replay scratch must be outside the checkout.")
+        work.mkdir(parents=True,exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="session-replay-",dir=work) as temporary:
+            trace=Path(temporary)/"inputs.txt"
+            trace.write_text("".join(f"{frames} {keys}\n" for frames,keys in inputs(scenario["steps"])),encoding="ascii")
+            subprocess.run([str(args.session_test.resolve()),str(args.rom.resolve()),"--replay",str(trace)],check=True)
 
 if __name__=="__main__":main()

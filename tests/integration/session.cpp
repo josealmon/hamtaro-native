@@ -1,6 +1,7 @@
 #include "app/session.h"
 #include "platform/audio.h"
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #define WIN32_LEAN_AND_MEAN
@@ -29,7 +30,7 @@ int main(int argc,char **argv)
         CHECK(!session.present()&&!session.playable()&&session.pixels().empty()&&session.samples().empty());
         session.persist(paths);session.stop(paths);CHECK(!std::filesystem::exists(paths.save()));
         rejects([&]{session.start(paths,{});});CHECK(!session.present());
-        if(argc==2||argc==3) {
+        if(argc==2||argc==3||argc==4) {
             const auto rom=hn::read_file(hn::from_utf8(argv[1]),hn::rom_size);
             const std::uint8_t damaged[]={1,2,3};hn::atomic_write(paths.save(),damaged);
             rejects([&]{session.start(paths,rom);});CHECK(std::filesystem::file_size(paths.save())==3&&!session.present());
@@ -56,6 +57,38 @@ int main(int argc,char **argv)
             CHECK(!session.frame(paths,0)&&game->fault==HN_GAME_IRQ);
             CHECK(!session.save_pending()&&hn::load_save(paths)==committed);
             session.stop(paths);CHECK(!session.present()&&hn::load_save(paths)==committed);
+            if(argc==4) {
+                CHECK(std::string(argv[2])=="--replay");Workspace replay;hn::Session playing;
+                hn::write_save(replay.paths,blank);CHECK(playing.start(replay.paths,rom));
+                std::ifstream input(hn::from_utf8(argv[3]));CHECK(input.is_open());
+                unsigned count,buttons;std::uint64_t total=0;
+                while(input>>count) {
+                    CHECK(static_cast<bool>(input>>buttons));
+                    CHECK(count>0&&count<=1000000&&buttons<=1023);
+                    total+=count;CHECK(total<=1000000);
+                    for(unsigned frame=0;frame<count;frame++)CHECK(playing.frame(replay.paths,static_cast<std::uint16_t>(buttons)));
+                }
+                CHECK(input.eof()&&total>0&&playing.playable()&&!playing.save_pending());
+                auto snapshot=[](const HNGame *current) {
+                    auto *memory=const_cast<HNMemory*>(&current->memory);
+                    const auto slot=hn_read32(memory,0x03002D98)+hn_read8(memory,0x03002C0C)*104;
+                    return std::array<std::uint32_t,6>{hn_read8(memory,0x03002C58),hn_read8(memory,0x03001F68),
+                        hn_read32(memory,slot+0x18),hn_read32(memory,slot+0x20),hn_read8(memory,0x03003E30),hn_read16(memory,0x0201DC52)};
+                };
+                const auto expected=snapshot(playing.game());CHECK(expected[4]>10);
+                const auto saved=hn::load_save(replay.paths);
+                CHECK(std::equal(saved.begin(),saved.end(),playing.game()->memory.sram));
+                CHECK(std::filesystem::file_size(replay.paths.save())==hn::save_size);
+                playing.stop(replay.paths);CHECK(!playing.present());
+                hn::Session restored;CHECK(restored.start(replay.paths,rom));
+                auto advance=[&](unsigned frames,std::uint16_t keys) {
+                    for(unsigned frame=0;frame<frames;frame++)CHECK(restored.frame(replay.paths,keys));
+                };
+                advance(1200,0);advance(1,8);advance(240,0);advance(1,1);advance(480,0);
+                CHECK(restored.playable()&&snapshot(restored.game())==expected&&!restored.save_pending());
+                restored.stop(replay.paths);
+                std::cout<<total<<" input updates persisted to private 32 KiB SRAM; a fresh host session continued with the same map, position, words and seeds.\n";
+            }
             if(argc==3) {
                 CHECK(std::string(argv[2])=="--audio");CHECK(SDL_Init(SDL_INIT_AUDIO));
                 {

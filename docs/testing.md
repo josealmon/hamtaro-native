@@ -88,7 +88,7 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 31,041 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 34,039 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
@@ -102,14 +102,33 @@ the conversation, returning to movement with its words and seed count retained.
 It then returns to the river, takes the northern path through map 2:20, climbs the
 stairs to map 2:2 and triggers the stump conversation. Heyhoo acquisition increases
 the word count from ten to eleven; the scenario opens the updated book, enters its
-first page and returns to the same movement position. Battery removal, Bijou's
-rescue and reconciliation are not established. The
-JSON contains only button inputs and metadata checkpoints. The runner writes no
+first page and returns to the same movement position. Select opens the status
+display; the route moves to End Game, confirms the original SRAM write, returns
+to the title and chooses Continue. The same map, position, eleven learned words
+and ten seeds are restored. The runtime frame counter resets at the title, while
+the runner's update total remains cumulative. Battery removal, Bijou's rescue
+and reconciliation are not established. The
+JSON contains only button inputs and metadata checkpoints. The default replay writes no
 save or capture, rejects unknown inputs and fails on any native runtime fault or
 checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
 This is native runtime scenario evidence, not a desktop playthrough or an independent
 full-machine comparison. Manual book navigation, later scenes and the complete
 desktop story playthrough remain pending.
+
+To replay the same inputs through the application's host Session API and test
+actual SRAM-file persistence, add:
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json --session-test build/Release/hn_session_tests.exe
+
+This passes the native checkpoints above and 37,649 host-session checks. The host
+replay performs all 34,039 input updates in a disposable private profile, verifies
+that the saved 32 KiB file equals the game's SRAM, stops and starts a fresh Session,
+then selects Continue. Map, position, eleven words and ten seeds are unchanged.
+The original ROM and player's profile are untouched; temporary input traces and
+SRAM files are removed. Trace scratch uses HAMTARO_NATIVE_WORK or the private
+.hamtaro-native-dev profile outside the checkout. This option starts from erased
+SRAM and cannot be combined with --save. It does not create an SDL gameplay window
+or prove persistence across a separate OS process or a complete desktop playthrough.
 
 For private function comparisons, use a Python environment with Unicorn 2.1.4
 and the test-only hn_reference_probe.dll built by BUILD_TESTING:
@@ -134,7 +153,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,203,881 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 1,383,341 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -425,6 +444,7 @@ Additional focused area-dependency checks use:
     python -B tools/compare_reference.py --actor-presets-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
     python -B tools/compare_reference.py --records-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
     python -B tools/compare_reference.py --wave-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+    python -B tools/compare_reference.py --counter-scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
 These pass 31,758 scene actor comparisons, 85,885 actor preset comparisons,
 26,322 record comparisons and 16,497 scanline-wave comparisons. The scene group
@@ -439,3 +459,13 @@ all 228 scanlines, blend thresholds, signed wrapping, frame-end phase updates an
 typed Main/F4/HBlank calls. Public synthetic game tests cover these boundaries
 without original assets. These comparisons do not establish full-area progression,
 the complete inventory UI, SRAM integration or timed raster-image fidelity.
+
+The counter-scene group passes 179,460 comparisons across all thirteen functions
+in map10_4_counter_sequence.c. It covers every 16-bit counter value, five tile banks,
+palette/window setup, byte-sized offsets, stage graphics, all active sequence
+phases, signed halfword/wrap boundaries, same-call phase fallthrough and live class
+aliases. Nine Main contracts and twelve argument-free F4 contracts are compared.
+The draw callback's invalid selector retains an incoming R6 pointer in the source;
+the host rejects that unreviewed contract before changing any tile bank. These
+checks and the opening scenario establish initial Select/status and End Game use;
+later stage animations, Items/Gems and the complete activity UI remain unverified.

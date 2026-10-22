@@ -5,6 +5,7 @@
 #include "game/wander.h"
 #include "game/scene_actor.h"
 #include "game/records.h"
+#include "game/counter_scene.h"
 #include "game/raster.h"
 #include "game/state.h"
 #include "game/render.h"
@@ -189,7 +190,8 @@ static bool task_callback(HNMemory *m,GameAddr callback)
         uint32_t ignored;return hn_wander_callback(m,callback,0,&ignored)==HN_SCENE_OK;}
     case 0x0801E00C:{uint32_t ignored;return hn_records_callback(m,callback,0,&ignored)==HN_SCENE_OK;}
     case 0x0802E22C:case 0x0802E258:{uint32_t ignored;return hn_raster_callback(m,callback,&ignored)==HN_SCENE_OK;}
-    default:{HNSceneResult result=hn_scene_actor_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
+    default:{HNSceneResult result=hn_counter_scene_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
+        result=hn_scene_actor_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_bank2_apply(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         uint32_t ignored;result=hn_map_choice_apply(m,callback,&ignored);
         return result==HN_SCENE_UNKNOWN?hn_preset_apply(m,callback)==HN_SCENE_OK:result==HN_SCENE_OK;}

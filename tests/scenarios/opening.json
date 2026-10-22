@@ -1,5 +1,5 @@
 {
-  "name": "New game, Sunny Peak actor interactions and Heyhoo acquisition",
+  "name": "New game, Sunny Peak Heyhoo and in-game SRAM save/continue",
   "steps": [
     {"frames": 100},
     {"repeat": 8, "steps": [{"frames": 1, "buttons": ["A"]}, {"frames": 119}]},
@@ -176,6 +176,28 @@
     {"frames": 120},
     {"frames": 1, "buttons": ["Start"]},
     {"frames": 180},
-    {"label": "Book return after Heyhoo", "expect": {"frame": 31041, "map_bank": 2, "map_index": 2, "opcode": 33, "main_cursor": "0x08033E60", "leader_x": 24.5, "leader_z": 128.5, "learned_words": 11, "seeds": 10}}
+    {"label": "Book return after Heyhoo", "expect": {"frame": 31041, "map_bank": 2, "map_index": 2, "opcode": 33, "main_cursor": "0x08033E60", "leader_x": 24.5, "leader_z": 128.5, "learned_words": 11, "seeds": 10}},
+    {"frames": 1, "buttons": ["Select"]},
+    {"frames": 240},
+    {"label": "Status menu opened", "expect": {"frame": 31282, "map_bank": 10, "map_index": 5, "opcode": 0, "main_cursor": "0x080D5565", "learned_words": 11, "seeds": 10}},
+    {"frames": 480},
+    {"frames": 1, "buttons": ["Right"]},
+    {"frames": 30},
+    {"frames": 1, "buttons": ["Right"]},
+    {"frames": 60},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 240},
+    {"label": "End Game confirmation", "expect": {"frame": 32095, "map_bank": 10, "map_index": 5, "opcode": 0, "main_cursor": "0x080D7D86"}},
+    {"frames": 1, "buttons": ["Left"]},
+    {"frames": 20},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 1200},
+    {"label": "Saved and returned to title", "expect": {"frame": 1039, "map_bank": 10, "map_index": 1, "opcode": 0, "main_cursor": "0x080D22A6"}},
+    {"frames": 1, "buttons": ["Start"]},
+    {"frames": 240},
+    {"label": "Continue offered", "expect": {"frame": 1280, "map_bank": 10, "map_index": 1, "opcode": 0, "main_cursor": "0x080D24A7"}},
+    {"frames": 1, "buttons": ["A"]},
+    {"frames": 480},
+    {"label": "Saved Sunny Peak state restored", "expect": {"frame": 1761, "map_bank": 2, "map_index": 2, "opcode": 33, "main_cursor": "0x08033E60", "leader_x": 24.5, "leader_z": 128.5, "learned_words": 11, "seeds": 10}}
   ]
 }
