@@ -55,7 +55,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
 | Scene actor state and panels | Adapted | 35 functions across 13 source families plus one shared cross-bank condition compared: snapshots, forward copy/swap, signed accelerations, class-target approach, panel presets and direction constructors; 27 reviewed argument-free task contracts; complete scene integration remains pending |
-| Actor render presets | Adapted | All 476 functions across five linked/neighbor/class/secondary/render-setup families compared; void/task ABI, captured auxiliary arguments, live selectors and direction sectors preserved; these functions are rejected as Main callbacks |
+| Actor render presets | Adapted | All 922 functions across eight linked/neighbor/class/secondary/render-setup/graphics/directional/extended families compared; void/task ABI, captured auxiliary arguments, live selectors, inactive mapped slots, byte-sized neighbors and direction sectors preserved; these functions are rejected as Main callbacks; later-area integration remains pending |
 | Map-choice scene control | Adapted | All 273 functions in map_choice_callbacks.c compared: 93 Main contracts, 253 argument-free task targets, five animation contracts and four slot helpers, including cursor skips/jumps, packed choices, motion, regions, phases and presets; complete area/activity integration remains pending |
 | Map particles | Adapted | All four functions in map_particles.c and the alternate parameter selection compared; initialization, reset boundaries, live parameter reads, scaling and field60-only hiding; timed scene integration remains pending |
 | Motion and collision | Adapted | Leader input/walk/run, action priority, map edge sampling/sliding, collision responses, event staging, follower routes, actor-position snapshots, transition animation/position selection and wrapped facing interpolation compared; full-game coverage remains pending |
@@ -194,7 +194,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-1,423,485 comparisons with the independent BIOS and PPU oracles.
+1,515,172 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -584,13 +584,27 @@ through eastern-map entry, wandering actors, facing and a complete conversation.
 Complete Sunny Peak story progression, the first reconciliation and later areas
 remain pending.
 
-The next area-dependency batch covers all 476 void actor presets across
+The shared actor preset implementation covers all 476 void functions across
 actor_animation_linked_presets.c, actor_animation_neighbor_presets.c,
 actor_class_animation_presets.c, actor_secondary_animation_presets.c and
-actor_render_setup_presets.c. Twenty-six already-reviewed implementations remain
-shared with the earlier presets. Auxiliary setup captures its byte-sized slot and
+actor_render_setup_presets.c. Earlier partial adapters now delegate to the complete
+implementations. Auxiliary setup captures its byte-sized slot and
 parent arguments before calling helpers; separate source calls reload live selectors.
 No void return is repurposed as Main's consumed-argument count.
+
+Three further complete families add 446 graphics/directional/extended animation
+presets in actor_graphics_animation_presets.c,
+actor_directional_animation_presets.c and actor_extended_animation_presets.c.
+Their native implementations share actor_presets.c and the typed task dispatch;
+thirty-nine earlier partial adapters now use the complete implementations. Original
+word-choice wrappers accept mapped inactive byte-selected slots, wrap neighbors
+at 0/255 and configure graphics records independently of their active count. Raw
+native helpers preserve those contracts while the existing guarded APIs keep
+their validation. Direction selection retains the source's missing-sector no-op,
+and the reviewed indicator that selects a different class from its animation.
+Auxiliary arguments remain captured; separate calls reload class selectors after
+each potentially overlapping write. These function checks prepare later-area
+dependencies; they do not establish that those areas are playable.
 
 Thirty-five scene actor/state/panel functions across 13 source families preserve
 the nine-byte class-coordinate approach state, fixed-point/signed boundaries,

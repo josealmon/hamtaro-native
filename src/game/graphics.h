@@ -11,6 +11,7 @@ typedef struct {
 } HNGraphics;
 void hn_graphics_init(HNGraphics *,HNMemory *);
 bool hn_graphics_configure(HNMemory *,uint8_t slot,GameAddr script);
+bool hn_graphics_configure_raw(HNMemory *,uint8_t slot,GameAddr script);
 bool hn_palette_prepare(HNMemory *,uint32_t amount,uint32_t first,uint32_t count);
 bool hn_palette_update(HNMemory *,uint32_t first,uint32_t count);
 void hn_mosaic_registers(HNMemory *,uint8_t selector,uint8_t x,uint8_t y);

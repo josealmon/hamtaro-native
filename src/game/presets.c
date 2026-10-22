@@ -26,63 +26,12 @@ static void indicator(HNMemory *m,uint8_t index,GameAddr resource)
 {hn_write8(m,0x03001FAC,index);hn_write32(m,0x03001F7C,resource);}
 static bool linked(HNMemory *m,uint8_t index,uint8_t parent,GameAddr resource,uint8_t mode)
 {return hn_render_configure(m,index,1,mode,0,0,0,resource)&&hn_render_modes(m,index,2,3,parent);}
-static bool class_link(HNMemory *m,GameAddr selector,int delta,GameAddr graphics,GameAddr resource)
-{
-    if(graphics&&!hn_graphics_configure(m,4,graphics))return false;
-    if(!hn_render_configure(m,(uint8_t)(hn_read8(m,selector)+delta),1,0xB0,0,0,0,resource))return false;
-    /* The render setup may alias the selector: reload it for the second call. */
-    return hn_render_modes(m,(uint8_t)(hn_read8(m,selector)+delta),2,3,hn_read8(m,selector));
-}
 static bool apply(HNMemory *m,GameAddr callback)
 {return hn_preset_apply(m,callback)==HN_SCENE_OK;}
 HNSceneResult hn_preset_apply(HNMemory *m,GameAddr callback)
 {
     bool ok=true;
     switch(callback&~1u){
-    /* Actor helpers used by the complete scene-render preset family. Resource
-       words identify the player's ROM; no resource bytes are embedded here. */
-    case 0x08013384:ok=animation(m,hn_read8(m,HN_RENDER_CLASS_FOLLOWER),0x088B5325,true);break;
-    case 0x080136B8:ok=animation(m,hn_read8(m,HN_RENDER_CLASS_FOLLOWER),0x088B6FD7,true);break;
-    case 0x08013FEC:ok=animation(m,hn_read8(m,0x03002C04),0x088C18D6,false);break;
-    case 0x08014400:ok=animation(m,hn_read8(m,0x03002C04),0x088BC636,true);break;
-    case 0x0801499C:ok=animation(m,hn_read8(m,0x03002C00),0x088C5C71,false);break;
-    case 0x080149E4:ok=animation(m,hn_read8(m,0x03002C00),0x088C5CAF,false);break;
-    case 0x0801536C:ok=animation(m,hn_read8(m,0x03002C04),0x088CAB5E,false);break;
-    case 0x0801542C:ok=animation(m,hn_read8(m,0x03002C04),0x088CACA8,true);break;
-    case 0x0801548C:ok=animation(m,hn_read8(m,0x03002C04),0x088CACFB,true);break;
-    case 0x08016A6C:ok=animation(m,hn_read8(m,0x03002C00),0x088D2FE5,false);break;
-    case 0x08016BD8:ok=animation(m,hn_read8(m,0x03002C00),0x088D33D4,false);break;
-    case 0x0801707C:ok=animation(m,hn_read8(m,0x03002C04),0x088D5C88,false);break;
-    case 0x0801710C:ok=animation(m,hn_read8(m,0x03002C00),0x088D48A9,false);break;
-    case 0x08017C6C:ok=animation(m,hn_read8(m,0x03002C04),0x088DC493,false);break;
-    case 0x080182FC:ok=animation(m,hn_read8(m,0x03002C00),0x088DBD87,false);break;
-    case 0x08014034:ok=animation(m,hn_read8(m,0x03002C04),0x088C18FB,false);break;
-    case 0x08017694:ok=animation(m,hn_read8(m,0x03002C04),0x088D836C,true);break;
-    case 0x080176AC:ok=animation(m,hn_read8(m,0x03002C00),0x088D836C,true);break;
-    case 0x080176C4:ok=animation(m,hn_read8(m,0x03002C04),0x088D839E,true);break;
-    case 0x080178D0:ok=animation(m,hn_read8(m,0x03002C00),0x088D8F67,true);break;
-    case 0x08018E2C:ok=field(m,(uint8_t)(hn_read8(m,0x03002C04)-1),0);break;
-    case 0x08018E90:ok=field(m,(uint8_t)(hn_read8(m,0x03002C00)-1),0);break;
-    case 0x08019A0C:ok=class_link(m,0x03002C00,-1,0x088E1364,0x088E39A9);break;
-    case 0x08019FE4:ok=class_link(m,0x03002C04,-1,0,0x088E3AC9);break;
-    case 0x0801A028:ok=class_link(m,0x03002C00,-1,0,0x088E3AC9);break;
-    case 0x0801A3B0:ok=class_link(m,0x03002C04,-1,0x088E138B,0x088C286A);break;
-    case 0x080192A4:ok=class_link(m,HN_RENDER_CLASS_FOLLOWER,-1,0x088E135C,0x088E3920);break;
-    case 0x08019584:ok=class_link(m,HN_RENDER_CLASS_FOLLOWER,-1,0x088E1330,0x088E3961);break;
-    case 0x080195D8:ok=class_link(m,0x03002C04,-1,0x088E1330,0x088E3961);break;
-    case 0x080197D0:ok=class_link(m,0x03002C04,-1,0x088E1330,0x088E3980);break;
-    case 0x08019878:ok=class_link(m,0x03002C04,-1,0x088E137B,0x088E398B);break;
-    case 0x08019BB0:ok=class_link(m,0x03002C00,-1,0x088E135C,0x088E3A24);break;
-    case 0x0801A458:ok=class_link(m,0x03002C00,-1,0x088E1338,0x088C5C7D);break;
-    case 0x0801A4AC:ok=class_link(m,0x03002C00,-1,0x088E137B,0x088C5CC4);break;
-    case 0x0801A500:ok=class_link(m,0x03002C00,1,0x088E137B,0x088C5CD5);break;
-    case 0x0801AA10:ok=class_link(m,0x03002C04,-1,0x088E1330,0x088CACBD);break;
-    case 0x0801AAB8:ok=class_link(m,0x03002C04,1,0x088E1330,0x088CACD6);break;
-    case 0x0801B7A8:ok=class_link(m,0x03002C04,1,0,0x088D449D);break;
-    case 0x0801BAFC:ok=hn_render_configure(m,(uint8_t)(hn_read8(m,0x03002C00)-1),1,0xB0,0,0,0,0x088D48C5)&&
-        hn_render_configure(m,(uint8_t)(hn_read8(m,0x03002C00)+1),1,0xB0,0,0,0,0x088D48D6)&&
-        hn_render_modes(m,(uint8_t)(hn_read8(m,0x03002C00)-1),2,3,hn_read8(m,0x03002C00))&&
-        hn_render_modes(m,(uint8_t)(hn_read8(m,0x03002C00)+1),2,3,hn_read8(m,0x03002C00));break;
     case 0x080CC878:hn_write8(m,HN_SCENE_CONTROLS,(uint8_t)(hn_read32(m,0x03004ED4)>>31));break;
     case 0x080CC8A8:break;
     case 0x080CC8AC:ok=apply(m,0x080136B8)&&apply(m,0x080192A4);break;

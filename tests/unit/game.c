@@ -1604,6 +1604,30 @@ static void actor_presets_contract(void)
     CHECK(hn_read8(&memory,HN_RENDER_CLASS_LEADER)==1); /* First auxiliary initialization aliases the selector. */
     CHECK(hn_read8(&memory,base+9*104+0x65)==10&&hn_read8(&memory,base+2*104+0x65)==1);
     CHECK(hn_preset_apply(&memory,0x08001001)==HN_SCENE_UNKNOWN&&!memory.fault);
+    reset();hn_write32(&memory,HN_RENDER_SLOTS,0x02010000);hn_write8(&memory,HN_RENDER_INFO+16,1);
+    hn_write32(&memory,HN_GRAPHICS_SCRIPTS,0x02018000);hn_write8(&memory,HN_GRAPHICS_COUNT,1);
+    hn_write8(&memory,0x03002C04,10);hn_write8(&memory,0x03002C00,13);hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,13);
+    CHECK(!hn_render_configure(&memory,10,1,0xB0,0,0,0,0x08500000));
+    CHECK(!hn_render_modes(&memory,10,2,3,13)&&!hn_graphics_configure(&memory,5,0x08500000));
+    CHECK(hn_preset_apply(&memory,0x0801799D)==HN_SCENE_OK);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,10)+4)==0x088D8AC1);
+    CHECK(hn_read8(&memory,0x03001FAC)==13&&hn_read32(&memory,0x03001F7C)==0x088D8AC1);
+    CHECK(hn_read8(&memory,hn_render_slot(&memory,9)+0x65)==10&&hn_read8(&memory,hn_render_slot(&memory,11)+0x65)==10);
+    CHECK(hn_preset_apply(&memory,0x08015BE9)==HN_SCENE_OK);
+    CHECK(hn_read32(&memory,0x02018000+5*44+0x18)==0x088E13AB&&hn_read8(&memory,0x02018000+5*44)==1);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,13)+4)==0x088CD0A1&&!hn_read8(&memory,0x03002170));
+    hn_write8(&memory,0x03002C00,255);hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,255);hn_write8(&memory,0x03002170,0xA5);
+    CHECK(hn_preset_apply(&memory,0x080146F5)==HN_SCENE_OK&&!hn_read8(&memory,0x03002170));
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,255)+4)==0x088BD285&&hn_read8(&memory,hn_render_slot(&memory,0)+0x65)==255);
+    hn_write8(&memory,HN_RENDER_CLASS_LEADER,0);
+    hn_write32(&memory,hn_render_slot(&memory,255)+0x18,0);hn_write32(&memory,hn_render_slot(&memory,255)+0x20,0);
+    hn_write32(&memory,hn_render_slot(&memory,0)+0x18,0xFFFF0000);hn_write32(&memory,hn_render_slot(&memory,0)+0x20,0);
+    CHECK(hn_preset_apply(&memory,0x08014745)==HN_SCENE_OK&&hn_read32(&memory,hn_render_slot(&memory,255)+4)==0x088BD22A);
+    hn_write32(&memory,hn_render_slot(&memory,0)+0x18,0);hn_write32(&memory,hn_render_slot(&memory,0)+0x20,0x10000);
+    CHECK(hn_preset_apply(&memory,0x08014745)==HN_SCENE_OK&&hn_read32(&memory,hn_render_slot(&memory,255)+4)==0x088BD22A);
+    CHECK(hn_preset_apply(&memory,0x0801499D)==HN_SCENE_OK&&hn_read32(&memory,hn_render_slot(&memory,255)+4)==0x088C5C71);
+    CHECK(hn_preset_apply(&memory,0x08013385)==HN_SCENE_OK&&hn_read32(&memory,hn_render_slot(&memory,255)+4)==0x088B5325);
+    CHECK(hn_scene_callback(&memory,0x0801499D,0,&consumed)==HN_SCENE_UNKNOWN&&!memory.fault);
 }
 static void records_contract(void)
 {

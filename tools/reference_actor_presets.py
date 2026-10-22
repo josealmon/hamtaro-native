@@ -7,19 +7,23 @@ import struct
 
 
 def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
-                        both, fresh, equal, compare, native_bytes):
+                        both, fresh, equal, compare, native_bytes, animation_families=False):
     sources = {"src/actors/actor_animation_linked_presets.c",
                "src/actors/actor_animation_neighbor_presets.c",
                "src/actors/actor_class_animation_presets.c",
                "src/actors/actor_secondary_animation_presets.c",
                "src/actors/actor_render_setup_presets.c"}
+    if animation_families:
+        sources = {"src/actors/actor_graphics_animation_presets.c",
+                   "src/actors/actor_directional_animation_presets.c",
+                   "src/actors/actor_extended_animation_presets.c"}
     rows = [row for row in entries if row["source"] in sources]
-    equal(len(rows), 476, "complete five-family actor preset inventory")
+    equal(len(rows), 446 if animation_families else 476, "complete actor preset source inventory")
     for row in rows:
         source = (reference / row["source"]).read_text(encoding="utf-8")
         equal(bool(re.search(r"void\s+" + re.escape(row["name"]) + r"\(void\)", source)), True,
               "reviewed actor preset void/argument-free source contract")
-    apply = bind("hn_preset_apply", C.c_int, C.c_void_p, C.c_uint32)
+    apply = bind("hn_actor_presets_apply", C.c_int, C.c_void_p, C.c_uint32)
     main = bind("hn_scene_callback", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
     task = bind("hn_probe_task_command", C.c_int, C.c_void_p, C.c_uint32, C.c_uint, C.POINTER(C.c_uint32))
     rng = random.Random(0x414354505245)
@@ -72,6 +76,9 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
                  ("SelectActorAnimationForXZDirection17B18", 0x03002C00),
                  ("SelectActorAnimationForXZDirection18784", 0x03002C04),
                  ("SelectActorAnimationForXZDirection187F8", 0x03002C00))
+    if animation_families:
+        selectors = (("SelectExtendedAnimationForXZDirection14744", 0x03002C00),
+                     ("SelectActorAnimationForXZDirection16788", 0x03002C04))
     for name, selector in selectors:
         row = next(row for row in rows if row["name"] == name)
         for dx, dz in ((0, 0), (-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1),
@@ -89,8 +96,16 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
     # Wrapper arguments are captured once, while two separate source calls
     # reload selectors. ConfigureRenderAuxiliarySlot must keep its old parent
     # even when render initialization overwrites the selector's guest byte.
-    for name, selector in (("ConfigureActorNeighborSlots13038", 0x03002C0C),
-                            ("ConfigureFollowerNeighborSlots13910", 0x03001F50)):
+    aliases = (("ConfigureActorNeighborSlots13038", 0x03002C0C),
+               ("ConfigureFollowerNeighborSlots13910", 0x03001F50))
+    if animation_families:
+        aliases = (("ConfigureExtendedAuxiliaryNeighbors14F9C", 0x03002C04),
+                   ("ConfigureExtendedAuxiliaryNeighbors14FE0", 0x03002C00),
+                   ("ConfigureGraphicsAnimationSlots15C5C", 0x03002C04),
+                   ("ConfigureGraphicsAnimationSlots163C0", 0x03002C04),
+                   ("ConfigureDirectionalAnimationSlots1799C", 0x03002C04),
+                   ("ConfigureDirectionalAnimationSlots17A2C", 0x03002C00))
+    for name, selector in aliases:
         row = next((row for row in rows if row["name"] == name), None)
         if row is None:
             # Source names are metadata, never guessed. Fail if the requested
@@ -104,10 +119,21 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
             both(new_base, payload)
             both(0x03002D98, struct.pack("<I", new_base))
             both(0x03002DC0, b"\x28\x00\x27")
+            both(0x03003070, struct.pack("<I", 0x02015000));both(0x03002E10, b"\x10")
             for i, address in enumerate((0x03002C0C, 0x03001F50, 0x03002C04, 0x03002C00)):
                 both(address, bytes([(10, 13, 16, 19)[(i + case) % 4]]))
             both(0x03002182, bytes([128 | (case & 1)]))
             equal(apply(memory, row["address"] | 1), 1, "actor auxiliary aliased selector")
             call(name)
             compare(f"actor auxiliary aliased selector {name}/{case}", ranges)
-    print("476 argument-free actor presets across five source families passed; full area integration remains unverified.")
+    for row in rows:
+        for case in (0, 1, 254, 255):
+            fixture(case);both(0x03002DC0, b"\x01");both(0x03002E10, b"\x01")
+            for address in (0x03002C0C, 0x03001F50, 0x03002C04, 0x03002C00):
+                both(address, bytes([case]))
+            equal(apply(memory, row["address"] | 1), 1, f"mapped inactive actor/neighbor byte selectors {row['name']}/{case}")
+            call(row["name"]);compare("mapped inactive actor/graphics records", ranges)
+    if animation_families:
+        print("446 argument-free graphics/directional/extended actor presets across three complete families passed; later-area integration remains unverified.")
+    else:
+        print("476 argument-free actor presets across five source families passed; full area integration remains unverified.")

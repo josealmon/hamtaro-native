@@ -189,7 +189,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,423,485 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 1,515,172 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -483,13 +483,14 @@ Additional focused area-dependency checks use:
     python -B tools/compare_reference.py --wave-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
     python -B tools/compare_reference.py --counter-scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-These pass 31,758 scene actor comparisons, 85,885 actor preset comparisons,
+These pass 31,758 scene actor comparisons, 91,597 actor preset comparisons,
 26,322 record comparisons and 16,497 scanline-wave comparisons. The scene group
 covers 35 functions across 13 families and one shared bank-3 condition, including
 approach completion, signed limits, all ARM shift counts, direction constructors,
 snapshots and copy aliases. The preset group covers all 476 functions in five
-families, Main rejection of void callbacks, F4 dispatch, direction sectors and
-captured auxiliary arguments versus live selector aliases. Record checks cover
+families, Main rejection of void callbacks, F4 dispatch, direction sectors,
+captured auxiliary arguments versus live selector aliases and inactive mapped
+byte selectors at 0, 1, 254 and 255. Record checks cover
 allocation/empty/full slots, twelve-byte result views, consuming zero counts,
 sentinel counters, arithmetic wrap and allocation callbacks. Wave checks cover
 all 228 scanlines, blend thresholds, signed wrapping, frame-end phase updates and
@@ -535,3 +536,16 @@ pointer are included. Synthetic public checks independently establish signed-div
 truncation, halfword wrapping, the fixed layer-2 anchor, rate-zero behavior and
 rejection of unreviewed animation contracts. The long native scenario exercises
 the first reconciliation's screen effects; complete scene timing remains unverified.
+
+The related graphics/directional/extended actor animation families use:
+
+    python -B tools/compare_reference.py --actor-animations-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+This group passes 85,975 comparisons across all 446 functions in three source
+families, including direct calls, F4 continuation and rejection of void functions
+as Main callbacks. It covers direction sectors, captured auxiliary arguments,
+live class-selector aliases, separate graphics initialization and every function
+with byte selectors at 0, 1, 254 and 255 while only one actor/graphics record is
+active. Synthetic public checks also verify wrapped neighbors, the missing-sector
+no-op, asymmetric animation/indicator classes and preservation of the general
+APIs' active-count guards. Full later-area integration remains unverified.

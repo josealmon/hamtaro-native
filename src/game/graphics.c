@@ -11,6 +11,10 @@ void hn_graphics_init(HNGraphics *g,HNMemory *m)
 bool hn_graphics_configure(HNMemory *m,uint8_t index,GameAddr data)
 {
     if(index>=hn_read8(m,HN_GRAPHICS_COUNT))return false;
+    return hn_graphics_configure_raw(m,index,data);
+}
+bool hn_graphics_configure_raw(HNMemory *m,uint8_t index,GameAddr data)
+{
     GameAddr s=hn_read32(m,HN_GRAPHICS_SCRIPTS)+index*44;
     hn_write32(m,s+0x18,data);hn_write8(m,s,1);hn_write8(m,s+1,0);hn_write8(m,s+2,0);
     hn_write16(m,s+0x1C,0);hn_write16(m,s+0x1E,0);hn_write16(m,s+0x20,0);

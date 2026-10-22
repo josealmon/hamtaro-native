@@ -76,6 +76,10 @@ bool hn_render_number(HNMemory *m,uint8_t index,uint32_t value,uint32_t x_word,u
 bool hn_render_modes(HNMemory *m,uint8_t index,uint8_t mode,uint8_t value,uint8_t field65)
 {
     if(index>=hn_read8(m,HN_RENDER_INFO+16)||!hn_read32(m,HN_RENDER_SLOTS))return false;
+    return hn_render_modes_raw(m,index,mode,value,field65);
+}
+bool hn_render_modes_raw(HNMemory *m,uint8_t index,uint8_t mode,uint8_t value,uint8_t field65)
+{
     uint8_t field62=(uint8_t)(((mode&3)<<6)|((value&3)<<4));GameAddr slot=hn_render_slot(m,index);
     if(mode<=1)field62|=field65&15;else hn_write8(m,slot+0x65,field65);
     hn_write8(m,slot+0x62,field62);return !m->fault;
@@ -84,6 +88,11 @@ bool hn_render_configure(HNMemory *m,uint8_t index,uint8_t field60,uint8_t field
                          int32_t x,int32_t y,int32_t z,GameAddr animation)
 {
     if(index>=hn_read8(m,HN_RENDER_INFO+0x10)||!hn_read32(m,HN_RENDER_SLOTS))return false;
+    return hn_render_configure_raw(m,index,field60,field62,x,y,z,animation);
+}
+bool hn_render_configure_raw(HNMemory *m,uint8_t index,uint8_t field60,uint8_t field62,
+                             int32_t x,int32_t y,int32_t z,GameAddr animation)
+{
     if(index==hn_read8(m,0x03001F50))hn_write8(m,0x03002170,0);
     hn_render_slot_reset(m,index);GameAddr slot=hn_render_slot(m,index);
     hn_write8(m,slot+0x60,field60);hn_write8(m,slot+0x62,field62);hn_render_flags(m,index,12,8);
