@@ -72,8 +72,9 @@ int main(int argc,char **argv)
                 auto snapshot=[](const HNGame *current) {
                     auto *memory=const_cast<HNMemory*>(&current->memory);
                     const auto slot=hn_read32(memory,0x03002D98)+hn_read8(memory,0x03002C0C)*104;
-                    return std::array<std::uint32_t,6>{hn_read8(memory,0x03002C58),hn_read8(memory,0x03001F68),
-                        hn_read32(memory,slot+0x18),hn_read32(memory,slot+0x20),hn_read8(memory,0x03003E30),hn_read16(memory,0x0201DC52)};
+                    return std::array<std::uint32_t,8>{hn_read8(memory,0x03002C58),hn_read8(memory,0x03001F68),
+                        hn_read32(memory,slot+0x18),hn_read32(memory,slot+0x20),hn_read8(memory,0x03003E30),hn_read16(memory,0x0201DC52),
+                        hn_read8(memory,0x03001F50),hn_read8(memory,0x03002182)&1u};
                 };
                 const auto expected=snapshot(playing.game());CHECK(expected[4]>10);
                 const auto saved=hn::load_save(replay.paths);

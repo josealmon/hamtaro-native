@@ -88,7 +88,7 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 60,545 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 83,069 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
@@ -113,10 +113,14 @@ Lookie teaches Pakapaka; cutting the boat's rope carries the player west to map
 2:17. Hamha and Yep-P with the wandering hamster teach Putput. A third
 status/End Game/Continue restores map 2:17 at x=131.5, z=208.5 with fifteen words
 and ten seeds.
-The runtime frame counter resets at the title, while
-the runner's update total remains cumulative. Battery removal, Bijou's rescue
-and reconciliation are not established. The
-JSON contains only button inputs and metadata checkpoints. The default replay writes no
+Heyhoo summons Seamore and learns Offdoff. The route removes the bridge's battery,
+places it in the boat, exercises powered travel through map 2:18 and docks beside
+Bijou. Mega-Q increases the count to seventeen; the joined-partner flag and
+follower slot 13 are checked after returning to movement. A fourth End Game/Continue
+retains that state at map 2:17, x=168.5, z=80.5. The runtime frame counter resets
+at the title, while the runner's update total remains cumulative. Reconciliation
+and the complete opening remain unverified. The JSON contains only button inputs
+and metadata checkpoints. The default replay writes no
 save or capture, rejects unknown inputs and fails on any native runtime fault or
 checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
 This is native runtime scenario evidence, not a desktop playthrough or an independent
@@ -128,29 +132,32 @@ actual SRAM-file persistence, add:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json --session-test build/Release/hn_session_tests.exe
 
-The host replay passes 65,010 checks. It performs all 60,545 input updates in a disposable private profile, verifies
+The host replay performs all 83,069 input updates in a disposable private profile, verifies
 that the saved 32 KiB file equals the game's SRAM, stops and starts a fresh Session,
-then selects Continue. Map, position, fifteen words and ten seeds are unchanged.
+then selects Continue. Map, position, seventeen words, ten seeds, the joined-partner
+flag and follower slot 13 are unchanged. The partner checkpoints describe the
+returned overworld state; UI scenes can reuse the same render-class slots.
 The original ROM and player's profile are untouched; temporary input traces and
 SRAM files are removed. Trace scratch uses HAMTARO_NATIVE_WORK or the private
 .hamtaro-native-dev profile outside the checkout. This option starts from erased
 SRAM and cannot be combined with --save. It does not create an SDL gameplay window
 or prove a complete desktop playthrough.
 
-For desktop review, append --desktop-profile PATH_TO_NEW_PRIVATE_PROFILE. This
+For desktop review, append --desktop-profile PATH_TO_NEW_PRIVATE_PROFILE. The
+verified replay including this export passes 88,310 host-session checks and
 retains the validated user ROM and tested SRAM in that new directory. The directory must
 be outside the checkout and must not already exist. Start the actual application
 with --data-dir PATH_TO_NEW_PRIVATE_PROFILE to inspect the same saved scene.
 This explicit private export differs from the default disposable test profile.
 
-A real-window review used an earlier thirteen-word profile. It closed and
-relaunched the Windows executable, selected Continue and restored the saved Sunny Peak scene.
-The controls UI reassigned Select to V; the in-game status then displayed thirteen
-learned words and ten seeds. End Game returned to the title and updated the private
-32 KiB SRAM file while preserving its previous bytes as the backup. After another
-process restart, Continue restored the scene, WASD moved the character and the
-status still displayed thirteen words/ten seeds. The Select remapping persisted.
-The review used Z/X and WASD for game input.
+A real-window review launched the Windows executable with the exported seventeen-word
+profile, selected Continue and restored the Sunny Peak scene with both Hamtaro and
+Bijou. Select, assigned to V in the copied test settings, displayed seventeen
+words and ten seeds. End Game returned to the title and updated the private 32 KiB
+SRAM file while preserving its previous bytes as the backup. The review used Z/X
+and WASD for game input. A subsequent visual reload of that window-written file
+remains unverified; the fresh host-session replay separately checks all eight
+story/position/partner fields from disk.
 This is bounded desktop evidence, not a full playthrough or a physical-controller
 test; the default Right Shift binding was not established by this window review.
 

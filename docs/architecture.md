@@ -33,7 +33,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | ROM import | Implemented | Identity and full hash, invalid imports preserve existing data |
 | Settings and bindings | Implemented | Persistence, bounds, defaults, Unicode paths |
 | Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, brief taps retained for one game update, deadzone, remapping, disconnect; physical models not tested |
-| SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session continues with the same story state; actual-window End Game, process restart and Continue retain thirteen words/ten seeds |
+| SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session retains seventeen words, ten seeds and Bijou; actual-window Continue restores that exported state, and End Game writes the file with its previous backup |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division, ObjAffine and native angular math; 37,009 angular cases compared with mGBA, hardware conformance remains unverified |
 | Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 30 private ROM snapshots compared, including directional movement; raster timing still pending |
@@ -69,7 +69,7 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status display, left/right navigation and End Game confirmation connected; Items/Gems and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | A 60,545-update native input scenario completes the basic lessons/reward, Sunny Peak through Heyhoo/Bluhoo/Gogo/Pakapaka/Putput, book/status and three End Game/Continue roundtrips; final map, position, fifteen words and ten seeds also survive host-file/fresh-session loading; a separate Windows process restores a thirteen-word save and its status; full story and desktop playthrough remain pending |
+| New game, movement, in-game save/load | Partial | An 83,069-update native input scenario completes the basic lessons/reward, Sunny Peak through Offdoff, battery removal, powered boat travel and Bijou/Mega-Q, book/status and four End Game/Continue roundtrips; final map, position, seventeen words, ten seeds and the joined partner also survive host-file/fresh-session loading; full story and desktop playthrough remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -97,8 +97,7 @@ returns control at x=156.5, z=208.5 with the ten learned words and ten seeds ret
 The route then returns west, crosses the northern path into map 2:20, climbs the
 stairs to map 2:2 and triggers the stump conversation. It learns Heyhoo, increasing
 the word count from ten to eleven, opens the updated book, enters its first page
-and returns to movement. This does not establish battery removal, Bijou's rescue,
-a reconciliation or a complete opening.
+and returns to movement.
 Select then opens the status display. The route selects End Game, confirms the
 original SRAM write, returns to the title and chooses Continue. The restored state
 has the same map 2:2, position, eleven words and ten seeds. It then talks to Oxnard
@@ -109,17 +108,22 @@ Lookie with Arnie teaches Pakapaka. The player boards the boat, cuts its rope an
 drifts west to map 2:17, then disembarks and talks to the wandering hamster.
 Answering Yep-P teaches Putput. A third End Game/Continue restores map 2:17,
 x=131.5, z=208.5, fifteen words and ten seeds.
-The scenario counts 60,545 input updates in total; the runtime frame counter resets
+Heyhoo then summons Seamore, whose dialogue teaches Offdoff. Removing the bridge's
+battery and placing it in the boat enables powered travel, including a roundtrip
+through map 2:18 and docking on the north bank of map 2:17. Bijou's conversation
+teaches Mega-Q and enables her as the player's partner. A fourth End Game/Continue
+restores x=168.5, z=80.5, seventeen words, ten seeds, the joined-partner flag and
+follower slot 13. Reconciliation and the complete opening remain unverified.
+The scenario counts 83,069 input updates in total; the runtime frame counter resets
 on returning to the title. A separate replay through the actual host Session API writes private
 32 KiB SRAM files, stops the session and starts a fresh one from disk. Continue
-restores the same six story/position fields. A separate review closes and relaunches
+restores the same eight story/position/partner fields. A separate review closes and relaunches
 the actual Windows executable with a private exported profile. Continue restores
-the saved Sunny Peak scene; Select, reassigned to V, displays thirteen learned
-words and ten seeds. The window review then saves through End Game, observes the
-return to the title and the updated 32 KiB file plus its previous backup, closes
-the process and launches a new one. Continue, WASD movement and the same status
-counters work again; the Select remapping also persists. This establishes a
-bounded desktop save/continuation check.
+the saved Sunny Peak scene with Hamtaro and Bijou together; Select, assigned to V,
+displays seventeen learned words and ten seeds. The window review then saves
+through End Game and observes the return to the title and the updated 32 KiB file
+plus its previous backup. WASD movement and loading the copied control settings
+are also reviewed. This establishes bounded desktop save/continuation evidence.
 Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
@@ -497,8 +501,8 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 1. Review remaining area and shared scene families with their dependencies, then adapt
    complete groups of story/scene callbacks, scanline effects and timed CPU transfers.
-2. Extend Sunny Peak through Bijou's rescue and the first reconciliation, then
-   verify the affected routes and save/reload in the actual Windows window.
+2. Complete Sunny Peak's first reconciliation after the verified Bijou rescue,
+   then verify the affected routes and save/reload in the actual Windows window.
 3. Expand coverage through the remaining story, secondary activities and minigames;
    establish input scenarios and compare story state and save effects with the reference.
 4. Compare canonical RGBA, state, SRAM and pre-device PCM. Keep original
