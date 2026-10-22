@@ -57,6 +57,7 @@ statically. A separate clean-machine validation remains pending.
 | Bank-3 main scene/activity family | Adapted | All 282 source functions accounted for across presets, source/spawn entries, pair board, phases/orbits, record text, chains and one shared condition; typed Main/task/animation contracts and helpers compared, including live links, byte wrapping and retained-register paths; complete activity progression and area integration remain pending |
 | Bank-4 scene/path family | Adapted | All 483 map_bank4_callbacks.c functions and the shared screen-indicator family compared; presentation, jump stages/windows, byte counters, audio distance scaling and three path followers retain reviewed Main/task/animation/helper contracts; complete area story/activity and timed scene integration remain pending |
 | Bank-5 scene/mechanism family | Adapted | All 207 map_bank5_callbacks.c functions and the four-function stairs/idle dependency family compared; grid choices, actor mirrors, lane states/outcomes, round timing and a typed VBlank callback; complete area progression and timed desktop integration remain pending |
+| Bank-6 main/final scene families | Adapted | All 243 functions in map_bank6_callbacks.c and map_bank6_final_callbacks.c plus the complete neighbor-pair dependency compared; oscillators/orbits, projected motion, cursor/rectangles, target selection/restore, task patterns and typed helpers; the separate 12-function chain family and full area integration remain pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
@@ -215,7 +216,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-3,782,413 checks with the independent BIOS and PPU oracles, including separately
+3,942,143 checks with the independent BIOS and PPU oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
@@ -793,6 +794,35 @@ Complete bank-5 story/activity integration remains a separate pending check.
 The four recovered bank-5 script sources declare 394 functions, all with explicit
 native dispatch. This is a structural planning count; literal indirect targets,
 correct calling forms and full area progression still need integration evidence.
+
+Bank 6's main/final source families share bank6_presets.c, bank6.c and
+bank6_targets.c. Their 200 presentation presets, 30 Main contracts, 223 task
+targets, six animation contracts and four typed helpers have whole-family
+comparisons. The one-function actor_neighbor_animation_pair.c dependency adds a
+task target through the existing actor preset adapters. Calling-contract counts
+overlap; the separate map_bank6_chain_callbacks.c family remains unadapted.
+
+Orbits preserve the low-byte slot and low-halfword class selectors, wrapped phase
+addition, upper-band clamp and signed center coordinates. Projected motion keeps
+eight lookahead reads while consuming five bytes and signed division of the
+wrapped square sum. Payload/return approaches store an even duration but divide
+by the original unmasked value. Cursor rectangles retain strict
+edges, halfword wrapping and result-store order. Target selection preserves both
+failure paths, two random draws and wrapped modular selection; task patterns use
+the original prefix matches and final-match priority; malformed nonterminating
+walks fail at an 8,192-byte guard. Affine allocation retains the 255 initialization
+sentinel and raw exhausted index 32, including its mapped write.
+
+The target-restore no-match path reads incoming R5 as a descriptor. A direct
+adapter accepts that guest address explicitly. The normal Main adapter uses
+0x030005E8, which the original MainScriptInvokeCallback loads into R5 before its
+indirect call. Both the actual Main opcode and arbitrary mapped retained
+descriptors are compared; this does not enable an unreviewed task/animation ABI.
+Area progression, chain animation and timed desktop integration remain pending.
+The three recovered bank-6 script sources declare 528 distinct functions; 526
+have explicit native dispatch. The two remaining declarations belong to the
+12-function chain family. Indirect and literal targets require separate review,
+so this declaration count is neither a remaining-function total nor area coverage.
 
 A separate private input-only scout completes the initial Ham-Jam conversation,
 No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement

@@ -199,7 +199,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 3,782,413 checks,
+GBA machine. The complete run with BIOS and PPU oracles passes 3,942,143 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -673,6 +673,26 @@ include variable references, the null sentinel and aliased forward copies. Publi
 synthetic tests additionally deliver the registered mechanism through the actual
 native clock's VBlank handler and reject an unreviewed IRQ target. These checks
 do not establish a full bank-5 story/activity or desktop playthrough.
+
+The complete bank-6 main/final families and neighbor-pair dependency use:
+
+    python -B tools/compare_reference.py --bank6-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+--bank6-presets-only selects all 200 presentation presets, the shared dependency
+and the retained-R5 Main calling contract; --bank6-dynamics-only selects the other
+motion/cursor/target functions and helpers. The separate 12-function chain source
+family is not included. Census checks account for every function in both covered
+source families and reject inappropriate calling forms.
+
+Fixtures cover wrapped orbit phases and center aliases, screen-edge cursor limits,
+strict rectangle hits, signed motion thresholds, every language's task patterns,
+missing target sets/ranges, aliased coordinate snapshots, affine exhaustion and
+wrapped scale curves. Direct helpers cover raw selectors and modular planar
+transforms. Target restoration compares matched selectors, explicit retained R5
+descriptors and the real MainScriptInvokeCallback scratch-address convention.
+Public synthetic tests include duplicate identifier removal, phase wrap/clamps,
+raw affine failure writes, signed coordinates, strict rectangle edges and zero
+movement duration. Full bank-6 story, chains and desktop coverage remain pending.
 
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:

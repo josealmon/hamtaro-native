@@ -4487,6 +4487,9 @@ HNSceneResult hn_actor_presets_apply(HNMemory *m,GameAddr callback)
         if(!hn_render_configure_raw(m,hn_read8(m,0x03002C00) - 1,1,0xB0,0,0,0,0x088D48C5))return HN_SCENE_RESOURCE; if(!hn_render_configure_raw(m,hn_read8(m,0x03002C00) + 1,1,0xB0,0,0,0,0x088D48D6))return HN_SCENE_RESOURCE; if(!hn_render_modes_raw(m,hn_read8(m,0x03002C00) - 1,2,3,hn_read8(m,0x03002C00)))return HN_SCENE_RESOURCE; if(!hn_render_modes_raw(m,hn_read8(m,0x03002C00) + 1,2,3,hn_read8(m,0x03002C00)))return HN_SCENE_RESOURCE;
         break;
     }
+    case 0x080A3908:
+        if(hn_actor_presets_apply(m,0x08013038)!=HN_SCENE_OK||hn_actor_presets_apply(m,0x08013910)!=HN_SCENE_OK)return HN_SCENE_RESOURCE;
+        break;
     default:return sequence_actor_presets(m,callback);
     }
     return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
