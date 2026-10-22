@@ -60,16 +60,18 @@ def main() -> None:
     parser.add_argument("--scene-actors-only", action="store_true", help="Run complete cutscene actor/state/panel families")
     parser.add_argument("--actor-presets-only", action="store_true", help="Run all five actor-preset families (requires BIOS oracle)")
     parser.add_argument("--actor-animations-only", action="store_true", help="Run complete graphics/directional/extended actor animation families (requires BIOS oracle)")
+    parser.add_argument("--actor-sequences-only", action="store_true", help="Run complete actor render-sequence family and typed task contracts")
     parser.add_argument("--records-only", action="store_true", help="Run game record allocation/query/consume/counter families")
-    parser.add_argument("--group3-only", action="store_true", help="Run the six complete SaveGroup3 field/pair/list families")
+    parser.add_argument("--group3-only", action="store_true", help="Run SaveGroup3, record-menu and strided transfer families")
     parser.add_argument("--group3-scenes-only", action="store_true", help="Run SaveGroup3 Main/task contracts")
+    parser.add_argument("--record-menus-only", action="store_true", help="Run complete record selection/menu family")
     parser.add_argument("--wave-only", action="store_true", help="Run complete scanline-wave family and typed IRQ dispatch")
     parser.add_argument("--counter-scenes-only", action="store_true", help="Run complete map-10 counter/sequence family")
     parser.add_argument("--shared-motion-only", action="store_true", help="Run shared actor geometry/motion families (requires BIOS oracle)")
     parser.add_argument("--scene-effects-only", action="store_true", help="Run complete background/render shake and screen-window families (requires BIOS oracle)")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
-    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or args.bank3_late_only or args.bank3_presets_only or args.bank3_games_only or args.bank3_chain_only or args.wander_only or args.actor_presets_only or args.actor_animations_only or args.shared_motion_only or args.scene_effects_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only,args.scene_actors_only,args.records_only,args.wave_only,args.counter_scenes_only,args.group3_only,args.group3_scenes_only))):
+    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or args.bank3_late_only or args.bank3_presets_only or args.bank3_games_only or args.bank3_chain_only or args.wander_only or args.actor_presets_only or args.actor_animations_only or args.shared_motion_only or args.scene_effects_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only,args.scene_actors_only,args.records_only,args.wave_only,args.counter_scenes_only,args.group3_only,args.group3_scenes_only,args.actor_sequences_only,args.record_menus_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -2257,6 +2259,12 @@ def main() -> None:
                             bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
                             native_bytes=native_bytes,animation_families=True)
 
+    def actor_sequence_checks():
+        from reference_actor_presets import check_actor_presets
+        check_actor_presets(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
+                            bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
+                            native_bytes=native_bytes,sequence_family=True)
+
     def bank3_late_checks():
         from reference_bank3 import check_bank3_late
         check_bank3_late(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
@@ -2289,11 +2297,23 @@ def main() -> None:
         for check in (check_group3,check_group3_scenes):
             check(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                   fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
+        check_group3_scenes(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
+                            fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command,record_menus=True)
 
     if args.bios_oracle:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.record_menus_only:
+            from reference_group3 import check_group3_scenes
+            check_group3_scenes(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
+                                fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command,record_menus=True)
+            print(f"{checks} private record-menu comparisons passed; complete story remains unverified.")
+            return
+        if args.actor_sequences_only:
+            actor_sequence_checks()
+            print(f"{checks} private actor-sequence comparisons passed; complete story remains unverified.")
+            return
         if args.group3_scenes_only:
             from reference_group3 import check_group3_scenes
             check_group3_scenes(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
@@ -2413,7 +2433,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();bank2_checks();bank3_late_checks();bank3_preset_checks();bank3_game_checks();bank3_chain_checks();group3_checks();wander_checks();scene_actor_checks();shared_motion_checks();scene_effects_checks();actor_preset_checks();actor_animation_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
+        indicator_checks();book_checks();bank2_checks();bank3_late_checks();bank3_preset_checks();bank3_game_checks();bank3_chain_checks();group3_checks();wander_checks();scene_actor_checks();shared_motion_checks();scene_effects_checks();actor_preset_checks();actor_animation_checks();actor_sequence_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

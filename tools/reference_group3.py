@@ -122,22 +122,43 @@ def check_group3(*, entries, rom, memory, cpu, bind, call, both, fresh, equal,
                               (0x080CAD5C, "UpdateSaveGroup3SelectedCountRenderSlots")):
         fixture(1);equal(task(memory, address | 1), 1, "group3 reviewed no-argument task")
         call(original);compare("typed group3 task", ranges)
+    copy_rows=bind("hn_transfer_strided_rows",C.c_bool,ptr,u32,u32,u32,u32,u32)
+    decompress_rows=bind("hn_transfer_decompress_rows",C.c_bool,ptr,u32,u32,u32,u32,u32)
+    heap_init=bind("hn_heap_init",None,ptr)
+    equal(sum(r["source"]=="src/graphics/transfer_decompress_rows.c" for r in entries),2,"complete strided transfer family")
+    for case in range(96):
+        fixture(case);start=0x02031000;destination=start+(-16,-2,0,2,16,4096)[case%6]
+        width=(0,1,2,3,8,16)[case%6];rows=case%5;stride=(0,2,8,16,32)[case%5]
+        both(start-64,rng.randbytes(8192))
+        equal(copy_rows(memory,start,destination,width|0xABCD0000,rows|0x12340000,stride|0x56780000),True,"strided halfword rows")
+        call("CopyStridedHalfwordRows",start,destination,width|0xABCD0000,rows|0x12340000,stride|0x56780000)
+        compare("halfword row widths, byte strides and forward overlap",ranges)
+    for case in range(32):
+        fixture(case);heap_init(memory);call("InitializeHeap")
+        both(0x02031000,b"\x10\x10\0\0\0ABCDEFGH\0IJKLMNOP")
+        rows=(1,2,4,8)[case%4];width=16//rows
+        equal(decompress_rows(memory,0x02031000,0x02032000,width|0xABCD0000,rows|0x12340000,32|0x56780000),True,"decompress strided rows")
+        call("DecompressStridedRows",0x02031000,0x02032000,width|0xABCD0000,rows|0x12340000,32|0x56780000)
+        compare("allocated decompression, strided row copies and heap free",ranges)
     print("SaveGroup3 field/graphics/catalog helper checks passed.")
 
 
 def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, equal,
-                        compare, native_bytes, command):
+                        compare, native_bytes, command, record_menus=False):
     import re
     from pathlib import Path
     from inventory_reference import body
-    source = (Path(__file__).resolve().parents[1] / "src/game/save_group3.c").read_text()
+    module="record_menu" if record_menus else "save_group3"
+    dispatch="hn_record_menu" if record_menus else "hn_group3"
+    source = (Path(__file__).resolve().parents[1] / f"src/game/{module}.c").read_text()
     addresses = lambda name: {int(x, 16) for x in re.findall(r"case (0x[0-9A-Fa-f]+):", body(source, name))}
-    main_addresses, task_addresses = addresses("hn_group3_callback"), addresses("hn_group3_task")
+    main_addresses, task_addresses = addresses(dispatch+"_callback"), addresses(dispatch+"_task")
     rows = [r for r in entries if r["address"] in main_addresses]
     equal(len(rows), len(main_addresses), "reviewed group3 scene entry points have reference symbols")
     families = {"src/scripts/save_group3_pair_render_callbacks.c", "src/scripts/save_group3_pair_selection.c",
                 "src/graphics/save_group3_pair_graphics.c", "src/save/save_group3_fields.c",
-                "src/save/save_group3_pair_catalog_scan.c", "src/save/save_group3_list.c"}
+                "src/save/save_group3_pair_catalog_scan.c", "src/save/save_group3_list.c",
+                "src/save/save_group3_list_selection.c"}
     helpers = {"ConfigureSaveGroup3PairAnimation", "PrepareSaveGroup3PairGraphics", "CopySaveGroup3PairPalette",
                "RenderSaveGroup3Number", "UpdateSaveGroup3CountRenderSlots", "UpdateSaveGroup3SelectedCountRenderSlots",
                "SetSaveGroup3FieldBit", "RemoveSaveGroup3ListEntryByLookupValue", "CopySaveGroup3TileMap",
@@ -145,17 +166,21 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
                "FindSaveGroup3PairIndex", "ConfigureSaveGroup3PairRenderSlot", "ScanSaveGroup3AvailableFieldPairs",
                "RemoveSaveGroup3ListEntry"}
     family_rows = [r for r in entries if r["source"] in families]
-    equal(len(family_rows), 59, "complete six-family SaveGroup3 inventory")
+    if record_menus:
+        family_rows=[r for r in entries if r["source"]=="src/save/record_selection.c"];helpers=set()
+    equal(len(family_rows), 18 if record_menus else 67, "complete record-menu or seven-family SaveGroup3 inventory")
     equal({r["name"] for r in family_rows}, {r["name"] for r in rows} | helpers, "all family entry points covered")
     main = bind("hn_scene_callback", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
-    apply = bind("hn_group3_task", C.c_int, C.c_void_p, C.c_uint32)
+    apply = bind(dispatch+"_task", C.c_int, C.c_void_p, C.c_uint32)
     task = bind("hn_probe_task_command", C.c_int, C.c_void_p, C.c_uint32, C.c_uint, C.POINTER(C.c_uint32))
     heap_init = bind("hn_heap_init", None, C.c_void_p)
+    allocate_task=bind("hn_task_allocate",C.c_uint32,C.c_void_p)
     rng = random.Random(0x4752335343454E45)
     base, controls, args = 0x02008000, 0x02004520, 0x0203F000
     catalogs, selected, counts, fields = (0x03003A50, 0x03003850, 0x03003680), 0x03003790, 0x0300357C, 0x03003C50
     ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x05000000, 0x400),
               (0x06000000, 0x18000), (0x07000000, 0x400), (0x0E000000, 0x8000))
+    if record_menus:ranges+=((0x04000000,0x60),(0x040000B0,12))
     def byte(address, value):both(address, bytes([value & 255]))
     def ctrl(offset, value):byte(controls + offset, value)
     def fixture(case):
@@ -164,6 +189,7 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
         both(0x03000608, struct.pack("<I", 0x03000610))
         both(0x03002D98, struct.pack("<I", base));byte(0x03002DC0, 1)
         both(0x03003070, struct.pack("<I", 0x02015000));byte(0x03002E10, 1);both(0x02015000, rng.randbytes(32 * 44))
+        both(0x03002E08,struct.pack("<I",0x02017000));both(0x02017000,rng.randbytes(8*80))
         both(controls, rng.randbytes(512));both(fields, rng.randbytes(120));both(0x0201EE40, bytes(rng.randrange(81) for _ in range(32)))
         both(0x03002180, rng.randbytes(96));byte(0x03002182, 128 | case & 127)
         both(0x03003730, rng.randbytes(96));both(0x03000820, struct.pack("<H", (0, 0x100, 0x200, 0x300)[case % 4]))
@@ -189,6 +215,15 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
         if row["name"].startswith("ScriptCallback") and "SaveGroup3List" in row["name"]:
             ctrl(0x180, case % 32)
         if row["name"] == "ScriptCallbackRevealSaveGroup3ListText":ctrl(0x60, case % 16)
+        if "SaveList" in row["name"]:ctrl(0x180,case%32)
+        if row["name"] in {"ScriptCallbackNavigateSaveListGrid","ScriptCallbackNavigateRecordSelection","ScriptCallbackConfigureRecordSelectionWindow"}:both(args,bytes([case%5]))
+        if record_menus:
+            ctrl(0x180,case%30);ctrl(0x181,case%6);ctrl(0x8A,case)
+            both(0x0201CC20,bytes(255 if (case+i)%4==0 else (case+i)%10 for i in range(257)))
+        if row["name"] in {"ScriptCallbackRemoveSaveListSelectionText","ScriptCallbackRemoveRecordSelectionText"}:
+            for i in range(5 if record_menus else 1):
+                created=allocate_task(memory);equal(created,call("AllocateTaskContext"),"fixture text task allocation")
+                both(0x030037A0+i*4,struct.pack("<I",created))
     def canonical_compare(row, label):
         if row["name"] != "ScriptCallbackRevealSaveGroup3ListText":
             compare(row["name"] + " " + label, ranges);return
@@ -236,6 +271,19 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
         else:
             equal(apply(memory, row["address"] | 1), 0, "argument-dependent group3 target rejected by F4")
             compare("rejected group3 task preserves memory", ranges)
+    if record_menus:
+        navigation=next(r for r in rows if r["name"]=="ScriptCallbackNavigateRecordSelection")
+        for selection in range(30):
+            for row in (0,1,4,5):
+                for direction in range(3):
+                    fixture(selection);prepare(navigation,selection);ctrl(0x180,selection);ctrl(0x181,row);both(args,bytes([direction]))
+                    check(navigation,"record navigation and wrap at both ends")
+        window=next(r for r in rows if r["name"]=="ScriptCallbackAdvanceRecordSelectionWindow")
+        for high in range(256):
+            for low in (0,1,255):
+                fixture(high);both(0x03002C70,struct.pack("<H",high*256+low));check(window,"scanline-window high-byte threshold and halfword wrap")
+        print("All 18 record-selection functions and typed Main/task contracts passed; complete Items/Gems integration remains unverified.")
+        return
     mask_rows = [r for r in rows if r["name"] in {"ScriptCallbackSelectNextSaveGroup3MaskBit", "ScriptCallbackSelectPreviousSaveGroup3MaskBit", "ScriptCallbackRecordSaveGroup3SelectedMaskBit"}]
     for row in mask_rows:
         for cursor in range(256):
@@ -256,4 +304,10 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
         for index in range(6):byte(0x03003730 + index*16, style)
         check(records, "all eight styles and empty record backgrounds")
     equal(rom[0x58DADC], 0, "empty-category default OBJ frame has no parts")
-    print(f"All 59 functions across six SaveGroup3 families accounted for: {len(rows)} Main callbacks and 16 helpers; full activities remain unverified.")
+    navigation=next(r for r in rows if r["name"]=="ScriptCallbackNavigateSaveListGrid")
+    for selection in range(256):
+        for direction in range(5):
+            for enabled in (False,True):
+                fixture(selection);ctrl(0x180,selection);both(args,bytes([direction]));value=native_bytes(0x0300219F,1)[0]
+                byte(0x0300219F,(value|32) if enabled else (value&~32));check(navigation,"all byte selections, grid directions and flag 253")
+    print(f"All 67 functions across seven SaveGroup3 families accounted for: {len(rows)} Main callbacks and 16 helpers; full activities remain unverified.")

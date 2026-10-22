@@ -14,6 +14,7 @@
 #include "game/bank2.h"
 #include "game/bank3.h"
 #include "game/save_group3.h"
+#include "game/record_menu.h"
 #include "game/audio.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
@@ -93,6 +94,16 @@ static void transfer_contract(void)
     CHECK(hn_read32(&memory,0x0600400C)==0xABCD9876);
     CHECK(hn_read8(&memory,HN_TRANSFER_READ)==hn_read8(&memory,HN_TRANSFER_WRITE));
     CHECK(!memory.fault);
+    hn_write16(&memory,0x02030000,0x2211);hn_write16(&memory,0x02030002,0x4433);
+    CHECK(hn_transfer_strided_rows(&memory,0x02030000,0x02030100,0xABCD0002,0xCAFE0002,0xBEEF0008));
+    CHECK(hn_read16(&memory,0x02030100)==0x2211&&hn_read16(&memory,0x02030108)==0x4433);
+    CHECK(hn_transfer_strided_rows(&memory,0,0,3,0,123)&&!memory.fault);
+    hn_heap_init(&memory);hn_write32(&memory,0x02030000,0x410);hn_write8(&memory,0x02030004,0);
+    hn_write32(&memory,0x02030005,0x44332211);
+    CHECK(hn_transfer_decompress_rows(&memory,0x02030000,0x02030100,2,2,8));
+    CHECK(hn_read16(&memory,0x02030100)==0x2211&&hn_read16(&memory,0x02030108)==0x4433);
+    hn_write32(&memory,0x03002E04,0x030010C8);
+    CHECK(!hn_transfer_decompress_rows(&memory,0x02030000,0x02030100,2,2,8)&&!memory.fault);
 }
 static void video_contract(void)
 {
@@ -2110,6 +2121,51 @@ static void group3_contract(void)
     CHECK(hn_task_remove(&memory,hn_read32(&memory,0x030037A0)));
     hn_write8(&memory,0x02030113,2);hn_write8(&memory,controls+0x60,19);hn_write8(&memory,HN_GROUP3_LIST_TEXT+20,0xA5);
     CHECK(!hn_group3_list_text(&memory,HN_GROUP3_LIST_TEXT)&&hn_read8(&memory,HN_GROUP3_LIST_TEXT+20)==0xA5&&!memory.fault);
+    uint8_t *rom=calloc(1,0x1000000);CHECK(rom!=NULL);hn_memory_init(&memory,rom,0x1000000);
+    hn_heap_init(&memory);hn_write32(&memory,HN_TASK_HEAD,HN_TASK_SENTINEL);hn_write32(&memory,HN_RENDER_SLOTS,0x02010000);
+    hn_write8(&memory,controls+0x180,128);
+    CHECK(hn_scene_callback(&memory,0x080C5789,0,&consumed)==HN_SCENE_OK);
+    GameAddr first=hn_read32(&memory,HN_TASK_HEAD);CHECK(first&&hn_read32(&memory,first+0x2C)==HN_TASK_SENTINEL);
+    CHECK(hn_read32(&memory,first+0x10)==HN_TASK_DEFAULT_SCRIPT&&hn_read16(&memory,0x02001C0E)==0xF2D5);
+    CHECK(hn_task_remove(&memory,first));hn_write8(&memory,controls+0x180,0);hn_write8(&memory,list,1);
+    hn_write32(&memory,0x02001D9C,0x02030000);hn_write32(&memory,0x02030000,0x02030100);hn_write32(&memory,0x0203000C,0x02030100);
+    hn_write32(&memory,0x02030100,0x00620161);
+    CHECK(hn_scene_callback(&memory,0x080C5789,0,&consumed)==HN_SCENE_OK);
+    first=hn_read32(&memory,HN_TASK_HEAD);task=hn_read32(&memory,0x030037A0);
+    CHECK(first!=task&&hn_read32(&memory,first+0x2C)==task&&hn_read32(&memory,task+0x2C)==HN_TASK_SENTINEL);
+    CHECK(hn_read32(&memory,0x03003650)==0x000D010C&&hn_read32(&memory,task+0x10)==0x03003650);
+    CHECK(hn_scene_callback(&memory,0x080C5BB9,0,&consumed)==HN_SCENE_OK&&hn_read32(&memory,first+0x2C)==HN_TASK_SENTINEL);
+    CHECK(hn_task_remove(&memory,first));hn_write8(&memory,controls+0xEB,3);
+    CHECK(hn_scene_callback(&memory,0x080C5789,0,&consumed)==HN_SCENE_OK&&hn_read32(&memory,0x03003650)==0x0062010C);
+    hn_write8(&memory,controls+0x180,29);hn_write8(&memory,0x0300219F,0);hn_write8(&memory,0x0203F000,0);
+    CHECK(hn_scene_callback(&memory,0x080C5BCD,0x0203F000,&consumed)==HN_SCENE_OK&&consumed==1);
+    CHECK(hn_read8(&memory,controls+0x180)==157&&hn_read16(&memory,0x03001FBC)==1);
+    hn_write8(&memory,0x0203F000,1);
+    CHECK(hn_scene_callback(&memory,0x080C5BCD,0x0203F000,&consumed)==HN_SCENE_OK&&hn_read8(&memory,controls+0x180)==29&&hn_read16(&memory,0x03001FBC)==2);
+    CHECK(hn_group3_task(&memory,0x080C5BCD)==HN_SCENE_UNKNOWN&&!memory.fault);
+    free(rom);
+}
+static void record_menu_contract(void)
+{
+    reset();GameAddr controls=HN_SCENE_CONTROLS;uint32_t consumed=99;
+    hn_write32(&memory,HN_RENDER_SLOTS,0x02010000);
+    hn_write8(&memory,controls+0x8A,0);
+    CHECK(hn_record_menu_callback(&memory,0x080C4635,0,&consumed)==HN_SCENE_OK&&!consumed&&hn_read8(&memory,controls+0x180)==255);
+    hn_write8(&memory,controls+0x8A,26);
+    CHECK(hn_record_menu_callback(&memory,0x080C4635,0,&consumed)==HN_SCENE_OK&&hn_read8(&memory,controls+0x180)==25&&hn_read8(&memory,controls+0x181)==1);
+    hn_write8(&memory,controls+0x8A,255);
+    CHECK(hn_record_menu_callback(&memory,0x080C4635,0,&consumed)==HN_SCENE_OK&&!hn_read8(&memory,controls+0x180)&&!hn_read8(&memory,controls+0x60));
+    hn_write16(&memory,HN_RASTER_SCANLINE,0xDCE0);
+    CHECK(hn_record_menu_task(&memory,0x080C4991)==HN_SCENE_OK&&hn_read16(&memory,HN_RASTER_SCANLINE)==0xE0E0&&hn_read8(&memory,controls+0x60)==1);
+    hn_write16(&memory,HN_RASTER_SCANLINE,0xFEE0);
+    CHECK(hn_record_menu_task(&memory,0x080C4991)==HN_SCENE_OK&&hn_read16(&memory,HN_RASTER_SCANLINE)==0x02E0&&!hn_read8(&memory,controls+0x60));
+    CHECK(hn_record_menu_task(&memory,0x080C48ED)==HN_SCENE_UNKNOWN&&hn_record_menu_task(&memory,0x080C4CBD)==HN_SCENE_UNKNOWN);
+    hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,19);hn_write8(&memory,0x03002170,0xA5);
+    CHECK(hn_preset_apply(&memory,0x080221CD)==HN_SCENE_OK&&!hn_read8(&memory,0x03002170));
+    CHECK(hn_read8(&memory,0x03001FAC)==19&&hn_read32(&memory,0x03001F7C)==0x088C2821);
+    CHECK(hn_preset_apply(&memory,0x08022A81)==HN_SCENE_OK&&hn_read8(&memory,hn_render_slot(&memory,31)+0x60)==1);
+    CHECK(hn_read8(&memory,0x03001FAC)==31&&hn_read32(&memory,0x03001F7C)==0x088E4EE1);
+    CHECK(hn_scene_callback(&memory,0x080221CD,0,&consumed)==HN_SCENE_UNKNOWN&&!memory.fault);
 }
 static void runtime_contract(void)
 {
@@ -2137,5 +2193,5 @@ int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
     text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();indicator_contract();book_contract();actor_snapshot_contract();preset_contract();map_choice_contract();particles_contract();scene_motion_contract();bank2_contract();wander_contract();scene_actor_contract();actor_presets_contract();records_contract();wave_contract();counter_scene_contract();shared_motion_contract();runtime_contract();
-    scene_effects_contract();bank3_contract();group3_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
+    scene_effects_contract();bank3_contract();group3_contract();record_menu_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

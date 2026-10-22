@@ -91,7 +91,7 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 134,892 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 139,833 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
@@ -143,10 +143,10 @@ actual SRAM-file persistence, add:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json --session-test build/Release/hn_session_tests.exe
 
-The host replay performs all 134,892 input updates in a disposable private profile, verifies
+The host replay performs the input updates in a disposable private profile, verifies
 that the saved 32 KiB file equals the game's SRAM, stops and starts a fresh Session,
-then selects Continue. Clubhouse map/position, twenty-one words, ten seeds, one
-rescued love, the joined-partner flag and follower slot 13 are unchanged; 142,033
+then selects Continue. Photo-room map/position, twenty-one words, ten seeds, one
+rescued love, the joined-partner flag and follower slot 13 are unchanged; 147,133
 host-session checks pass. The partner checkpoints describe the
 returned overworld state; UI scenes can reuse the same render-class slots.
 The original ROM and player's profile are untouched; temporary input traces and
@@ -199,7 +199,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,975,206 checks,
+GBA machine. The complete run with BIOS and PPU oracles passes 2,034,370 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -622,15 +622,19 @@ and rejected calling contracts. Function-family checks and the existing long
 opening scenario do not establish complete bank-3 activity progression, rendering
 timing, save effects or a desktop playthrough of those activities.
 
-The six complete SaveGroup3 families can be compared separately:
+The seven complete SaveGroup3 families, the 18-function record-selection family
+and two strided-transfer helpers can be compared separately:
 
     python -B tools/compare_reference.py --group3-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-The helper portion passes 84,181 comparisons. The 43 Main callbacks and their
-reviewed F4 contracts pass 55,773 comparisons, including typed returns and Main
-argument cursors, all byte mask cursors, skipped completion fields, overlapping
-record/catalog writes, all eight record styles and empty backgrounds. Both portions
-also run in the full comparison suite. --group3-scenes-only selects the latter.
+The helper portion passes 85,078 comparisons, including allocated strided copies.
+The 51 Main callbacks and their reviewed F4 contracts pass 80,705 comparisons, including typed returns and Main
+argument cursors, all byte mask and grid cursors, all four navigation directions,
+flag-253 variants, skipped completion fields, overlapping record/catalog writes,
+all eight record styles and empty backgrounds. Record selection passes another
+23,974 comparisons, including 30-entry scrolling and wrapped window thresholds.
+All portions also run in the full comparison suite. --group3-scenes-only selects
+the SaveGroup3 scene checks; --record-menus-only selects the record menu.
 
 Direct helper checks cover all byte categories and arbitrary retained Z, aliased
 coordinate outputs, byte constructor versus full-word animation indices, palette
@@ -642,10 +646,26 @@ verified pointer relocation: its text and all other covered state still compare.
 Neither adaptation establishes exact original stack-history behavior.
 
 Private native input checks now enter and leave the photo room without a fault.
-The greeting reaches a separate actor-sequence dependency. Complete photo-list
-navigation, the training-seat quest and activity/save integration remain pending.
+The greeting completes and returns to its action menu after the actor-sequence
+batch. Items entry then reaches a separate shared map-10/5 dependency. Complete
+photo-list navigation, the training-seat quest and activity/save integration remain pending.
 A separate Windows process restores the native photo-room End Game save and
 opens Status with the existing 21 words, ten seeds and one rescued love. The
 reference profile remains read-only; the desktop test uses a private copied profile.
 Reading all 81 list entries in five languages confirms a maximum text length of
 18 bytes, within the original 20-byte buffer.
+
+The 48 actor render-sequence presets have a separate focused check:
+
+    python -B tools/compare_reference.py --actor-sequences-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+Its 9,361 comparisons cover every source entry, typed F4 calls, rejection through
+the Main consumed-count ABI, mapped inactive slots, neighbor byte wrapping, follower
+boot gates, indicators and constructors that overwrite the selector read by a later
+source call. These checks also run in the full suite. No asset data or function
+machine-code images are embedded in the native implementation.
+A separate Windows process restores the photo-room save near the characters and
+displays the greeting's full text, portrait, actor animations and continuation
+indicator. The canonical opening scenario now completes the greeting, returns to
+its action menu and restores the photo room through a seventh End Game/Continue.
+The complete desktop conversation/activity remains a separate pending check.

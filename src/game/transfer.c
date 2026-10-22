@@ -1,5 +1,20 @@
 #include "game/transfer.h"
+#include "game/heap.h"
+#include "gba/bios.h"
 #include "game/state.h"
+bool hn_transfer_strided_rows(HNMemory *m,GameAddr source,GameAddr destination,uint32_t width_word,uint32_t rows_word,uint32_t stride_word)
+{
+    uint16_t width=(uint16_t)width_word,rows=(uint16_t)rows_word,stride=(uint16_t)stride_word;
+    for(unsigned i=0;i<rows;i++,source+=width,destination+=stride)hn_bios_cpu_set(m,source,destination,width>>1);
+    return !m->fault;
+}
+bool hn_transfer_decompress_rows(HNMemory *m,GameAddr source,GameAddr destination,uint32_t width_word,uint32_t rows_word,uint32_t stride_word)
+{
+    uint16_t width=(uint16_t)width_word,rows=(uint16_t)rows_word,stride=(uint16_t)stride_word;
+    GameAddr buffer=hn_heap_allocate(m,(uint32_t)width*rows,true);if(!buffer)return false;
+    bool ok=hn_bios_lz77(m,source,buffer,0x40000)&&hn_transfer_strided_rows(m,buffer,destination,width,rows,stride);
+    hn_heap_free(m,buffer);return ok&&!m->fault;
+}
 static void zero_words(HNMemory *m,GameAddr address,unsigned count)
 {for(unsigned i=0;i<count;i++)hn_write32(m,address+i*4,0);}
 void hn_transfer_reset(HNMemory *m)

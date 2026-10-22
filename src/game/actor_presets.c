@@ -131,6 +131,258 @@ static HNSceneResult base_actor_presets(HNMemory *m,GameAddr callback)
     return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
 }
 
+static HNSceneResult sequence_actor_presets(HNMemory *m,GameAddr callback)
+{
+    switch(callback&~1u){
+    case 0x080220B8: /* SetActorAnimationAndIndicator220B8 */
+        if(!(hn_actor_presets_apply(m,0x08014985)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        indicator(m,hn_read8(m,0x03002C00), 0x088C5C60);
+        break;
+    case 0x080220D4: /* ApplyActorAnimationPair220D4 */
+        if(!(hn_actor_presets_apply(m,0x08013385)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        if(!(hn_actor_presets_apply(m,0x08019585)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080220E4: /* ApplyActorAnimationTriple220E4 */
+        if(!(hn_actor_presets_apply(m,0x080149E5)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        if(!(hn_actor_presets_apply(m,0x0801A4AD)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        if(!(hn_actor_presets_apply(m,0x0801A501)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080220F8: /* SetFixedSlot19Animation220F8 */
+        if(!(animation(m,19, 0x088C2752)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x0802210C: /* ConfigureFixedSlot19WithNextSlot2210C */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E135C)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088C2785)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,20, 1, 0xB0, 0, 0, 0, 0x088C2791)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,20, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022158: /* SetFixedSlot19Animation22158 */
+        if(!(animation(m,19, 0x088C279F)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x0802216C: /* ConfigureFixedSlot19WithNextSlot2216C */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E1330)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088C27AB)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,20, 1, 0xB0, 0, 0, 0, 0x088C27B7)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,20, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080221B8: /* SetFixedSlot19Animation221B8 */
+        if(!(animation(m,19, 0x088C27C5)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080221CC: /* SetFixedSlot19AnimationAndIndicator221CC */
+        if(!(animation(m,19, 0x088C2821)))return HN_SCENE_RESOURCE;
+        indicator(m,19, 0x088C2821);
+        break;
+    case 0x080221EC: /* SetFixedSlot19Animation221EC */
+        if(!(animation(m,19, 0x088C2850)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022200: /* SetFixedSlot16Animation22200 */
+        if(!(animation(m,16, 0x088C1813)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022214: /* SetFixedSlot16Animation22214 */
+        if(!(animation(m,16, 0x088C188C)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022228: /* SetFixedSlot16AnimationAndIndicator22228 */
+        if(!(animation(m,16, 0x088C18B3)))return HN_SCENE_RESOURCE;
+        indicator(m,16, 0x088C18B3);
+        break;
+    case 0x08022248: /* SetFixedSlot16Animation22248 */
+        if(!(animation(m,16, 0x088C0D8D)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x0802225C: /* ConfigureFixedSlot16OffsetNeighbor2225C */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E135C)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,16, 0x088C151B)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,17, 1, 0xB0, -18, -20, 0, 0x088E33CF)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,17, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080222AC: /* SetFixedSlot16AnimationAndIndicator222AC */
+        if(!(animation(m,16, 0x088C153F)))return HN_SCENE_RESOURCE;
+        indicator(m,16, 0x088C153F);
+        break;
+    case 0x080222CC: /* SetFixedSlot16Animation222CC */
+        if(!(animation(m,16, 0x088C18D6)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080222E0: /* SetFixedSlot16Animation222E0 */
+        if(!(animation(m,16, 0x088C18EF)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080222F4: /* SetFixedSlot19Animation222F4 */
+        if(!(animation(m,19, 0x088C2844)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022308: /* DisableFixedSlot20Render22308 */
+        if(!(field(m,20, 0)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022318: /* ApplyActorAnimationPair22318 */
+        if(!(hn_actor_presets_apply(m,0x080140C5)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        if(!(hn_actor_presets_apply(m,0x0801A405)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022328: /* ConfigureClass2NextSlot22328 */
+        if(!(raw_animation(m,hn_read8(m,0x03002C04), 0x088C0D8D)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,hn_read8(m,0x03002C04) + 1, 1, 0xB0, 0, 0, 0, 0x088C0D99)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,hn_read8(m,0x03002C04) + 1, 2, 3, hn_read8(m,0x03002C04))))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022378: /* ConfigureClass2NextSlot22378 */
+        if(!(hn_actor_presets_apply(m,0x0801A3B1)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        if(!(raw_animation(m,hn_read8(m,0x03002C04), 0x088C18FB)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,hn_read8(m,0x03002C04) + 1, 1, 0xB0, 0, 0, 0, 0x088C1909)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,hn_read8(m,0x03002C04) + 1, 2, 3, hn_read8(m,0x03002C04))))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080223CC: /* ConfigureClass2NextSlot223CC */
+        if(!(raw_animation(m,hn_read8(m,0x03002C04), 0x088C1919)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,hn_read8(m,0x03002C04) + 1, 1, 0xB0, 0, 0, 0, 0x088C1925)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,hn_read8(m,0x03002C04) + 1, 2, 3, hn_read8(m,0x03002C04))))return HN_SCENE_RESOURCE;
+        break;
+    case 0x0802241C: /* ApplyActorAnimationPair2241C */
+        if(!(hn_actor_presets_apply(m,0x080140AD)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        if(!(hn_actor_presets_apply(m,0x080198CD)==HN_SCENE_OK))return HN_SCENE_RESOURCE;
+        break;
+    case 0x0802242C: /* ConfigureFixedSlots10And13WithNeighbors2242C */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E13DB)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,10, 0x088A5FBF)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,9, 1, 0xB0, 0, 0, 0, 0x088E201E)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,9, 2, 3, 10)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,11, 1, 0xB0, 0, 0, 0, 0x088E204D)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,11, 2, 3, 10)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,13, 0x088AA177)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,12, 1, 0xB0, 0, 0, 0, 0x088E205E)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,12, 2, 3, 13)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,14, 1, 0xB0, 0, 0, 0, 0x088E208D)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,14, 2, 3, 13)))return HN_SCENE_RESOURCE;
+        indicator(m,10, 0x088A5FBF);
+        break;
+    case 0x080224FC: /* ConfigureFixedSlots16And19WithNeighbors224FC */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E1330)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,16, 0x088D83E7)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,17, 1, 0xB0, 0, 0, 0, 0x088D83FF)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,17, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D83E7)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,20, 1, 0xB0, 0, 0, 0, 0x088D83FF)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,20, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022570: /* SetFixedSlots16And19Animation22570 */
+        if(!(animation(m,16, 0x088D8D5C)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D8D5C)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022590: /* SetFixedSlots16And19AnimationAndIndicator22590 */
+        if(!(animation(m,16, 0x088D85AB)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D85AB)))return HN_SCENE_RESOURCE;
+        indicator(m,16, 0x088D85AB);
+        break;
+    case 0x080225B8: /* DisableFixedAuxiliaryRenderSlots225B8 */
+        if(!(field(m,15, 0)))return HN_SCENE_RESOURCE;
+        if(!(field(m,17, 0)))return HN_SCENE_RESOURCE;
+        if(!(field(m,18, 0)))return HN_SCENE_RESOURCE;
+        if(!(field(m,20, 0)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080225E0: /* ConfigureFixedSlots16And19WithNeighbors225E0 */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E1330)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,16, 0x088D83E7)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,17, 1, 0xB0, 0, 0, 0, 0x088D840A)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,17, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D83E7)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,20, 1, 0xB0, 0, 0, 0, 0x088D840A)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,20, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022654: /* ConfigureFixedSlots16And19WithNeighbors22654 */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E135C)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,16, 0x088D8CCE)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,17, 1, 0xB0, 0, 0, 0, 0x088D8CE3)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,17, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D8CCE)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,20, 1, 0xB0, 0, 0, 0, 0x088D8D01)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,20, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080226D0: /* SetFixedSlots16And19Animation226D0 */
+        if(!(animation(m,16, 0x088D83B3)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D83B3)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080226F0: /* ConfigureFixedSlots16And19WithFourNeighbors226F0 */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E137B)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,16, 0x088D8E8E)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,15, 1, 0xB0, 0, 1, -1, 0x088D813C)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,15, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,17, 1, 0xB0, 0, 1, -1, 0x088D8167)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,17, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D8E8E)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,18, 1, 0xB0, 0, 1, -1, 0x088D813C)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,18, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,20, 1, 0xB0, 0, 1, -1, 0x088D8167)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,20, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080227BC: /* ConfigureFixedSlots16And19WithNeighbors227BC */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E1330)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,16, 0x088D8BFF)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,17, 1, 0xB0, 0, 0, 0, 0x088D8C0B)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,17, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D8BFF)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,20, 1, 0xB0, 0, 0, 0, 0x088D8C0B)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,20, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022830: /* SetFixedSlots16And19Animation22830 */
+        if(!(animation(m,16, 0x088D7E99)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D7E99)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022850: /* ConfigureFixedSlots16And19WithFourNeighbors22850 */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E13DB)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,16, 0x088D8AC1)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,15, 1, 0xB0, 0, 0, 0, 0x088D8B13)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,15, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,17, 1, 0xB0, 0, 0, 0, 0x088D8B59)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,17, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D8B6A)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,18, 1, 0xB0, 0, 0, 0, 0x088D8BB9)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,18, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,20, 1, 0xB0, 0, 0, 0, 0x088D8BEE)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,20, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        indicator(m,16, 0x088D8AC1);
+        break;
+    case 0x08022920: /* SetFixedSlots16And19Animation22920 */
+        if(!(animation(m,16, 0x088D86E4)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D86E4)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022940: /* ConfigureFixedSlots16And19WithNeighbors22940 */
+        if(!(hn_graphics_initialize_raw(m,4, 1, (uint32_t)0x088E135C)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,16, 0x088D8E76)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,17, 1, 0xB0, 0, 0, 0, 0x088D8CE3)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,17, 2, 3, 16)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D8E76)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_configure_raw(m,20, 1, 0xB0, 0, 0, 0, 0x088D8CF2)))return HN_SCENE_RESOURCE;
+        if(!(hn_render_modes_raw(m,20, 2, 3, 19)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080229BC: /* SetFixedSlots16And19Animation229BC */
+        if(!(animation(m,16, 0x088D8623)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D8623)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080229DC: /* SetFixedSlots16And19Animation229DC */
+        if(!(animation(m,16, 0x088D8E82)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D8E82)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x080229FC: /* SetFixedSlot16Animation229FC */
+        if(!(animation(m,16, 0x088D8E42)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022A10: /* SetFixedSlot19Animation22A10 */
+        if(!(animation(m,19, 0x088D8E4E)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022A24: /* SetFixedSlot19Animation22A24 */
+        if(!(animation(m,19, 0x088D8AA0)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022A38: /* SetFixedSlots16And19Animation22A38 */
+        if(!(animation(m,16, 0x088D8DFC)))return HN_SCENE_RESOURCE;
+        if(!(animation(m,19, 0x088D8E1F)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022A58: /* SetFixedSlot16Animation22A58 */
+        if(!(animation(m,16, 0x088D839E)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022A6C: /* SetFixedSlot16Animation22A6C */
+        if(!(animation(m,16, 0x088D86E4)))return HN_SCENE_RESOURCE;
+        break;
+    case 0x08022A80: /* ConfigureFixedSlot31AndIndicator22A80 */
+        if(!(hn_render_configure_raw(m,31, 1, 0, 0, 0, 0, 0x088E4EE1)))return HN_SCENE_RESOURCE;
+        indicator(m,31, 0x088E4EE1);
+        break;
+    default:return base_actor_presets(m,callback);
+    }
+    return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+}
+
 HNSceneResult hn_actor_presets_apply(HNMemory *m,GameAddr callback)
 {
     switch(callback&~1u){
@@ -4235,7 +4487,7 @@ HNSceneResult hn_actor_presets_apply(HNMemory *m,GameAddr callback)
         if(!hn_render_configure_raw(m,hn_read8(m,0x03002C00) - 1,1,0xB0,0,0,0,0x088D48C5))return HN_SCENE_RESOURCE; if(!hn_render_configure_raw(m,hn_read8(m,0x03002C00) + 1,1,0xB0,0,0,0,0x088D48D6))return HN_SCENE_RESOURCE; if(!hn_render_modes_raw(m,hn_read8(m,0x03002C00) - 1,2,3,hn_read8(m,0x03002C00)))return HN_SCENE_RESOURCE; if(!hn_render_modes_raw(m,hn_read8(m,0x03002C00) + 1,2,3,hn_read8(m,0x03002C00)))return HN_SCENE_RESOURCE;
         break;
     }
-    default:return base_actor_presets(m,callback);
+    default:return sequence_actor_presets(m,callback);
     }
     return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
 }

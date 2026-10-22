@@ -10,6 +10,7 @@
 #include "game/world.h"
 #include "game/heap.h"
 #include "game/task.h"
+#include "game/record_menu.h"
 #include "gba/bios.h"
 
 enum {
@@ -476,11 +477,115 @@ static bool list_numbers(HNMemory *m)
     }
     return list_style_slots(m,true);
 }
+static bool list_task(HNMemory *m)
+{
+    GameAddr task=hn_task_allocate(m);hn_write32(m,0x030037A0,task);
+    return task&&hn_task_graphics(m,task,13,2,0,1,0,3,24,0x06005000,LIST_BLANK_TILES);
+}
+static bool list_selection_detail(HNMemory *m)
+{
+    list_blank(m);uint32_t selected=(control(m,0x180)&128)?255:control(m,0x180);
+    if(!list_task(m))return false;
+    uint8_t entry=hn_read8(m,LIST+selected);
+    if(entry&&selected!=255){
+        uint16_t digits[3][2];
+        for(unsigned i=0;i<3;i++){
+            uint16_t packed=hn_read16(m,LIST_NUMBER_FIELDS+hn_read8(m,LIST+selected)*24+i*2);
+            unsigned category=(packed>>7)&127,number=packed&127;digits[i][0]=(uint16_t)(number/10);digits[i][1]=(uint16_t)(number%10);
+            if(category){
+                if(!hn_render_configure_raw(m,(uint8_t)(13+i),1,0x72,108,0,24+(int32_t)i*16,resource(m,LIST_CATEGORY_ANIMATIONS,category)))return false;
+                priority(m,13+i,1);
+            }else hn_write8(m,hn_render_slot(m,13+i)+0x60,0);
+        }
+        for(unsigned i=0;i<3;i++){
+            hn_write16(m,LIST_STYLE_FRAMES+i*14+6,(uint16_t)(digits[i][0]?0xF2D6+digits[i][0]:0xF2D5));
+            hn_write16(m,LIST_STYLE_FRAMES+i*14+12,(uint16_t)((digits[i][0]||digits[i][1])?0xF2D6+digits[i][1]:0xF2D5));
+        }
+        if(!list_style_slots(m,true))return false;
+        GameAddr text=resource(m,LIST_TEXT_BUNDLES,hn_read8(m,LIST+selected));
+        if(text!=HN_TASK_DEFAULT_SCRIPT)text=resource(m,text,control(m,0xEB));
+        uint8_t i=0;unsigned visited=0;
+        for(;;){
+            if(visited++>=4096)return false;
+            uint8_t value=hn_read8(m,text++);hn_write8(m,0x03003650+i,value);
+            if(!i){uint8_t first=hn_read8(m,0x03003650);if((uint8_t)(first-0x61)<=0x31)hn_write8(m,0x03003650,(uint8_t)(first-0x55));}
+            else if(hn_read8(m,0x03003650+i-1)==1&&control(m,0xEB)!=3&&(uint8_t)(value-0x61)<=0x31)
+                hn_write8(m,0x03003650+i,(uint8_t)(value-0x55));
+            uint8_t next=hn_read8(m,text);
+            if(!next){i++;hn_write8(m,0x03003650+i,next);break;}i++;
+        }
+        if(!list_task(m)||!hn_task_set_script(m,hn_read32(m,0x030037A0),0x03003650))return false;
+    }else{
+        for(unsigned i=0;i<3;i++)if(!hn_render_configure_raw(m,(uint8_t)(13+i),1,0x72,108,0,24+(int32_t)i*16,LIST_HEADER_ANIMATION))return false;
+        for(unsigned i=0;i<3;i++){hn_write16(m,LIST_STYLE_FRAMES+i*14+6,0xF2D5);hn_write16(m,LIST_STYLE_FRAMES+i*14+12,0xF2D5);}
+        if(!list_style_slots(m,false))return false;
+    }
+    return !m->fault;
+}
+static bool list_cursor(HNMemory *m,uint32_t value,bool lower,bool alternate)
+{
+    int32_t x=lower?195:(uint8_t)((value%10)*22+5),z=lower?140:(uint8_t)((value/10)*20+79);
+    GameAddr image=lower?(alternate?0x088FA333:0x088FA319):(alternate?0x088FA326:0x088FA30C);
+    if(!hn_render_configure_raw(m,21,1,0x72,x,0,z,image))return false;
+    if(lower)priority(m,21,1);return !m->fault;
+}
+static bool navigate_list(HNMemory *m,uint8_t direction)
+{
+    hn_write16(m,0x03001FBC,0);set_flag(m,255,hn_read8(m,LIST+control(m,0x180))!=0);
+    uint32_t current=control(m,0x180);GameAddr actor=hn_render_slot(m,21);uint16_t result=0;
+    switch(direction){
+    case 0:
+        if(current<=19){store(m,0x180,current+10);hn_write32(m,actor+0x20,hn_read32(m,actor+0x20)+0x140000);result=3;}
+        else if(!(current&128)){
+            store(m,0x180,current|128);bool alternate=flag(m,253);if(!list_cursor(m,0,true,alternate))return false;result=alternate?3:1;
+        }else{
+            store(m,0x180,current&127);store(m,0x180,control(m,0x180)%10);
+            current=control(m,0x180);bool alternate=flag(m,253);if(!list_cursor(m,current,false,alternate))return false;result=alternate?3:2;
+        }break;
+    case 1:
+        if(current&128){
+            store(m,0x180,current&127);current=control(m,0x180);bool alternate=flag(m,253);
+            if(!list_cursor(m,current,false,alternate))return false;result=alternate?3:2;
+        }else if(current>9){store(m,0x180,current-10);hn_write32(m,actor+0x20,hn_read32(m,actor+0x20)+0xFFEC0000);result=3;}
+        else{store(m,0x180,(current+20)|128);bool alternate=flag(m,253);if(!list_cursor(m,0,true,alternate))return false;result=alternate?3:1;}break;
+    case 2:
+        if(current<=126){store(m,0x180,current%10?current-1:current+9);hn_write32(m,actor+0x18,hn_read32(m,actor+0x18)+(current%10?0xFFEA0000u:0x00C60000u));result=3;}break;
+    case 3:
+        if(current<=126){store(m,0x180,current%10!=9?current+1:current-9);hn_write32(m,actor+0x18,hn_read32(m,actor+0x18)+(current%10!=9?0x00160000u:0xFF3A0000u));result=3;}break;
+    }
+    hn_write16(m,0x03001FBC,result);
+    if(result==3)set_flag(m,256,hn_read8(m,LIST+control(m,0x180))!=0);return !m->fault;
+}
 #define GROUP3_REQUIRE(operation) do {if(!(operation))return HN_SCENE_RESOURCE;}while(0)
 HNSceneResult hn_group3_callback(HNMemory *m,GameAddr callback,GameAddr arguments,uint32_t *consumed)
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x080C5788:GROUP3_REQUIRE(list_selection_detail(m));break;
+    case 0x080C5BB8:GROUP3_REQUIRE(hn_task_remove(m,hn_read32(m,0x030037A0)));break;
+    case 0x080C5BCC:GROUP3_REQUIRE(navigate_list(m,hn_read8(m,arguments)));*consumed=1;break;
+    case 0x080C5F78:
+        hn_write16(m,0x03001FBC,0);
+        if(control(m,0x180)>40||!hn_read8(m,LIST+control(m,0x180)))hn_write16(m,0x03001FBC,1);break;
+    case 0x080C5FB0:
+        hn_write16(m,LIST_CELLS+(control(m,0x180)*3+3)*2,0xB35C);
+        if(12==hn_read8(m,HN_RENDER_CLASS_FOLLOWER))hn_write8(m,0x03002170,0);
+        hn_render_set_animation(m,12,0x088FA3C7);priority(m,12,0);
+        if(22==hn_read8(m,HN_RENDER_CLASS_FOLLOWER))hn_write8(m,0x03002170,0);
+        hn_render_set_animation(m,22,0x088FA348);list_blank(m);break;
+    case 0x080C601C:GROUP3_REQUIRE(list_task(m));break;
+    case 0x080C6060:{
+        hn_group3_remove_list(m,control(m,0x180));GROUP3_REQUIRE(hn_render_configure_raw(m,19,1,0x72,102,0,80,0x088FA3E2));
+        GROUP3_REQUIRE(hn_graphics_initialize_raw(m,4,1,0x088FA6A4));
+        if(control(m,0x180)<=9&&hn_read8(m,LIST+9))hn_write16(m,LIST_CELLS+186,hn_read16(m,LIST_TILE_INDICES+hn_read8(m,LIST_DESCRIPTORS+hn_read8(m,LIST+9)*24+4)*2));
+        if(control(m,0x180)<=19&&hn_read8(m,LIST+19))hn_write16(m,LIST_CELLS+192,hn_read16(m,LIST_TILE_INDICES+hn_read8(m,LIST_DESCRIPTORS+hn_read8(m,LIST+19)*24+4)*2));
+        GROUP3_REQUIRE(hn_record_menu_load_list(m));place(m,12,0x4C8000,0x8000,0x88000);
+        hn_write32(m,hn_render_slot(m,12)+0x24,0xFFFE8000);hn_write8(m,hn_render_slot(m,21)+0x60,0);break;
+    }
+    case 0x080C615C:
+        GROUP3_REQUIRE(hn_graphics_initialize_raw(m,4,1,0x088FA6B3));hn_write8(m,hn_render_slot(m,19)+0x60,0);
+        {uint32_t ignored;GROUP3_REQUIRE(hn_group3_callback(m,0x080C670C,0,&ignored)==HN_SCENE_OK);}
+        GROUP3_REQUIRE(hn_render_configure_raw(m,21,1,0x72,(uint8_t)((control(m,0x180)%10)*22+5),0,(uint8_t)((control(m,0x180)/10)*20+79),0x088FA326));break;
     case 0x080C61E0:
         if(control(m,0x60)&1)for(unsigned i=0;i<=31;i++)if(i>control(m,0x180)){
             GameAddr cell=LIST_CELLS+(i*3+2)*2;uint16_t value=(uint16_t)(hn_read16(m,cell)-1);
@@ -641,6 +746,7 @@ HNSceneResult hn_group3_task(HNMemory *m,GameAddr callback)
     case 0x080CB028:hn_save_default_fields(m);break;
     case 0x080CACB8:if(!hn_group3_counts(m))return HN_SCENE_RESOURCE;break;
     case 0x080CAD5C:if(!hn_group3_selected_count(m))return HN_SCENE_RESOURCE;break;
+    case 0x080C5788:case 0x080C5BB8:case 0x080C5F78:case 0x080C5FB0:case 0x080C601C:case 0x080C6060:case 0x080C615C:
     case 0x080C61E0:case 0x080C6270:case 0x080C6374:case 0x080C641C:case 0x080C6518:case 0x080C670C:
     case 0x080C9304:case 0x080C93F8:case 0x080C9478:case 0x080C94CC:
     case 0x080C9578:case 0x080C9694:case 0x080C97C8:case 0x080C9884:case 0x080C9990:case 0x080C9AD8:
