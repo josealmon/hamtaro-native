@@ -127,7 +127,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 753,481 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 948,988 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -184,6 +184,23 @@ configuration. The public suite checks those ABI boundaries and rejects unknown
 targets and missing slots. Other functions in the actor-helper source families and
 complete activity/story integration remain pending. Resource contents are never
 embedded in fixtures or written by this comparison.
+
+The complete map-choice and particle families use the independent BIOS oracle:
+
+    python -B tools/compare_reference.py --map-choice-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+Pass --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME if the oracle needs external
+runtime DLLs. This group passes 195,507 private comparisons across all 273 map-choice
+functions, 11 actor dependencies, four particle functions, direction queries and
+relative planar velocity. It checks direct calls, 93 Main contracts and 253 reviewed
+task targets, all five animation contracts and all four slot helpers. Cases cover
+all packed-choice byte selectors, signed/wrapped region boundaries, retained flags,
+positive/negative/zero motion, predicted clamps, complete follower phase branches,
+conditional graphics/animation changes and particle reset boundaries. Main cursor
+jumps and overlapping position/script variables are compared with the original.
+The source's unusual integer wrapping and height overshoot are preserved. Fixtures
+use synthetic state and caller-provided resources, with no captures or extracted
+tables written to disk. Complete area/activity playthroughs remain separate evidence.
 
 The Ham-Chat book group can run separately:
 

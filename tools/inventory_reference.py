@@ -16,7 +16,10 @@ def body(text: str, name: str) -> str:
     # Strip comments/strings before matching braces; this is a bounded source
     # scanner for our explicit dispatchers, not a C parser or reachability proof.
     text = re.sub(r'/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"', "", text, flags=re.S)
-    match = re.search(r"\b" + re.escape(name) + r"\([^;{}]*\)\s*\{", text)
+    # A call nested in an if-condition may also precede a brace. Require a
+    # declaration at the start of a line, including its return type/qualifiers.
+    match = re.search(r"^[ \t]*(?:[A-Za-z_]\w*[ \t*]+)+" + re.escape(name) +
+                      r"\([^;{}]*\)\s*\{", text, re.M)
     if not match:
         raise ValueError(f"Dispatch function not found: {name}")
     start = match.end()
@@ -41,6 +44,13 @@ def dispatches() -> dict[int, list[str]]:
         ("animation", "scene_motion.c", "hn_scene_motion_animation"),
         ("text-task", "presets.c", "hn_preset_apply"),
         ("main", "presets.c", "hn_preset_callback"),
+        ("main", "map_choice.c", "hn_map_choice_callback"),
+        ("main", "map_choice.c", "simple_main"),
+        ("animation", "map_choice.c", "hn_map_choice_animation"),
+        ("text-task", "map_choice.c", "hn_map_choice_apply"),
+        ("text-task", "map_choice.c", "simple_apply"),
+        ("render-slot", "map_choice.c", "hn_map_choice_slot"),
+        ("main", "particles.c", "hn_particles_callback"),
     )
     for abi, filename, function in definitions:
         text = body((ROOT / "src/game" / filename).read_text(encoding="utf-8"), function)

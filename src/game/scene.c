@@ -12,6 +12,8 @@
 #include "game/motion.h"
 #include "game/scene_motion.h"
 #include "game/presets.h"
+#include "game/map_choice.h"
+#include "game/particles.h"
 
 static unsigned menu_kind(HNMemory *m)
 {
@@ -248,6 +250,7 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x0801CC78:if(!hn_motion_relative_velocity(m))return HN_SCENE_RESOURCE;break;
     case 0x08011C8C:if(!hn_motion_approach_clamped(m,arguments))return HN_SCENE_RESOURCE;*consumed=2;break;
     case 0x08011DC0:{
         unsigned index,count=hn_read8(m,HN_RENDER_INFO+16);if(!hn_read32(m,HN_RENDER_SLOTS))return HN_SCENE_RESOURCE;
@@ -500,7 +503,9 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         hn_write16(m,0x0201DC40,keys);hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));break;
     }
     default:{
-        HNSceneResult result=hn_scene_motion_callback(m,callback,arguments,consumed);
+        HNSceneResult result=hn_map_choice_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_particles_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_scene_motion_callback(m,callback,arguments,consumed);
         if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_preset_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_scene_text_callback(m,callback,arguments,consumed);
@@ -513,6 +518,7 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
                                          uint32_t *consumed,uint32_t *yield)
 {
     (void)slot;(void)arguments;
+    HNSceneResult map=hn_map_choice_animation(m,callback,slot,arguments,consumed,yield);if(map!=HN_SCENE_UNKNOWN)return map;
     HNSceneResult motion=hn_scene_motion_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;
     switch(callback&~1u){
     /* These script callbacks ignore their argument register. Animation streams
@@ -521,20 +527,6 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
     case 0x08011EEC:case 0x08011EF0:case 0x08011EF4:case 0x08011F08:
         return hn_scene_callback(m,callback,0,consumed);
     default:break;
-    }
-    if((callback&~1u)==0x0802FFF4){
-        hn_write32(m,slot+0x24,(uint32_t)((int32_t)(0x00E08000u-hn_read32(m,slot+0x18))/48));
-        hn_write32(m,slot+0x2C,(uint32_t)((int32_t)(0x00B88000u-hn_read32(m,slot+0x20))/48));
-        *consumed=0;*yield=0;return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
-    }
-    if((callback&~1u)==0x0803002C){
-        unsigned leader=hn_read8(m,HN_RENDER_CLASS_LEADER),count=hn_read8(m,HN_RENDER_INFO+16);
-        if(leader>=count||!hn_read32(m,HN_RENDER_SLOTS)||!hn_motion_map_height(m,hn_render_slot(m,leader)))return HN_SCENE_RESOURCE;
-        if(hn_read8(m,0x03002182)&1){
-            unsigned follower=hn_read8(m,HN_RENDER_CLASS_FOLLOWER);
-            if(follower>=count||!hn_motion_map_height(m,hn_render_slot(m,follower)))return HN_SCENE_RESOURCE;
-        }
-        *consumed=0;*yield=1;return HN_SCENE_OK;
     }
     if((callback&~1u)==0x0801E800){
         if(!hn_audio_region(m,arguments,yield))return HN_SCENE_RESOURCE;

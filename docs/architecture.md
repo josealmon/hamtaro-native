@@ -50,6 +50,8 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 | Scene actor snapshots | Adapted | Four 104-byte render snapshots, active-slot restoration and six modal map roundtrips compared; idle animation variants, optional slots and script cursor retention preserved |
 | Shared scene actor control | Adapted | All 40 functions in class_anchor_presets.c and scene_control_callbacks.c compared: anchors/modes, vectors, signed rectangles/corridors, aiming, background alignment/offsets and clone phases; later-activity runtime integration remains pending |
 | Scene render presets | Adapted | All 77 functions in script_callbacks_render_presets.c and 28 required actor helpers compared; typed F4/task calls and 35 defined-zero Main callbacks, linked slots, indicators, graphics and live class selectors; full area/activity integration remains pending |
+| Map-choice scene control | Adapted | All 273 functions in map_choice_callbacks.c compared: 93 Main contracts, 253 argument-free task targets, five animation contracts and four slot helpers, including cursor skips/jumps, packed choices, motion, regions, phases and presets; complete area/activity integration remains pending |
+| Map particles | Adapted | All four functions in map_particles.c and the alternate parameter selection compared; initialization, reset boundaries, live parameter reads, scaling and field60-only hiding; timed scene integration remains pending |
 | Motion and collision | Adapted | Leader input/walk/run, action priority, map edge sampling/sliding, collision responses, event staging, follower routes, actor-position snapshots, transition animation/position selection and wrapped facing interpolation compared; full-game coverage remains pending |
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
@@ -144,7 +146,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-753,481 comparisons with the independent BIOS and PPU oracles.
+948,988 comparisons with the independent BIOS and PPU oracles.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register
 values that refer to the reference's stack are excluded; destination memory and
@@ -221,6 +223,24 @@ clears the follower boot gate. Linked-slot setup retains the original configure/
 order and reloads class selectors after writes that may alias them. Clear operations
 touch only field60, without resetting or releasing the render record. Graphics,
 animation/frame resources and labels remain in the player's ROM.
+
+map_choice.c retains the original typed entry points for map selection, actor
+presets and motion. Packed choices use live RAM tables initialized from the ROM;
+large selectors shift to zero, and a zero flag nibble retains the previous flag.
+Main callbacks preserve their variable consumed counts and the unsigned -4 cursor
+jump contract. Position save/restore performs sequential guest-memory reads and
+writes, including overlap with script variables. Movement retains signed 32-bit
+wrap, halfword boundaries, one-step height overshoot, predicted-position clamping,
+bounded routes and source INT_MIN quirks. Follower phases and motion graphics keep
+their conditional resource ownership. Direction queries use native BIOS angular
+math, with the source's four/eight-direction sectors and wrapped coordinate deltas.
+
+particles.c reads slot-index and physical-parameter tables from guest RAM/ROM,
+preserves the source's live count and pointer reloads, and resets only the original
+position, velocity and scale fields when a particle leaves its bounds. Acceleration
+is retained during an update reset. Slot indexes and resources fail explicitly
+when they cannot be represented by the native scene. No particle data or animation
+contents are embedded in this repository.
 
 The native Main interpreter keeps cursor, scratch, variables and return stack
 in their original 32-bit memory views. Callback bindings accept a specific typed
@@ -479,6 +499,9 @@ update these existing documents and retain no per-function reports in the reposi
 Within batch 1, class_anchor_presets.c and scene_control_callbacks.c have complete
 function-level comparisons for their 40 functions. script_callbacks_render_presets.c
 also has complete comparisons for all 77 functions, including its 28 required actor
-helpers. The other functions in those actor source families and the remaining
-map_choice_callbacks.c functions are still pending. This batch status does not
-establish completion of any later story area or activity.
+helpers. map_choice_callbacks.c now has complete comparisons for its 273 functions,
+along with 11 required actor helpers, the four-function particle family, direction
+queries and relative planar velocity. Other functions in the actor source families
+still need adaptation as their area dependencies are reviewed. This batch status
+does not establish completion of any later story area or activity; extend native
+area scenarios and verify actual-window progression next.

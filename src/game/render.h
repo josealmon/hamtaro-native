@@ -16,6 +16,7 @@ void hn_render_init(HNRender *,HNMemory *,const HNAnimationCallback *,size_t);
 GameAddr hn_render_slot(HNMemory *,uint32_t index);
 uint8_t hn_render_find_slot(HNMemory *,GameAddr slot);
 int32_t hn_render_class(HNMemory *,GameAddr slot);
+uint32_t hn_render_direction_between(HNMemory *,uint8_t from,uint8_t to,bool eight_directions);
 void hn_render_error(HNMemory *,uint16_t code);
 void hn_render_set_animation(HNMemory *,uint32_t index,GameAddr animation);
 void hn_render_flags(HNMemory *,uint32_t index,uint8_t clear_mask,uint8_t value);

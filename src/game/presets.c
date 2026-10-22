@@ -55,6 +55,17 @@ HNSceneResult hn_preset_apply(HNMemory *m,GameAddr callback)
     case 0x0801710C:ok=animation(m,hn_read8(m,0x03002C00),0x088D48A9,false);break;
     case 0x08017C6C:ok=animation(m,hn_read8(m,0x03002C04),0x088DC493,false);break;
     case 0x080182FC:ok=animation(m,hn_read8(m,0x03002C00),0x088DBD87,false);break;
+    case 0x08014034:ok=animation(m,hn_read8(m,0x03002C04),0x088C18FB,false);break;
+    case 0x08017694:ok=animation(m,hn_read8(m,0x03002C04),0x088D836C,true);break;
+    case 0x080176AC:ok=animation(m,hn_read8(m,0x03002C00),0x088D836C,true);break;
+    case 0x080176C4:ok=animation(m,hn_read8(m,0x03002C04),0x088D839E,true);break;
+    case 0x080178D0:ok=animation(m,hn_read8(m,0x03002C00),0x088D8F67,true);break;
+    case 0x08018E2C:ok=field(m,(uint8_t)(hn_read8(m,0x03002C04)-1),0);break;
+    case 0x08018E90:ok=field(m,(uint8_t)(hn_read8(m,0x03002C00)-1),0);break;
+    case 0x08019A0C:ok=class_link(m,0x03002C00,-1,0x088E1364,0x088E39A9);break;
+    case 0x08019FE4:ok=class_link(m,0x03002C04,-1,0,0x088E3AC9);break;
+    case 0x0801A028:ok=class_link(m,0x03002C00,-1,0,0x088E3AC9);break;
+    case 0x0801A3B0:ok=class_link(m,0x03002C04,-1,0x088E138B,0x088C286A);break;
     case 0x080192A4:ok=class_link(m,HN_RENDER_CLASS_FOLLOWER,-1,0x088E135C,0x088E3920);break;
     case 0x08019584:ok=class_link(m,HN_RENDER_CLASS_FOLLOWER,-1,0x088E1330,0x088E3961);break;
     case 0x080195D8:ok=class_link(m,0x03002C04,-1,0x088E1330,0x088E3961);break;

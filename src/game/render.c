@@ -1,5 +1,6 @@
 #include "game/render.h"
 #include "game/state.h"
+#include "gba/bios.h"
 #include <string.h>
 void hn_render_init(HNRender *r,HNMemory *m,const HNAnimationCallback *callbacks,size_t count)
 {memset(r,0,sizeof(*r));r->memory=m;r->callbacks=callbacks;r->callback_count=count;}
@@ -22,6 +23,22 @@ void hn_render_error(HNMemory *m,uint16_t code)
 {
     unsigned i=hn_read32(m,0x03002C78);
     hn_write16(m,0x03002DE0+i*2,code);hn_write32(m,0x03002C78,(i+1)&7);
+}
+uint32_t hn_render_direction_between(HNMemory *m,uint8_t from,uint8_t to,bool eight_directions)
+{
+    if(from>=hn_read8(m,HN_RENDER_INFO+16)||to>=hn_read8(m,HN_RENDER_INFO+16)||!hn_read32(m,HN_RENDER_SLOTS))return 0;
+    GameAddr a=hn_render_slot(m,from),b=hn_render_slot(m,to);
+    int32_t dx=(int32_t)(hn_read32(m,b+0x18)-hn_read32(m,a+0x18))>>16;
+    int32_t dz=(int32_t)(hn_read32(m,b+0x20)-hn_read32(m,a+0x20))>>16;
+    uint16_t angle=hn_bios_arctan2(dx,dz);
+    if(eight_directions){
+        if((uint16_t)(angle-0x1000)<=0x1FFF)return 4;if((uint16_t)(angle-0x3000)<=0x1FFF)return 5;
+        if((uint16_t)(angle-0x5000)<=0x1FFF)return 6;if((uint16_t)(angle-0x7000)<=0x1FFF)return 7;
+        if((uint16_t)(angle+0x7000)<=0x1FFF)return 8;if((uint16_t)(angle+0x5000)<=0x1FFF)return 1;
+        if((uint16_t)(angle+0x3000)<=0x1FFF)return 2;return 3;
+    }
+    if((uint16_t)(angle-0x2000)<=0x3FFF)return 2;if((uint16_t)(angle-0x6000)<=0x3FFF)return 3;
+    if((uint16_t)(angle+0x6000)<=0x3FFF)return 1;return 4;
 }
 void hn_render_set_animation(HNMemory *m,uint32_t index,GameAddr animation)
 {

@@ -103,6 +103,16 @@ bool hn_motion_restore_actors(HNMemory *m)
     }
     return !m->fault;
 }
+bool hn_motion_relative_velocity(HNMemory *m)
+{
+    unsigned source=hn_read8(m,HN_SCENE_CONTROLS+0x60),destination=hn_read8(m,HN_SCENE_CONTROLS+0x61);
+    unsigned count=hn_read8(m,HN_RENDER_INFO+16),duration=hn_read8(m,HN_SCENE_CONTROLS+0x62)+1;
+    if(source>=count||destination>=count||!hn_read32(m,HN_RENDER_SLOTS))return false;
+    GameAddr a=hn_render_slot(m,source),b=hn_render_slot(m,destination);
+    int32_t dx=(int32_t)(hn_read32(m,b+0x18)-hn_read32(m,a+0x18));
+    int32_t dz=(int32_t)(hn_read32(m,b+0x1C)+hn_read32(m,b+0x20)-hn_read32(m,a+0x1C)-hn_read32(m,a+0x20));
+    hn_write32(m,a+0x24,(uint32_t)(dx/(int32_t)duration));hn_write32(m,a+0x2C,(uint32_t)(dz/(int32_t)duration));return !m->fault;
+}
 bool hn_motion_map_height(HNMemory *m,GameAddr slot)
 {
     uint32_t x=hn_read32(m,slot+0x18),z=hn_read32(m,slot+0x20),height=hn_read32(m,slot+0x1C);

@@ -11,6 +11,7 @@ import json
 import math
 from pathlib import Path
 import random
+import re
 import struct
 from contextlib import nullcontext
 from unicorn import (Uc, UC_ARCH_ARM, UC_MODE_THUMB, UC_HOOK_INTR,
@@ -49,9 +50,10 @@ def main() -> None:
     parser.add_argument("--book-only", action="store_true", help="Run Ham-Chat acquisition, page and decoration comparisons")
     parser.add_argument("--indicators-only", action="store_true", help="Run destination progress, indicators, navigation and unlock comparisons")
     parser.add_argument("--presets-only", action="store_true", help="Run scene-render presets, actor dependencies and typed task/Main contracts")
+    parser.add_argument("--map-choice-only", action="store_true", help="Run complete map-choice, particle and dependency comparisons (requires BIOS oracle)")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
-    if not args.bios_oracle and (args.collisions_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only))):
+    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -1624,6 +1626,221 @@ def main() -> None:
             call("RenderPairListNumber",index,value,x,y)
             compare(f"three-digit number {case}",((0x02000000,0x40000),(0x03000000,0x7000)))
 
+    def map_choice_checks():
+        start_checks=checks;local=random.Random(0x4D434843)
+        family=[e for e in entries if e["source"]=="src/scripts/map_choice_callbacks.c"]
+        source=(args.reference/"src/scripts/map_choice_callbacks.c").read_text(encoding="utf-8")
+        signatures={}
+        groups={kind:[] for kind in ("apply","main","animation","slot")}
+        for row in family:
+            name=row["name"];match=re.search(r"^[ \t]*(u32|void)\s+"+re.escape(name)+r"\(([^;{}]*)\)\s*\{",source,re.M)
+            if not match:raise RuntimeError(f"Map-choice source signature missing: {name}")
+            signatures[name]=(match[1],match[2].strip())
+            kind="animation" if name.startswith("AnimationCallback") else "main" if name.startswith("ScriptCallback") else "apply" if match[2].strip()=="void" or name=="FaceMapChoiceSlot10Toward13" else "slot"
+            groups[kind].append(row)
+        equal(tuple(len(groups[k]) for k in ("apply","main","animation","slot")),(233,31,5,4),"complete 273-function map-choice contracts")
+        apply_map=bind("hn_map_choice_apply",C.c_int,C.c_void_p,C.c_uint32,C.POINTER(C.c_uint32))
+        main_map=bind("hn_scene_callback",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        animation_map=bind("hn_scene_animation_callback",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32),C.POINTER(C.c_uint32))
+        slot_map=bind("hn_map_choice_slot",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+        preset=bind("hn_preset_apply",C.c_int,C.c_void_p,C.c_uint32)
+        task_command=bind("hn_probe_task_command",C.c_int,C.c_void_p,C.c_uint32,C.c_uint,C.POINTER(C.c_uint32));report=(C.c_uint32*4)()
+        directions=bind("hn_render_direction_between",C.c_uint32,C.c_void_p,C.c_uint8,C.c_uint8,C.c_bool)
+        data=rom[0x8FE018:0x900EC8]
+        ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x03007FF0,4),(0x04000060,0x80),(0x04000100,4))
+        fresh();both(0x02000000,data)
+        equal(native("hn_audio_driver_init",result=C.c_bool)(memory),True,"map-choice audio baseline")
+        call("InitializeAudioDriver",limit=2000000);compare("map-choice audio baseline",ranges)
+        audio_baseline=[(address,native_bytes(address,size)) for address,size in ((0x02000000,0x40000),(0x03000000,0x8000),(0x04000000,0x400))]
+        audio_names={"StartMapChoiceSong23","ConfigureMapChoiceSlot14WithSong70","ScriptCallbackUpdateMapChoiceInputMotion"}
+        def fixture(case,audio=False,base=0x02010000):
+            fresh()
+            if audio:
+                for address,payload in audio_baseline:both(address,payload)
+            else:both(0x02000000,data)
+            both(base,local.randbytes(40*104));both(0x02015000,local.randbytes(16*44));both(0x02016000,local.randbytes(8*80))
+            both(0x02014000,bytes(range(40)));both(0x03002D98,struct.pack("<II",base,0x02014000));both(0x03002DC0,b"\x28\x00\x27")
+            both(0x03002E2C,struct.pack("<I",0x02014200));both(0x02014200,local.randbytes(40*8))
+            both(0x03003070,struct.pack("<I",0x02015000));both(0x03002E10,b"\x10");both(0x03002E08,struct.pack("<I",0x02016000));both(0x03002C80,b"\x08")
+            both(0x02000138,struct.pack("<HH",64,64));both(0x03002BFC,struct.pack("<I",0x02024000))
+            both(0x02024000,bytes(8192) if case%8==0 else local.randbytes(8192))
+            for index in range(40):
+                x=(local.randrange(400)<<16)|local.randrange(65536);z=(local.randrange(400)<<16)|local.randrange(65536)
+                both(base+index*104+0x18,struct.pack("<III",x,local.getrandbits(32),z))
+                both(base+index*104+0x24,struct.pack("<III",local.choice((0,0x800,0x10000,0x18000,0xFFFFF800,0xFFFE8000)),0,local.choice((0,0x8000,0xFFFF8000))))
+                both(base+index*104+0x60,bytes([(case+index)%4+1]))
+            both(0x02004520,local.randbytes(512));both(0x03002180,local.randbytes(96))
+            both(0x03002182,bytes([(case&1)|128]));both(0x03002170,b"\xA5")
+            for i,address in enumerate((0x03002C0C,0x03001F50,0x03002C04,0x03002C00)):
+                both(address,bytes([(10,13,16,19)[(i+case//8)%4]]))
+            if case%16==1:both(0x03001F50,b"\x00")
+            if case%8==2:both(0x03001F50,native_bytes(0x03002C0C,1))
+            both(0x0201DC40,local.randbytes(128));both(0x0201DC8C,struct.pack("<HH",case%4+1,(case//4)%4+1))
+            both(0x02004520+0x6E,bytes([case%4]));both(0x02004520+0x1A0,bytes([case%7+1]))
+            both(0x02004520+0x12,bytes([case%40]))
+            both(0x02004520+0x28,bytes([(0,22,23,255)[case%4]]));both(0x02004580,bytes([(0,1,2,255)[case%4]]))
+            both(0x02004581,bytes([(0,1,255)[case%3]]));both(0x0200459B,bytes([case%3]));both(0x0200454A,bytes([case&1]))
+            both(0x0200457C,bytes([(0,1,2,255)[case%4]]));both(0x03001140,bytes([(0,1,255)[case%3]]))
+            both(0x03000820,struct.pack("<4H",(0,16,32,64,128,240,48,192)[case%8],0,0,0))
+            both(0x02020000,bytes([case%40,case%14,0x6E])+local.randbytes(13))
+            if base!=0x02010000:
+                both(0x03002D98,struct.pack("<II",base,0x02014000));both(0x03002DC0,b"\x28\x00\x27")
+                both(0x03002E2C,struct.pack("<I",0x02014200));both(0x03003070,struct.pack("<I",0x02015000))
+                both(0x03002E10,b"\x10");both(0x03002E08,struct.pack("<I",0x02016000));both(0x03002C80,b"\x08")
+        def payload(name,case):
+            if name=="ScriptCallbackSkipIfMapValuesDiffer":return bytes([case%2])+struct.pack("<HH",case%32,(case//2)%32)
+            if name=="ScriptCallbackConfigureMapChoiceRenderSlots":return bytes([(1,2,3,4,8)[case%5]])
+            if name=="ScriptCallbackPrepareMapChoiceMotion":return bytes([case%4+1,case%256,0x6E])
+            if name in {"ScriptCallbackOrientMapChoicePairToSlot","ScriptCallbackToggleMapChoiceRaisedPosition"}:return bytes([case%40,case%2])
+            if name=="ScriptCallbackSelectPackedMapChoice":return bytes([(0,1,2,3,4,7,8,255)[case%8]])
+            if name=="ScriptCallbackApproachMapChoiceLeaderPosition":return struct.pack("<HH",case*137%65536,case*193%65536)
+            return bytes([case%40,case%14])+local.randbytes(14)
+        for row in groups["apply"]:
+            for case in range(64):
+                name=row["name"];fixture(case,name in audio_names);value=C.c_uint32(99)
+                equal(apply_map(memory,row["address"]|1,C.byref(value)),1,f"native map preset {name}/{case}")
+                result=call(name,0) if name=="FaceMapChoiceSlot10Toward13" else call(name)
+                if signatures[name][0]=="u32":equal(value.value,result,f"map preset return {name}")
+                compare(f"map preset {name}/{case}",ranges)
+        for row in groups["main"]:
+            for case in range(64):
+                name=row["name"];fixture(case,name in audio_names);both(0x02020000,payload(name,case));consumed=C.c_uint32(99)
+                equal(main_map(memory,row["address"]|1,0x02020000,C.byref(consumed)),1,f"native map Main {name}/{case}")
+                equal(consumed.value,call(name,0x02020000),f"map Main consumed {name}")
+                compare(f"map Main {name}/{case}",ranges)
+        for row in groups["animation"]:
+            for case in range(128):
+                fixture(case);slot=0x02010000+(case%40)*104;yielded=C.c_uint32(local.getrandbits(32));consumed=C.c_uint32(99)
+                both(0x02020000,bytes([case%5,case%256])+local.randbytes(12));both(0x0203FFF0,struct.pack("<I",yielded.value))
+                equal(animation_map(memory,row["address"]|1,slot,0x02020000,C.byref(consumed),C.byref(yielded)),1,f"native map animation {row['name']}")
+                equal(consumed.value,call(row["name"],slot,0x02020000,0x0203FFF0),"map animation consumed")
+                equal(yielded.value,struct.unpack("<I",cpu.mem_read(0x0203FFF0,4))[0],"map animation yield")
+                both(0x0203FFF0,struct.pack("<I",yielded.value));compare(f"map animation {row['name']}/{case}",ranges)
+        for row in groups["slot"]:
+            for case in range(256):
+                fixture(case);slot=0x02010000+(case%40)*104;value=C.c_uint32(99)
+                both(slot+0x18,local.randbytes(36))
+                equal(slot_map(memory,row["address"]|1,slot,C.byref(value)),1,f"native map slot helper {row['name']}")
+                result=call(row["name"],slot)
+                if signatures[row["name"]][0]=="u32":equal(value.value,result,"map slot predicate")
+                compare(f"map slot helper {row['name']}/{case}",ranges)
+        from inventory_reference import body as source_body
+        unused=[row for row in groups["main"] if not re.search(r"\barguments\b",source_body(source,row["name"]))]
+        equal(len(unused),20,"reviewed argument-free task/Main sharing")
+        for row in groups["apply"]+unused:
+            for case in range(16):
+                name=row["name"];fixture(case,name in audio_names);task=0x02019000;script=0x02020000;index=(case*37)%104
+                both(task,local.randbytes(52));both(task+0x10,struct.pack("<I",script));both(script,bytes([index,0xE1]))
+                both(0x03001FC0+index*4,struct.pack("<I",row["address"]|1))
+                equal(task_command(memory,task,0xF4,report),1,f"native map task ABI {name}/{case}")
+                equal(report[3],call("TaskCommandF4",task),"map task continuation");compare(f"map task ABI {name}/{case}",ranges)
+        main_rows=groups["main"]+[row for row in groups["apply"] if signatures[row["name"]][0]=="u32"]
+        equal(len(main_rows),93,"reviewed 93 map Main contracts")
+        for row in main_rows:
+            for case in range(16):
+                name=row["name"];fixture(case,name in audio_names)
+                both(0x02020000,struct.pack("<I",row["address"]|1)+payload(name,case));both(0x03000010,b"\x1C"+bytes(15))
+                equal(command(memory,0x1C,0x02020000),1,f"native map Main ABI {name}/{case}")
+                call("MainScriptInvokeCallback",0x02020000);compare(f"map Main ABI {name}/{case}",ranges)
+        # Signed/prospective region boundaries include subpixel edges and word
+        # wrap, and distinguish the split at x=128 from the outer rectangle.
+        for predicted_x in (0x47FFFF,0x480000,0x480001,0x7FFFFF,0x800000,0x800001,0xB7FFFF,0xB80000,0xB80001):
+            for predicted_z in (0xCFFFFF,0xD00000,0xD00001):
+                for vx in (-0x8000,-1,0,1,0x8000):
+                    for vz in (-1,0,1):
+                        fixture(predicted_x);slot=0x02010000
+                        both(slot+0x18,struct.pack("<III",(predicted_x-vx)&0xFFFFFFFF,0,(predicted_z-vz)&0xFFFFFFFF))
+                        both(slot+0x24,struct.pack("<III",vx&0xFFFFFFFF,0,vz&0xFFFFFFFF));value=C.c_uint32()
+                        equal(slot_map(memory,symbols["IsMapChoiceProspectiveSlotRegion"]|1,slot,C.byref(value)),1,"native prospective map region")
+                        equal(value.value,call("IsMapChoiceProspectiveSlotRegion",slot),"prospective map region predicate");compare("prospective map region",ranges)
+        for previous in range(1,8):
+            fixture(previous)
+            for choice in range(256):
+                both(0x020046C0,bytes([previous]));both(0x02020000,bytes([choice]));consumed=C.c_uint32()
+                equal(main_map(memory,symbols["ScriptCallbackSelectPackedMapChoice"]|1,0x02020000,C.byref(consumed)),1,"native packed map choice")
+                equal(consumed.value,call("ScriptCallbackSelectPackedMapChoice",0x02020000),"packed map choice consumed");compare("packed map choice",ranges)
+        for name in ("ScriptCallbackSaveMapChoicePosition","ScriptCallbackRestoreMapChoicePosition"):
+            for index in (0,1,10,13):
+                for variable in (0,1,13,14,15,16,122,255):
+                    base=0x03002BB0+variable*4-index*104-0x1C;fixture(variable,base)
+                    both(0x02020000,bytes([index,variable]));consumed=C.c_uint32()
+                    equal(main_map(memory,symbols[name]|1,0x02020000,C.byref(consumed)),1,"native overlapping map position variables")
+                    equal(consumed.value,call(name,0x02020000),"overlapping map position consumed");compare("overlapping map position variables",ranges)
+        for case in range(64):
+            fixture(case);index=case%40;slot=0x02010000+index*104;resource=0x08000101+case*4
+            both(slot+4,struct.pack("<I",resource));both(slot+0x60,bytes([case&1]));target=0x02020400+case*5
+            stream=struct.pack("<IBII",symbols["ScriptCallbackJumpMapChoiceActiveAnimation"]|1,index,resource if case&2 else resource+4,target)
+            both(0x02020000,stream);both(0x03000010,b"\x1C"+bytes(15))
+            equal(command(memory,0x1C,0x02020000),1,"native active-animation Main cursor jump")
+            call("MainScriptInvokeCallback",0x02020000);compare("active-animation Main cursor jump",ranges)
+        positions=((0x687FFF,0x778000),(0x688000,0x778000),(0xC88000,0x808000),(0xC88001,0x808000),
+                   (0x688000,0x777FFF),(0x688000,0x808001),(0,0),(0xA08000,0x7C8000))
+        for phase in (0,1,2,255):
+            for x,z in positions:
+                for current in (0x088B503E,0x088B7318,0x08000101):
+                    for leader in (1,13):
+                        fixture(phase);both(0x03002C0C,bytes([leader]));both(0x0200457C,bytes([phase]))
+                        both(0x02010000+leader*104+0x18,struct.pack("<III",x,0,z));both(0x02010000+13*104+4,struct.pack("<I",current))
+                        consumed=C.c_uint32(99);yielded=C.c_uint32(0xA5B6C7D8);both(0x0203FFF0,struct.pack("<I",yielded.value))
+                        equal(animation_map(memory,symbols["AnimationCallbackUpdateMapChoiceFollowerPhase"]|1,0x02010000,0,C.byref(consumed),C.byref(yielded)),1,"native follower-region phase")
+                        equal(consumed.value,call("AnimationCallbackUpdateMapChoiceFollowerPhase",0x02010000,0,0x0203FFF0),"follower-region phase consumed")
+                        equal(yielded.value,struct.unpack("<I",cpu.mem_read(0x0203FFF0,4))[0],"follower-region phase yield")
+                        both(0x0203FFF0,struct.pack("<I",yielded.value));compare("follower-region phase",ranges)
+        for name in ("ScriptCallbackConstrainMapChoiceMotion","ScriptCallbackConstrainMapChoiceZ3196C","ScriptCallbackConstrainMapChoiceUpperX31A20"):
+            for x in (0x3C7FFF,0x3C8000,0x467FFF,0x468000,0x957FFF,0x958000,0x958001,0x7FFFFFFF,0x80000000):
+                for z in (0x787FFF,0x788000,0x837FFF,0x838000,0x988000,0x988001,0x80000000):
+                    for vx in (-0x10000,0x10000):
+                        fixture(x+z);both(0x03002C0C,b"\x01");slot=0x02010000+104
+                        both(slot+0x18,struct.pack("<III",(x-vx)&0xFFFFFFFF,0,(z-0x8000)&0xFFFFFFFF));both(slot+0x24,struct.pack("<III",vx&0xFFFFFFFF,0,0x8000))
+                        consumed=C.c_uint32();equal(main_map(memory,symbols[name]|1,0,C.byref(consumed)),1,"native predicted map motion bounds")
+                        equal(consumed.value,call(name,0),"predicted map motion bounds consumed");compare("predicted map motion bounds",ranges)
+        for case in range(128):
+            fixture(case);both(0x03002C0C,b"\x01");slot=0x02010000+104
+            tx=(0,1,32767,32768,65535)[case%5];tz=(0,1,32767,32768,65535)[(case//5)%5]
+            delta=(0,1,-1,0x7FFF,0x8000,0x8001,-0x8001,0x7FFFFFFF,0x80000000)
+            both(slot+0x18,struct.pack("<III",((tx<<16)+0x8000+delta[case%9])&0xFFFFFFFF,0,((tz<<16)+0x8000+delta[(case//9)%9])&0xFFFFFFFF))
+            both(0x02020000,struct.pack("<HH",tx,tz))
+            for _ in range(3):
+                consumed=C.c_uint32();equal(main_map(memory,symbols["ScriptCallbackApproachMapChoiceLeaderPosition"]|1,0x02020000,C.byref(consumed)),1,"native wrapped map approach")
+                equal(consumed.value,call("ScriptCallbackApproachMapChoiceLeaderPosition",0x02020000),"wrapped map approach consumed");compare("wrapped map approach",ranges)
+        actor_dependencies=("SetSecondaryAnimationPreset14034","ConfigureRenderSetupPreset1A3B0","ClearRenderSetupNeighborFields6018E2C",
+            "ClearRenderSetupNeighborFields6018E90","ConfigureRenderSetupPreset19A0C","ConfigureRenderSetupPreset19FE4","ConfigureRenderSetupPreset1A028",
+            "SetDirectionalAnimationPreset17694","SetDirectionalAnimationPreset176AC","SetDirectionalAnimationPreset176C4","SetDirectionalAnimationPreset178D0")
+        for name in actor_dependencies:
+            for case in range(64):
+                fixture(case);equal(preset(memory,symbols[name]|1),1,f"native map actor dependency {name}")
+                call(name);compare(f"map actor dependency {name}",ranges)
+        for case in range(512):
+            fixture(case);a=case%40;b=(case//8)%40
+            for eight in (False,True):
+                equal(directions(memory,a,b,eight),call("GetRenderXZDirectionBetweenSlots8" if eight else "GetRenderXZDirectionBetweenSlots4",a,b),"native pair direction")
+                compare("pair direction",ranges)
+            both(0x02004580,bytes([a,b,case%256]));consumed=C.c_uint32(99)
+            equal(main_map(memory,symbols["ScriptCallbackSetSlotRelativePlanarVelocity"]|1,0,C.byref(consumed)),1,"native relative planar velocity")
+            equal(consumed.value,call("ScriptCallbackSetSlotRelativePlanarVelocity",0),"relative planar velocity consumed");compare("relative planar velocity",ranges)
+        particles=[e for e in entries if e["source"]=="src/graphics/map_particles.c"]
+        equal(len(particles),4,"complete map-particle family")
+        initialize_particles=native("hn_particles_initialize",result=C.c_bool)
+        for row in particles:
+            for case in range(64):
+                fixture(case);both(0x02004580,bytes([case%2,(0,1,13,14)[case%4],0,0])+struct.pack("<I",0x085F4484 if case&1 else 0x085F42F0))
+                if row["name"]=="InitializeMapParticleRenderSlots":
+                    equal(initialize_particles(memory),True,"native particle initialization");call(row["name"])
+                else:
+                    consumed=C.c_uint32(99);equal(main_map(memory,row["address"]|1,0,C.byref(consumed)),1,f"native particle callback {row['name']}")
+                    equal(consumed.value,call(row["name"],0),"particle callback consumed")
+                compare(f"particle {row['name']}/{case}",ranges)
+        for x in (0xFFDFFFFF,0xFFE00000,0xFFE00001,0,0x1600000,0x1600001,0x7FFFFFFF,0x80000000):
+            for z in (0x1EFFFFF,0x1F00000,0x1F00001,0xFFFFFFFF,0x7FFFFFFF,0x80000000):
+                fixture(x+z);consumed=C.c_uint32()
+                equal(main_map(memory,symbols["ScriptCallbackStartMapParticleEffect"]|1,0,C.byref(consumed)),1,"native particle bounds setup")
+                call("ScriptCallbackStartMapParticleEffect",0);compare("particle bounds setup",ranges)
+                index=struct.unpack("<I",native_bytes(0x020012C4,4))[0];slot=0x02010000+index*104
+                both(slot+0x18,struct.pack("<III",x,0,z));both(slot+0x30,local.randbytes(12))
+                equal(main_map(memory,symbols["ScriptCallbackUpdateMapParticleEffect"]|1,0,C.byref(consumed)),1,"native particle reset boundaries")
+                equal(consumed.value,call("ScriptCallbackUpdateMapParticleEffect",0),"particle reset boundaries consumed");compare("particle reset boundaries",ranges)
+        print(f"{checks-start_checks} private map-choice/particle comparisons passed (273 map functions and reviewed dependencies).")
+
     def preset_checks():
         start_checks=checks;local=random.Random(0x50525354)
         family=[e for e in entries if e["source"]=="src/scripts/script_callbacks_render_presets.c"]
@@ -1975,6 +2192,10 @@ def main() -> None:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.map_choice_only:
+            map_choice_checks()
+            print(f"{checks} private map-choice checks passed; complete story remains unverified.")
+            return
         if args.presets_only:
             preset_checks()
             print(f"{checks} private render-preset checks passed; complete story remains unverified.")
@@ -2024,7 +2245,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();preset_checks();scene_motion_checks();script_memory_checks()
+        indicator_checks();book_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

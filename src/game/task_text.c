@@ -1,5 +1,6 @@
 #include "game/task.h"
 #include "game/presets.h"
+#include "game/map_choice.h"
 #include "game/state.h"
 #include "game/render.h"
 #include "game/transfer.h"
@@ -178,7 +179,8 @@ static bool task_callback(HNMemory *m,GameAddr callback)
     case 0x080CB398:animation=0x088BA4B4;break;
     case 0x080CB3AC:animation=0x088BA4C0;break;
     case 0x080CB3C4:animation=0x088ABE43;indicator=true;break;
-    default:return hn_preset_apply(m,callback)==HN_SCENE_OK;
+    default:{uint32_t ignored;HNSceneResult result=hn_map_choice_apply(m,callback,&ignored);
+        return result==HN_SCENE_UNKNOWN?hn_preset_apply(m,callback)==HN_SCENE_OK:result==HN_SCENE_OK;}
     }
     if(hn_read8(m,HN_RENDER_INFO+0x10)<(secondary?18:17)||!hn_read32(m,HN_RENDER_SLOTS))return false;
     if(hn_read8(m,HN_RENDER_CLASS_FOLLOWER)==16)hn_write8(m,0x03002170,0);
