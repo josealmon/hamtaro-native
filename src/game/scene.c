@@ -19,6 +19,7 @@
 #include "game/bank5.h"
 #include "game/bank6.h"
 #include "game/bank7.h"
+#include "game/record_selection.h"
 #include "game/presentation.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
@@ -532,6 +533,7 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         result=hn_bank5_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_bank6_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_bank7_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_record_selection_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_presentation_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_map_choice_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_particles_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;

@@ -74,6 +74,7 @@ statically. A separate clean-machine validation remains pending.
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; complete Items/Gems and timed raster integration remain pending |
+| Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; complete workshop progression remains pending |
 | Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; empty entry/return and a one-item training-seat SDK view/save/reload run; multi-item inventories and complete activity integration remain pending |
 | Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
 | Status counters and stage sequence | Adapted | All 13 functions in map10_4_counter_sequence.c compared, including the complete 16-bit counter domain, five tile banks, windows, stage/scroll graphics and sequence phases; nine Main and twelve argument-free task contracts; later-stage live integration remains pending |
@@ -199,6 +200,15 @@ A second replay passes 247,641 host-session checks and restores the same fields
 from private 32 KiB SRAM files in a fresh session.
 This proves the reported return/save path; complete cart activity and remaining
 Sunny Peak progression still require validation.
+
+A separate private follow-up starts from that read-only cart-area SRAM. Putput
+uses the oilcan on the cart, Gogo completes its ride to map 2:23, and the following
+conversation teaches Rubrub. All 11,469 input updates, including original End
+Game/Continue, pass with 24 words, two seeds, two rescued loves and Bijou at
+x=72.5, z=96.5. A new SDK process loads the exported 32 KiB SRAM and repeats
+1,922 startup/Continue updates, restoring those fields. This is bounded compiled
+runtime/save evidence; it does not establish full workshop or desktop progression.
+
 Book pages, word menus, rewards, the destination map and Sunny Peak have been
 visually inspected through native PPU output; the full desktop story playthrough
 is still pending. No game capture is stored in this repository.
@@ -215,6 +225,25 @@ The complete pixel and PCM sequences retained identical SHA-256 digests. The PPU
 64 synthetic frames also continue to match the independent oracle. Audio starts
 with 2,048 silent stereo frames (62.5 ms) to absorb device scheduling jitter; pause
 preserves queued samples. There is no sample dropping or game-clock speed change.
+
+The counter/crafting selection implementation uses record_selection.c. Its three
+complete source families retain the 20-byte counter and 24-byte record descriptor
+layouts, resource pointers in ROM, five-language label tables, two scrolling rows,
+three candidate palettes and status tiles. Candidate generation preserves the
+original PRNG draws, duplicate rejection, special record reservation and cache
+reuse. Transactions keep the separate requirements check and cost writes: key zero
+is skipped by the former but charged by the latter, repeated keys are not summed
+before checking, and byte-sized costs/refunds wrap in the original order.
+
+The 42,501 focused comparisons cover every source entry and reviewed calling
+contract, all raw byte selectors, five-language record graphics, palette marker
+bits, overlapping counter/list/selection writes and forward glyph copies. The
+graphics helper's original three-pointer local array and candidate buffer's
+80-entry capacity have explicit failure guards; a non-terminating random selection
+also fails after its budget. Those invalid-state guards do not establish original
+stack-overrun parity. Counter 31 has no display descriptor; the resource-rendering
+fixtures use the recovered 0..30 catalog. Function checks prepare the workshop;
+they do not establish its full player-facing activity or timed desktop behavior.
 
 ## Storage and lifetime
 
@@ -261,7 +290,7 @@ static PPU snapshots across the schedules match a separate mGBA renderer; twenty
 contain multiple colors. The schedule also compares 3,581 HBlank callbacks using
 explicit scanline samples, without deferred DMA0/PPU timing or instruction interleaving.
 The complete function run, including three hardware-initialization cases, passes
-4,157,841 checks with the independent BIOS, PPU and floating-bus oracles, including separately
+4,200,342 checks with the independent BIOS, PPU and floating-bus oracles, including separately
 identified corrupt-state guards alongside successful state comparisons.
 These schedules omit the full-game word-choice path, CPU-transfer
 flushing, the complete IRQ cadence and hardware audio output. Transient DMA3 register

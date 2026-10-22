@@ -99,6 +99,8 @@ def dispatches() -> dict[int, list[str]]:
         ("animation", "bank6_chain.c", "hn_bank6_chain_animation"),
         ("main", "bank7.c", "hn_bank7_callback"),
         ("text-task", "bank7.c", "hn_bank7_task"),
+        ("main", "record_selection.c", "hn_record_selection_callback"),
+        ("text-task", "record_selection.c", "hn_record_selection_task"),
         ("main", "presentation.c", "hn_presentation_callback"),
         ("text-task", "presentation.c", "hn_presentation_task"),
         ("animation", "presentation.c", "hn_presentation_animation"),

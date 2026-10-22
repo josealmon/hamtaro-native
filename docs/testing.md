@@ -200,12 +200,31 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS, PPU and floating-bus oracles passes 4,157,841 checks,
+GBA machine. The complete run with BIOS, PPU and floating-bus oracles passes 4,200,342 checks,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
 directional movement. Word-choice handlers use opcodes 0x24 (await) and 0x45
 (configure). The desktop loop is now connected; complete playthrough remains pending.
+
+The complete counter-display, candidate-selection and crafting-transaction group
+can also run separately:
+
+    python -B tools/compare_reference.py --record-selection-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+All 23 functions across game_counter_display.c, game_record_selection.c and
+game_record_transactions.c have explicit entry/helper coverage. The 42,501 focused
+comparisons include 18 Main contracts, 14 argument-free F4 contracts, five helpers,
+actual Main/F4 command calls, all three candidate graphics rows and five languages,
+raw selectors, cache/PRNG behavior and counter requirement boundaries. Synthetic
+public checks retain zero-key charging, separate repeated-key requirements,
+cost/refund wrapping, full-list retention and cached selections without PRNG draws.
+Private alias checks cover captured clear pointers, palette writes over selection,
+velocity writes that change live selectors, overlapping glyph copies and a counter
+list overlapping its own selection/count controls. The original source's local
+array capacities and non-returning impossible draws have explicit host guards;
+those malformed states are not treated as matching original stack behavior.
+Complete workshop/activity progression remains a separate integration requirement.
 
 The Main memory and scene-transition group can also run separately:
 
@@ -430,6 +449,14 @@ host-file replay passes 247,641 checks and restores those fields in a fresh sess
 The canonical 144,204-update opening, including empty Items/Gems roundtrips and
 eight saves, also passes with this adapter. These are bounded compiled-runtime
 and save tests; the complete cart activity and desktop story remain unverified.
+
+A separate private input-only scenario starts from the read-only cart-area save,
+uses Putput and Gogo, learns Rubrub and completes another original End
+Game/Continue. Its 11,469 updates retain map 2:23 at x=72.5, z=96.5 with 24 words,
+two seeds, two rescued loves and Bijou. Another SDK process passes 1,922 startup
+and Continue updates from the exported 32 KiB SRAM and restores the same fields.
+This follow-up does not start from erased SRAM and has no host-session or actual
+desktop playthrough claim. Its private traces and saves remain outside the checkout.
 
 Text-task checks can be run separately:
 

@@ -71,6 +71,7 @@ def main() -> None:
     parser.add_argument("--bank6-chain-only", action="store_true", help="Run the complete bank-6 chain family (requires BIOS oracle)")
     parser.add_argument("--presentation-only", action="store_true", help="Run complete shared presentation families (requires BIOS oracle)")
     parser.add_argument("--bank7-only", action="store_true", help="Run complete bank-7 board/preset families (requires BIOS oracle)")
+    parser.add_argument("--record-selection-only", action="store_true", help="Run complete record counter/selection/transaction families (requires BIOS oracle)")
     parser.add_argument("--wander-only", action="store_true", help="Run connected actor-wandering families (requires BIOS oracle)")
     parser.add_argument("--scene-actors-only", action="store_true", help="Run complete cutscene actor/state/panel families")
     parser.add_argument("--actor-presets-only", action="store_true", help="Run all five actor-preset families (requires BIOS oracle)")
@@ -2368,6 +2369,11 @@ def main() -> None:
         check_bank7(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                      fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    def record_selection_checks():
+        from reference_record_selection import check_record_selection
+        check_record_selection(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
+                               fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
+
     def scene_effects_checks():
         from reference_shared_motion import check_scene_effects
         check_scene_effects(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
@@ -2387,6 +2393,10 @@ def main() -> None:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.record_selection_only:
+            record_selection_checks()
+            print(f"{checks} private record selection/counter/transaction comparisons passed; full activities remain unverified.")
+            return
         if args.bank7_only:
             bank7_checks()
             print(f"{checks} private bank-7 comparisons passed; complete puzzle/story remains unverified.")
@@ -2546,7 +2556,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();bank2_checks();bank3_late_checks();bank3_preset_checks();bank3_game_checks();bank3_chain_checks();bank4_checks();bank5_checks();bank6_checks();bank6_chain_checks();presentation_checks();bank7_checks();group3_checks();wander_checks();scene_actor_checks();shared_motion_checks();scene_effects_checks();actor_preset_checks();actor_animation_checks();actor_sequence_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
+        indicator_checks();book_checks();bank2_checks();bank3_late_checks();bank3_preset_checks();bank3_game_checks();bank3_chain_checks();bank4_checks();bank5_checks();bank6_checks();bank6_chain_checks();presentation_checks();bank7_checks();record_selection_checks();group3_checks();wander_checks();scene_actor_checks();shared_motion_checks();scene_effects_checks();actor_preset_checks();actor_animation_checks();actor_sequence_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")
