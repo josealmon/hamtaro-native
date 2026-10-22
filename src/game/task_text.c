@@ -4,6 +4,7 @@
 #include "game/bank2.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
+#include "game/scene_motion.h"
 #include "game/records.h"
 #include "game/counter_scene.h"
 #include "game/raster.h"
@@ -189,6 +190,9 @@ static bool task_callback(HNMemory *m,GameAddr callback)
     case 0x0801C5F4:case 0x0801C66C:case 0x0801CB7C:case 0x0801CCE4:{
         uint32_t ignored;return hn_wander_callback(m,callback,0,&ignored)==HN_SCENE_OK;}
     case 0x0801E00C:{uint32_t ignored;return hn_records_callback(m,callback,0,&ignored)==HN_SCENE_OK;}
+    case 0x0801EBBC:case 0x0801EBDC:case 0x0801EC20:case 0x0801EC3C:
+    case 0x0801EC6C:case 0x0801ECAC:case 0x0801ECC4:case 0x0801F118:{
+        uint32_t ignored;return hn_scene_motion_callback(m,callback,0,&ignored)==HN_SCENE_OK;}
     case 0x0802E22C:case 0x0802E258:{uint32_t ignored;return hn_raster_callback(m,callback,&ignored)==HN_SCENE_OK;}
     default:{HNSceneResult result=hn_counter_scene_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_scene_actor_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;

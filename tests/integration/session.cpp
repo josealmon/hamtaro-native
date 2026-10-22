@@ -72,9 +72,9 @@ int main(int argc,char **argv)
                 auto snapshot=[](const HNGame *current) {
                     auto *memory=const_cast<HNMemory*>(&current->memory);
                     const auto slot=hn_read32(memory,0x03002D98)+hn_read8(memory,0x03002C0C)*104;
-                    return std::array<std::uint32_t,8>{hn_read8(memory,0x03002C58),hn_read8(memory,0x03001F68),
+                    return std::array<std::uint32_t,9>{hn_read8(memory,0x03002C58),hn_read8(memory,0x03001F68),
                         hn_read32(memory,slot+0x18),hn_read32(memory,slot+0x20),hn_read8(memory,0x03003E30),hn_read16(memory,0x0201DC52),
-                        hn_read8(memory,0x03001F50),hn_read8(memory,0x03002182)&1u};
+                        hn_read8(memory,0x03001F50),hn_read8(memory,0x03002182)&1u,hn_read16(memory,0x0201DC5C)};
                 };
                 const auto expected=snapshot(playing.game());CHECK(expected[4]>10);
                 const auto saved=hn::load_save(replay.paths);
@@ -94,7 +94,7 @@ int main(int argc,char **argv)
                     CHECK(hn::load_save(desktop)==saved&&hn::load_rom(desktop)==rom);
                     std::cout<<"Validated ROM and tested SRAM retained in the caller's new private desktop profile.\n";
                 }
-                std::cout<<total<<" input updates persisted to private 32 KiB SRAM; a fresh host session continued with the same map, position, words and seeds.\n";
+                std::cout<<total<<" input updates persisted to private 32 KiB SRAM; a fresh host session continued with the same map, position, words, seeds, partner and rescued-love count.\n";
             }
             if(argc==3) {
                 CHECK(std::string(argv[2])=="--audio");CHECK(SDL_Init(SDL_INIT_AUDIO));

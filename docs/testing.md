@@ -88,7 +88,7 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 83,069 clocked native updates from erased SRAM, confirms bedroom control,
+It runs 114,613 clocked native updates from erased SRAM, confirms bedroom control,
 walks to the Clubhouse, displays the initial ten-word book and returns to the room.
 It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
 and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
@@ -117,9 +117,13 @@ Heyhoo summons Seamore and learns Offdoff. The route removes the bridge's batter
 places it in the boat, exercises powered travel through map 2:18 and docks beside
 Bijou. Mega-Q increases the count to seventeen; the joined-partner flag and
 follower slot 13 are checked after returning to movement. A fourth End Game/Continue
-retains that state at map 2:17, x=168.5, z=80.5. The runtime frame counter resets
-at the title, while the runner's update total remains cumulative. Reconciliation
-and the complete opening remain unverified. The JSON contains only button inputs
+retains that state at map 2:17, x=168.5, z=80.5. Returning by boat reaches the Ham-lift
+lesson. The pair lowers Pepper from the vine, chooses Bluhoo, learns Oopsie and
+Gossip-P and completes the first reconciliation. Control returns in map 2:2 at
+x=112.5, z=88.5 with twenty words and one rescued love. Select/status and a fifth
+End Game/Continue retain the map, position, ten seeds and Bijou as well. The runtime
+frame counter resets at the title, while the runner's update total stays cumulative.
+Complete Sunny Peak coverage remains unverified. The JSON contains only button inputs
 and metadata checkpoints. The default replay writes no
 save or capture, rejects unknown inputs and fails on any native runtime fault or
 checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
@@ -132,10 +136,10 @@ actual SRAM-file persistence, add:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json --session-test build/Release/hn_session_tests.exe
 
-The host replay performs all 83,069 input updates in a disposable private profile, verifies
+The host replay performs all 114,613 input updates in a disposable private profile, verifies
 that the saved 32 KiB file equals the game's SRAM, stops and starts a fresh Session,
-then selects Continue. Map, position, seventeen words, ten seeds, the joined-partner
-flag and follower slot 13 are unchanged. The partner checkpoints describe the
+then selects Continue. Map, position, twenty words, ten seeds, one rescued love,
+the joined-partner flag and follower slot 13 are unchanged. The partner checkpoints describe the
 returned overworld state; UI scenes can reuse the same render-class slots.
 The original ROM and player's profile are untouched; temporary input traces and
 SRAM files are removed. Trace scratch uses HAMTARO_NATIVE_WORK or the private
@@ -144,20 +148,21 @@ SRAM and cannot be combined with --save. It does not create an SDL gameplay wind
 or prove a complete desktop playthrough.
 
 For desktop review, append --desktop-profile PATH_TO_NEW_PRIVATE_PROFILE. The
-verified replay including this export passes 88,310 host-session checks and
-retains the validated user ROM and tested SRAM in that new directory. The directory must
+host replay including this export retains the validated user ROM and tested SRAM
+in that new directory. The directory must
 be outside the checkout and must not already exist. Start the actual application
 with --data-dir PATH_TO_NEW_PRIVATE_PROFILE to inspect the same saved scene.
 This explicit private export differs from the default disposable test profile.
 
-A real-window review launched the Windows executable with the exported seventeen-word
+A real-window review launched the Windows executable with the exported twenty-word
 profile, selected Continue and restored the Sunny Peak scene with both Hamtaro and
-Bijou. Select, assigned to V in the copied test settings, displayed seventeen
-words and ten seeds. End Game returned to the title and updated the private 32 KiB
-SRAM file while preserving its previous bytes as the backup. The review used Z/X
-and WASD for game input. A subsequent visual reload of that window-written file
-remains unverified; the fresh host-session replay separately checks all eight
-story/position/partner fields from disk.
+Bijou. Select, assigned to V in the copied test settings, displayed twenty words,
+ten seeds and one rescued love. End Game returned to the title and updated the
+private 32 KiB SRAM file; its previous bytes exactly matched the backup. The
+executable was then closed and relaunched. Continue restored the same scene and
+Select displayed the same three counters. The review used Z/X and WASD bindings;
+the fresh host-session replay separately checks all nine story/position/partner/
+counter fields from disk.
 This is bounded desktop evidence, not a full playthrough or a physical-controller
 test; the default Right Shift binding was not established by this window review.
 
@@ -184,7 +189,7 @@ the circular transition; deferred DMA0/PPU timing is not modeled. The full word-
 cadence and hardware audio output are omitted. DMA3 stack-local source registers
 are excluded, while transferred data and sound DMA1/2 register images are compared.
 The CPU oracle uses explicit BIOS, immediate-DMA and IO-mask models, not a complete
-GBA machine. The complete run with BIOS and PPU oracles passes 1,395,692 comparisons,
+GBA machine. The complete run with BIOS and PPU oracles passes 1,423,485 comparisons,
 including 401 distinct leader positions during directional input.
 It does not exercise the game as a whole and is not part of ROM-free public CI.
 The schedule ends with MainScriptWaitForByte1FA8 (0x21) active after exercising
@@ -515,3 +520,18 @@ coordinate aliases, signed-half absolute overflow, render pairs and video mode.
 The original nine-byte class approach remains in the full scene-actor comparisons.
 Synthetic public checks cover the empty screen grid separately; the private BIOS
 probe rejects division by zero and does not establish that hardware behavior.
+
+Shared screen and shake comparisons use:
+
+    python -B tools/compare_reference.py --scene-effects-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
+
+The group passes 27,793 comparisons across eight functions in five complete source
+families, with eight Main and eight argument-free F4 contracts. It compares RAM and
+window registers for display mode/flags, screen-window bounds, anchor resets,
+every byte-sized phase/layer selector, amplitude/rate/wrap boundaries and continuous
+320-update shake sequences. Raw inactive render slots, captured background anchors,
+overlapping position/control/class storage and a position write over the render-base
+pointer are included. Synthetic public checks independently establish signed-division
+truncation, halfword wrapping, the fixed layer-2 anchor, rate-zero behavior and
+rejection of unreviewed animation contracts. The long native scenario exercises
+the first reconciliation's screen effects; complete scene timing remains unverified.

@@ -1,4 +1,4 @@
-"""Private shared actor geometry/motion comparisons across complete source families."""
+"""Private shared actor geometry, motion and screen-effect family comparisons."""
 from __future__ import annotations
 import ctypes as C
 import itertools
@@ -126,3 +126,69 @@ def check_shared_motion(*, entries, rom, memory, bind, call, both, fresh,
             fixture(offset, 0x03002BB0 - 5 * 104 - offset)
             both(args, b"\x05");check(row, "captured slot/offset alias")
     print("Eleven shared actor geometry functions, ten Main contracts and three task targets passed; full scene integration remains unverified.")
+
+
+def check_scene_effects(*, entries, rom, memory, bind, call, both, fresh,
+                        equal, compare, native_bytes, command):
+    sources = {"src/graphics/display_mode_clear_callback.c", "src/graphics/screen_window_callbacks.c",
+               "src/scripts/script_callback_configure_shake.c", "src/scripts/script_callback_render_shake.c",
+               "src/scripts/script_callback_reset_background_shake.c"}
+    rows = [row for row in entries if row["source"] in sources]
+    equal(len(rows), 8, "complete five-family screen/shake inventory")
+    main = bind("hn_scene_callback", C.c_int, C.c_void_p, C.c_uint32, C.c_uint32, C.POINTER(C.c_uint32))
+    task = bind("hn_probe_task_command", C.c_int, C.c_void_p, C.c_uint32, C.c_uint, C.POINTER(C.c_uint32))
+    rng = random.Random(0x5348414B45)
+    base, controls, args = 0x02010000, 0x02004520, 0x02028000
+    ranges = ((0x02000000, 0x40000), (0x03000000, 0x7000), (0x04000040, 8))
+
+    def fixture(case, render_base=base):
+        fresh();both(render_base, rng.randbytes((40 if render_base >> 24 == 3 else 256) * 104))
+        both(controls, rng.randbytes(512));both(0x0201DC40, rng.randbytes(128))
+        both(0x03002C90, rng.randbytes(256));both(0x03002E40, rng.randbytes(176))
+        both(0x03002D98, struct.pack("<I", render_base));both(0x03002DC0, b"\x01")
+        both(controls + 0x60, bytes([case % 2, case % 256, (0, 1, 128, 255)[case % 4],
+                                   (0, 1, 2, 255)[case // 4 % 4], case % 256, case * 7 % 256]))
+        both(args, rng.randbytes(8));both(0x04000040, rng.randbytes(8))
+
+    def check(row, label):
+        consumed = C.c_uint32(99)
+        equal(main(memory, row["address"] | 1, args, C.byref(consumed)), 1, "native screen/shake " + label)
+        equal(consumed.value, call(row["name"], args), "screen/shake zero-argument Main result")
+        compare(row["name"] + " " + label, ranges)
+
+    for row in rows:
+        for case in range(256):
+            fixture(case);check(row, f"byte domain {case}")
+        for case in range(16):
+            fixture(case);both(args, struct.pack("<I", row["address"] | 1) + rng.randbytes(4))
+            both(0x03000010, b"\x1C" + bytes(15))
+            equal(command(memory, 0x1C, args), 1, "screen/shake Main ABI")
+            call("MainScriptInvokeCallback", args);compare("screen/shake Main ABI", ranges)
+            fixture(case);both(0x02019000, rng.randbytes(52));both(0x02019010, struct.pack("<I", args))
+            both(args, b"\x01\xE1");both(0x03001FC4, struct.pack("<I", row["address"] | 1))
+            report = (C.c_uint32 * 4)()
+            equal(task(memory, 0x02019000, 0xF4, report), 1, "screen/shake F4 ABI")
+            equal(report[3], call("TaskCommandF4", 0x02019000), "screen/shake F4 continuation")
+            compare("screen/shake F4 ABI", ranges)
+    shake = next(row for row in rows if row["name"] == "ScriptCallbackUpdateRenderShake")
+    for mode, amplitude, rate in itertools.product((0, 1, 255), (0, 1, 128, 255), (0, 1, 2, 255)):
+        for case in (0, 1, 62, 63, 64, 254, 255):
+            fixture(case);both(controls + 0x60, bytes([mode, case, amplitude, rate, case, case]))
+            check(shake, "phase/amplitude/decay boundaries")
+    for layers in range(256):
+        fixture(layers);both(controls + 0x60, bytes([1, layers, 128, 1, 63, 0]))
+        both(0x03002C90 + 0x3A + 48, struct.pack("<HH", 65530, 7))
+        both(0x0201DC84, struct.pack("<HH", 65535, 32768));check(shake, "captured background-1 anchor/layer mask")
+    # Position writes can overlap control bytes, classes or the render-base pointer.
+    # Preserve the captured destination and read the decay state after those writes.
+    for target in (controls + 0x5C, controls + 0x60, controls + 0x64, controls + 0x68,
+                   0x0201DC80, 0x0201DC84, 0x0201DC88, 0x03002D98):
+        for case in range(16):
+            fixture(case, target - 5 * 104 - 0x18)
+            both(controls + 0x60, bytes([0, 5, case * 17, case, case, case * 17]))
+            check(shake, "captured destination/live decay alias")
+    for mode, rate in itertools.product((0, 1), (0, 1, 2, 255)):
+        fixture(0);both(controls + 0x60, bytes([mode, 15, 128, rate, 62, 254]))
+        for frame in range(320):
+            check(shake, f"continuous phase/decay {mode}/{rate}/{frame}")
+    print("Eight shared screen/shake functions and their Main/F4 contracts passed; timed story integration remains unverified.")

@@ -53,7 +53,7 @@ class NativeGame:
                     opcode=self.value(0x03000010,1),main_cursor=f"0x{self.value(0x03002C60):08X}",leader_x=self.value(slot+0x18,signed=True)/65536,
                     leader_z=self.value(slot+0x20,signed=True)/65536,learned_words=self.value(0x03003E30,1),seeds=self.value(0x0201DC52,2),
                     scene_selection=self.value(0x0200458C,1),follower_slot=self.value(0x03001F50,1),
-                    partner_joined=bool(self.value(0x03002182,1)&1))
+                    partner_joined=bool(self.value(0x03002182,1)&1),loves_rescued=self.value(0x0201DC5C,2))
     def frame(self,buttons):
         if not self.advance(self.game,buttons):self.check();raise RuntimeError("Native update failed without a diagnostic.")
 
@@ -68,7 +68,7 @@ def validate_steps(steps,depth=0):
             total+=step["repeat"]*validate_steps(step["steps"],depth+1)
         elif "expect" in step:
             if set(step)-{"expect","label"} or not isinstance(step["expect"],dict):raise ValueError("Invalid checkpoint.")
-            fields={"frame","map_bank","map_index","opcode","main_cursor","leader_x","leader_z","learned_words","seeds","scene_selection","follower_slot","partner_joined"}
+            fields={"frame","map_bank","map_index","opcode","main_cursor","leader_x","leader_z","learned_words","seeds","scene_selection","follower_slot","partner_joined","loves_rescued"}
             if not step["expect"] or set(step["expect"])-fields:raise ValueError("Unknown or empty checkpoint fields.")
         else:
             if set(step)-{"frames","buttons"} or type(step.get("frames")) is not int or not 1<=step["frames"]<=1000000:

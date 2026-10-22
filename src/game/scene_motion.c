@@ -2,6 +2,7 @@
 #include "game/state.h"
 #include "game/render.h"
 #include "game/random.h"
+#include "game/video.h"
 #include "gba/bios.h"
 
 static bool valid_slot(HNMemory *m,unsigned index)
@@ -10,6 +11,38 @@ static int32_t high(HNMemory *m,GameAddr slot,unsigned field)
 {return (int32_t)hn_read32(m,slot+field)>>16;}
 static unsigned background(HNMemory *m,unsigned layer,unsigned axis)
 {return hn_read16(m,HN_VIDEO_STATE+0x3A+layer*48+axis*2);}
+static void screen_anchor(HNMemory *m,uint16_t x,uint16_t y)
+{
+    hn_write16(m,HN_LAYER_OFFSETS+2*44+0x1E,x);hn_write16(m,HN_LAYER_OFFSETS+2*44+0x20,y);
+}
+static void render_shake(HNMemory *m)
+{
+    GameAddr control=HN_SCENE_CONTROLS;
+    uint8_t phase=(uint8_t)(hn_read8(m,control+0x64)+1);hn_write8(m,control+0x64,phase);
+    if(phase>63){phase=0;hn_write8(m,control+0x64,0);}
+    int32_t cosine=(int16_t)hn_read16(m,HN_RENDER_SINE_TABLE+(phase*4+64)*2);
+    int32_t sine=(int16_t)hn_read16(m,HN_RENDER_SINE_TABLE+phase*8),amplitude=hn_read8(m,control+0x62);
+    uint16_t x=(uint16_t)((cosine+sine)*amplitude/256+hn_read16(m,0x0201DC84));
+    uint16_t y=(uint16_t)((sine-cosine)*amplitude/256+hn_read16(m,0x0201DC86));
+    if(!hn_read8(m,control+0x60)){
+        GameAddr slot=hn_render_slot(m,hn_read8(m,control+0x61));
+        hn_write32(m,slot+0x18,(uint32_t)x<<16);hn_write32(m,slot+0x1C,(uint32_t)y<<16);hn_write32(m,slot+0x20,0);
+    }else{
+        unsigned layers=hn_read8(m,control+0x61);
+        uint16_t anchor_x=(uint16_t)(background(m,1,0)+x),anchor_y=(uint16_t)(background(m,1,1)+y);
+        for(unsigned layer=0;layer<4;layer++,layers>>=1)if(layers&1){
+            hn_video_mark_backgrounds(m,(uint8_t)(1u<<layer));
+            hn_write16(m,HN_VIDEO_STATE+0x3A+layer*48,anchor_x);hn_write16(m,HN_VIDEO_STATE+0x3C+layer*48,anchor_y);
+            /* The original always updates layer 2's anchor, even for other layers. */
+            screen_anchor(m,anchor_x,anchor_y);
+        }
+    }
+    uint8_t next=(uint8_t)(hn_read8(m,control+0x65)+1);hn_write8(m,control+0x65,next);
+    if(next==hn_read8(m,control+0x63)){
+        hn_write8(m,control+0x65,0);
+        if(hn_read8(m,control+0x63)&&hn_read8(m,control+0x62))hn_write8(m,control+0x62,(uint8_t)(hn_read8(m,control+0x62)-1));
+    }
+}
 static void anchor(HNMemory *m,uint16_t x,uint16_t z,uint8_t first,uint8_t second,uint8_t mode)
 {
     hn_write16(m,0x0201DC84,x);hn_write16(m,0x0201DC86,z);
@@ -104,6 +137,22 @@ HNSceneResult hn_scene_motion_callback(HNMemory *m,GameAddr callback,GameAddr ar
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x0801EBBC:hn_video_set_mode(m,0);break;
+    case 0x0801EBDC:
+        hn_video_mark_backgrounds(m,4);
+        screen_anchor(m,(uint16_t)(hn_read16(m,0x0201DC84)+background(m,1,0)),(uint16_t)(hn_read16(m,0x0201DC86)+background(m,1,1)));break;
+    case 0x0801EC20:hn_video_mark_backgrounds(m,4);screen_anchor(m,0,0);break;
+    case 0x0801EC3C:case 0x0801EC6C:{
+        bool enabled=(callback&~1u)==0x0801EC3C;uint8_t flags=hn_read8(m,HN_DISPLAY_SHADOW+1);
+        hn_write8(m,HN_DISPLAY_SHADOW+1,enabled?(flags|32):((flags|16)&~32u));
+        hn_write32(m,HN_VIDEO_STATE,hn_read32(m,HN_VIDEO_STATE)|1);
+        hn_write16(m,0x04000040,enabled?240:0);hn_write16(m,0x04000044,enabled?160:0);break;
+    }
+    case 0x0801ECAC:hn_write8(m,HN_SCENE_CONTROLS+0x64,0);hn_write8(m,HN_SCENE_CONTROLS+0x65,0);break;
+    case 0x0801ECC4:
+        hn_write8(m,HN_SCENE_CONTROLS+0x61,4);hn_write8(m,HN_SCENE_CONTROLS+0x62,128);
+        hn_write8(m,HN_SCENE_CONTROLS+0x63,1);hn_write8(m,HN_SCENE_CONTROLS+0x60,1);break;
+    case 0x0801F118:render_shake(m);break;
     case 0x0801ED1C:anchor(m,112,152,16,19,0);break;
     case 0x0801ED50:anchor(m,176,200,16,19,1);break;
     case 0x0801ED84:anchor(m,256,144,16,19,0);break;

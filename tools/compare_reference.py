@@ -59,9 +59,10 @@ def main() -> None:
     parser.add_argument("--wave-only", action="store_true", help="Run complete scanline-wave family and typed IRQ dispatch")
     parser.add_argument("--counter-scenes-only", action="store_true", help="Run complete map-10 counter/sequence family")
     parser.add_argument("--shared-motion-only", action="store_true", help="Run shared actor geometry/motion families (requires BIOS oracle)")
+    parser.add_argument("--scene-effects-only", action="store_true", help="Run complete background/render shake and screen-window families (requires BIOS oracle)")
     parser.add_argument("--bios-oracle",type=Path,help="Separate mGBA angular BIOS oracle, required for full/collision comparisons")
     args = parser.parse_args()
-    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or args.wander_only or args.actor_presets_only or args.shared_motion_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only,args.scene_actors_only,args.records_only,args.wave_only,args.counter_scenes_only))):
+    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or args.wander_only or args.actor_presets_only or args.shared_motion_only or args.scene_effects_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only,args.scene_actors_only,args.records_only,args.wave_only,args.counter_scenes_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -2238,10 +2239,19 @@ def main() -> None:
         check_shared_motion(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
                             fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
+    def scene_effects_checks():
+        from reference_shared_motion import check_scene_effects
+        check_scene_effects(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
+                           fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
+
     if args.bios_oracle:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.scene_effects_only:
+            scene_effects_checks()
+            print(f"{checks} private scene-effect comparisons passed; complete story remains unverified.")
+            return
         if args.shared_motion_only:
             shared_motion_checks()
             print(f"{checks} private shared geometry comparisons passed; complete story remains unverified.")
@@ -2327,7 +2337,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();bank2_checks();wander_checks();scene_actor_checks();shared_motion_checks();actor_preset_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
+        indicator_checks();book_checks();bank2_checks();wander_checks();scene_actor_checks();shared_motion_checks();scene_effects_checks();actor_preset_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")
