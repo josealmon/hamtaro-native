@@ -224,7 +224,8 @@ static bool restore_actor_slots_impl(HNMemory *m,bool idle,bool bounded)
         if(idle){
             unsigned primary=hn_read8(m,0x03001F60),secondary=hn_read8(m,0x03001F90),family;
             if(i==0||i==2)variant=(uint8_t)((hn_read8(m,saved+96)&15)-1);
-            if(bounded&&variant>=4)return false;
+            /* A hidden primary actor has direction zero: the original byte
+               subtraction wraps to 255 and still reads the guest table. */
             if(!(i&1)){
                 family=(i==2?(primary^1):primary)*2+1;
                 animation=hn_read32(m,hn_read32(m,HN_PRIMARY_ANIMATION_FAMILIES+family*4)+variant*4);

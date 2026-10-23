@@ -18,8 +18,10 @@ learns Scrub, collects the trash and earns the green marble with 630 points in
 the musical-note challenge. It then rescues the operator, repairs Ham-Bot,
 reaches the sixth reconciliation and returns to Clubhouse, retaining the new
 destination unlock through original Save and Continue.
-Haunted House's opening now covers the ID card negotiation and entry, Thump-P
-lesson and bronze card, followed by another original saved continuation.
+Haunted House now covers the ID and bronze cards, Go-P and the mirror passage,
+the ghost challenge and silver card, upper-floor lessons and Bijou's prison
+rescue. The seventh reconciliation and Flipflop survive original Save and Continue,
+including a separate saved continuation while Bijou is alone.
 This development build still stops at unfinished functions; complete story, optional activities,
 remaining minigames and desktop playthrough coverage remain unverified.
 See docs/architecture.md for the current evidence.

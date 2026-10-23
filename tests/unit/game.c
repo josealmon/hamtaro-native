@@ -1176,6 +1176,32 @@ static void actor_snapshot_contract(void)
     CHECK(!hn_read8(&memory,slots+99)&&!hn_read8(&memory,slots+104+99)&&!hn_read8(&memory,slots+312+99));
     CHECK(hn_read8(&memory,slots+208)==0xA5&&hn_read8(&memory,slots+208+99)==0xA5);
     CHECK(hn_read32(&memory,slots+104)==0x13121110&&!memory.fault);
+
+    /* Modal return while Hamtaro is captured must retain his inactive slot
+       and restore the active Bijou slot in every facing direction. */
+    const size_t size=0x600000;uint8_t *rom=calloc(1,size);CHECK(rom!=NULL);
+    put32(rom+(HN_MAP_BANKS-HN_ROM_BASE),HN_ROM_BASE+0x40);
+    rom[0x48]=8;rom[0x4A]=1;rom[0x4B]=1;rom[0x4C]=1;rom[0x4D]=2;
+    put32(rom+(HN_PRIMARY_ANIMATION_FAMILIES-HN_ROM_BASE)+4,0x02010000);
+    put32(rom+(HN_PRIMARY_ANIMATION_FAMILIES-HN_ROM_BASE)+12,0x02011000);
+    const GameAddr restores[]={0x080C2A9D,0x080C3B21,0x080CB47D,0x080CBA35,0x080CC6DD,0x080CEEA9};
+    for(unsigned callback=0;callback<6;callback++)for(unsigned direction=1;direction<=4;direction++){
+        hn_memory_init(&memory,rom,size);hn_heap_init(&memory);
+        hn_write32(&memory,0x020103FC,0x08000301);
+        hn_write32(&memory,0x02011000+(direction-1)*4,0x08000401+direction*4);
+        hn_write32(&memory,HN_ACTOR_RENDER_SNAPSHOT+0x18,0x12345678);
+        hn_write32(&memory,HN_ACTOR_RENDER_SNAPSHOT+208+0x20,0x789ABCDE);
+        hn_write8(&memory,HN_ACTOR_RENDER_SNAPSHOT+208+96,(uint8_t)direction);
+        hn_write32(&memory,0x03002C60,0x02020111);
+        CHECK(hn_scene_callback(&memory,restores[callback],0,&consumed)==HN_SCENE_OK&&consumed==0);
+        GameAddr primary=hn_render_slot(&memory,1),follower=hn_render_slot(&memory,2);
+        CHECK(!hn_read8(&memory,primary+96)&&hn_read32(&memory,primary+4)==0x08000301);
+        CHECK(hn_read32(&memory,primary+0x18)==0x12345678);
+        CHECK(hn_read8(&memory,follower+96)==direction&&hn_read32(&memory,follower+4)==0x08000401+direction*4);
+        CHECK(hn_read32(&memory,follower+0x20)==0x789ABCDE);
+        CHECK(hn_read32(&memory,0x03002C60)==0x02020111&&!memory.fault);
+    }
+    free(rom);reset();
 }
 static void map_choice_contract(void)
 {

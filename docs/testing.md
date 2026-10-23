@@ -78,12 +78,19 @@ oracle, in 678.102 seconds on the development machine. The preceding log spanned
 approximately 1,238 seconds; that older value comes from file timestamps. Concurrent
 native route replays ran during both executions, so the roughly 45% reduction is
 an observed local comparison, not a portable performance guarantee. Those measurements preceded the scene-copy and paired-actor additions.
-The current expanded suite passes 4,246,325 checks in 591.669 seconds, with the same
+The preceding expanded suite passed 4,246,325 checks in 591.669 seconds, with the same
 exhaustive domains and oracles plus scene-copy, paired-actor, render-selection and
 five local SaveGroup4 contracts and actor reflections. This retains all 4,236,281
 prior checks and adds 10,044; native story replays ran concurrently. The preceding
 expanded run took 590.054 seconds. These local timings are observations, not a
 portable speed guarantee.
+
+The latest run passes 4,246,997 checks in 705.157 seconds, retaining all of those
+cases and adding 672 checks for hidden primary actors across the six modal-map
+roundtrips. Story replays ran concurrently. The focused script/transition group
+passes in 7.026 seconds; use it during iteration, then the full suite at the next
+functional batch boundary. Synthetic unit cases also restore the active follower
+in all four directions while retaining the inactive primary actor and script cursor.
 
 `compare_reference.py` prints elapsed time and assertion counts per family and for
 its complete invocation. Optional `--timings-json PATH_OUTSIDE_CHECKOUT` retains a
@@ -233,18 +240,24 @@ saved flags, controls, position and counters. Later Sunny Peak, the rest of Haun
 remaining activities and full desktop progression remain unverified.
 No earlier scenario, exhaustive reference domain or independent oracle was removed.
 
-The Haunted House opening continues from the saved sixth reconciliation in a fresh
-process. Its 34,258 updates and nine scalar checkpoints retain the entrance scene,
+The Haunted House route continues from the saved sixth reconciliation in a fresh
+process. Its 142,196 updates and 43 scalar checkpoints retain the entrance scene,
 Hif-hif seed pickup, Digdig passage, two Blash-T price reductions, five-seed ID card
 purchase and Ta-dah entry. Heyhoo at reception teaches Thump-P and opens its book;
-another Ta-dah earns the bronze card. Original Save/Continue retains map 5:4 at
-x=184.5, z=144.5, 40 words, 17 seeds, six loves and Bijou, with flags
-0xB5/0xBA/0x8D/0x13A and controls 0x8E=3/0x1AA=2. The SDK replay passes in 47.34
-seconds; 37,597 host-session checks pass in 50.19 seconds, including exact SDK/host
-SRAM equality and fresh continuation. Another 2,103-update SDK reload/Status
-inspection passes in 2.585 seconds with all saved flags and controls retained.
-The seventh reconciliation and the remaining Haunted House puzzles are
-outside this stage. Literal input recordings from the original guide agree at
+another Ta-dah earns the bronze card. Every earlier bronze-card and Save/Continue
+checkpoint remains unchanged. Go-P opens the mirror passage; three ghost captures
+earn the silver card, followed by the plank passage, Hamlift, Hamspar and Nopookie.
+An original Save/Continue preserves Hamtaro's capture and Bijou-only control.
+Nok-nok, Pushie, Heyhoo and Libert-T then complete the prison rescue, seventh
+reconciliation and Flipflop lesson. The final original Save/Continue retains
+map 5:14, x=128.5, z=144.5, 46 words, 17 seeds, seven loves and both characters,
+flags 0x7D/0x10/0x164 set, 0x15B cleared and control 0x97=5. The SDK replay passes
+in 239.36 seconds; 149,423 host-session checks pass in 217.99 seconds, including
+byte-for-byte SDK/host SRAM equality and fresh continuation. A separate
+2,103-update SDK reload/Status inspection passes in 3.144 seconds with the same
+saved fields. The gold-card
+challenge, quiz, Spat and jungle unlock remain outside this stage.
+Literal input recordings from the original guide agree at
 entry but diverge later in this native route; their observation labels are not
 semantic assertions and the divergent recording is not used as native proof.
 
@@ -423,11 +436,13 @@ The Main memory and scene-transition group can also run separately:
 
     python -B tools/compare_reference.py --scripts-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-This passes 133,074 comparisons: byte/halfword pointer copies, zero/max counts,
+This passes 133,746 comparisons: byte/halfword pointer copies, zero/max counts,
 variable indirection and overlap, graphics disable-except, display-layer flags,
-and 96 actor snapshot/modal-map roundtrips across six map callbacks. Cases include
+and 192 actor snapshot/modal-map roundtrips across six map callbacks. Cases include
 optional/absent actors, all direction variants, retained cursor and first/third
-variant reuse for the fourth restored actor. Input data is synthetic; original
+variant reuse for the fourth restored actor. A hidden primary actor retains the
+original unsigned-byte subtraction to selector 255; the adapter reads the guest
+animation table instead of rejecting that valid Bijou-only state. Input data is synthetic; original
 animation families and map descriptors remain in the private ROM. It also covers
 unsigned screen-Y sides, signed slot-10 half-height tests and actor turn control,
 including leader/follower aliases and preserved opposite-direction state.

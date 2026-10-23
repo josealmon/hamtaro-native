@@ -2333,7 +2333,7 @@ def main() -> None:
                      ("ScriptCallbackSaveActorsAndChangeMap10_12","ScriptCallbackRestoreActorsAndPreviousMapCC6DC"),
                      ("ScriptCallbackSaveActorsAndChangeMap10_17","ScriptCallbackRestoreActorsAndPreviousMapCEEA8"))
         for save_name,restore_name in transitions:
-            for case in range(16):
+            for case in range(32):
                 fresh();heap_init(memory);call("InitializeHeap",0)
                 equal(native("hn_map_initialize",2,C.c_bool)(memory,10,10),True,"actor snapshot map setup")
                 call("InitializeMapDescriptor",10,10)
@@ -2344,7 +2344,7 @@ def main() -> None:
                 indices=(1,0 if case&8 else 2,3,4)
                 for i,index in enumerate(indices):
                     both((0x03002C0C,0x03002274,0x03001F50,0x03002270)[i],bytes([index]))
-                    active=i==0 or case&(1<<(i-1))
+                    active=not (case&16) if i==0 else case&(1<<(i-1))
                     both(slots+index*104+96,bytes([((case+i)%4)+1 if active else 0]))
                 for name in (save_name,restore_name):
                     both(0x02020000,struct.pack("<I",symbols[name]|1));both(0x03000010,bytes([0x1C])+bytes(15))

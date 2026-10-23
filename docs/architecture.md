@@ -49,7 +49,7 @@ statically. A separate clean-machine validation remains pending.
 | Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular and wave HBlank callbacks compared, remaining scanline callbacks and timed DMA/PPU integration pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
-| Scene actor snapshots | Adapted | Four 104-byte render snapshots, active-slot restoration and six modal map roundtrips compared; idle animation variants, optional slots and script cursor retention preserved |
+| Scene actor snapshots | Adapted | Four 104-byte render snapshots and six modal map roundtrips compared, including a hidden primary actor during Bijou-only play; byte-wrapped idle animation selectors, optional slots and script cursor retention preserved |
 | Actor reflections | Adapted | Complete actor_animation_mirror.c animation contract compared: 23/18-entry mutable tables, wrapped Z, changed/retained animation offsets, fallbacks and companion aliases; dressing-room introduction and movement execute natively |
 | Shared scene actor control | Adapted | All 40 functions in class_anchor_presets.c and scene_control_callbacks.c compared: anchors/modes, vectors, signed rectangles/corridors, aiming, background alignment/offsets and clone phases; later-activity runtime integration remains pending |
 | Scene render presets | Adapted | All 77 functions in script_callbacks_render_presets.c and 28 required actor helpers compared; typed F4/task calls and 35 defined-zero Main callbacks, linked slots, indicators, graphics and live class selectors; full area/activity integration remains pending |
@@ -203,17 +203,24 @@ in 140.82 seconds. Their entire 32 KiB SRAM images match byte for byte. A separa
 same saved flags, controls and counters. Later Sunny Peak visits, the rest of Haunted House,
 remaining activities and complete desktop progression remain pending.
 
-`haunted_house.json` starts from the saved sixth reconciliation. Its 34,258
-updates and nine scalar checkpoints cover the entrance scene, Hif-hif seed pickup,
+`haunted_house.json` starts from the saved sixth reconciliation. Its 142,196
+updates and 43 scalar checkpoints retain the entrance scene, Hif-hif seed pickup,
 Digdig passage, two Blash-T price reductions and purchase of the ID card for five
 seeds. Ta-dah opens the entrance; Heyhoo at the reception desk teaches Thump-P,
-and another Ta-dah earns the bronze card. Original Save/Continue retains map 5:4
-at x=184.5, z=144.5 with 40 words, 17 seeds, six loves and Bijou, flags
-0xB5/0xBA/0x8D/0x13A and controls 0x8E=3/0x1AA=2. The SDK replay passes in 47.34
-seconds and 37,597 host-session checks pass in 50.19 seconds. SDK and host SRAM
-match across all 32 KiB; a separate 2,103-update SDK reload/Status inspection
-passes in 2.585 seconds with the same flags, controls and counters.
-Haunted House's remaining puzzles and seventh reconciliation are pending.
+and another Ta-dah earns the bronze card. All earlier bronze-card and original
+Save/Continue checks are retained. The route adds Go-P, the false mirror,
+three ghost captures, the silver card, the plank passage, Hamlift access,
+Hamspar and Nopookie. Hamtaro's capture passes an original Save/Continue with
+Bijou alone; she learns Nok-nok and Pushie, opens the prison and uses Heyhoo
+and Libert-T to complete the rescue. The seventh reconciliation and Flipflop
+survive another original Save/Continue in map 5:14, x=128.5, z=144.5, with
+46 words, 17 seeds and both characters. Flags 0x7D/0x10/0x164 remain set,
+0x15B is cleared and control 0x97=5. The SDK replay passes in 239.36 seconds;
+149,423 host-session checks pass in 217.99 seconds, with exact 32 KiB SDK/host
+SRAM equality. A separate 2,103-update SDK reload/Status inspection passes in
+3.144 seconds with the same saved fields. Haunted House's gold-card challenge, quiz, Spat confrontation
+and jungle unlock remain pending. An exploratory tile-challenge recording
+faults during the return to the preceding room; it is not passing coverage.
 This input-only route contains no game data or state injection.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
@@ -628,8 +635,8 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from Haunted House's saved bronze card through the seventh
-   reconciliation and jungle prerequisites for Sunny Peak's later hat story. The original
+1. Continue from Haunted House's saved seventh reconciliation through the
+   gold-card challenge, quiz, Spat and jungle prerequisites for Sunny Peak's later hat story. The original
    route reaches Sunny Peak's temple/workshop after obtaining all three marbles,
    including the jungle wedding's red marble; keep these dependencies explicit.
    Sunny Peak's later hat story, temple, workshop and optional activities still
