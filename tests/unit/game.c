@@ -19,6 +19,7 @@
 #include "game/bank7.h"
 #include "game/presentation.h"
 #include "game/save_group3.h"
+#include "game/save_group4.h"
 #include "game/record_menu.h"
 #include "game/record_selection.h"
 #include "game/audio.h"
@@ -2753,9 +2754,67 @@ static void record_selection_contract(void)
     CHECK(hn_record_selection_callback(&memory,0x08023545,0,&consumed)==HN_SCENE_UNKNOWN);
     CHECK(!memory.fault);free(rom);reset();
 }
+static void group4_contract(void)
+{
+    uint8_t *rom=calloc(1,0x700000);CHECK(rom!=NULL);
+    hn_memory_init(&memory,rom,0x700000);
+    const GameAddr controls=HN_SCENE_CONTROLS,received=0x03003D30,context=0x02020000,args=0x02001001;
+    const GameAddr table=0x086E8CCC;uint32_t consumed=99;
+    hn_write32(&memory,0x03002BB0,context);hn_write16(&memory,args,0x1FF);
+    hn_write8(&memory,context+0x2B18,0xDA);
+    CHECK(hn_scene_callback(&memory,0x080C8E71,args,&consumed)==HN_SCENE_OK&&consumed==2);
+    CHECK(hn_read8(&memory,controls+0x1FF)==0xDA);
+    hn_write8(&memory,controls+0x1FF,0xB9);
+    CHECK(hn_group4_callback(&memory,0x080C8E49,args,&consumed)==HN_SCENE_OK&&consumed==2);
+    CHECK(hn_read8(&memory,context+0x2B18)==0xB9);
+    hn_write8(&memory,controls+0x180,2);hn_write8(&memory,controls+0x181,3);
+    for(unsigned i=0;i<128;i++)hn_write8(&memory,context+2*1100+3*220+i,(uint8_t)(i^0xA5));
+    CHECK(hn_group4_callback(&memory,0x080C8741,0,&consumed)==HN_SCENE_OK&&consumed==0);
+    CHECK(hn_read8(&memory,received)==0xA5&&hn_read8(&memory,received+127)==(127^0xA5));
+    hn_write8(&memory,controls+0x181,4);hn_write8(&memory,received+127,0x72);
+    CHECK(hn_group4_callback(&memory,0x080C8740,0,&consumed)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,received)==0xA5&&hn_read8(&memory,received+126)==0&&hn_read8(&memory,received+127)==0x72);
+    /* Clear-before-copy and forward byte overlap both matter for saved records. */
+    hn_write8(&memory,controls+0x180,0);hn_write8(&memory,controls+0x181,0);
+    hn_write32(&memory,0x03002BB0,received-1);hn_write8(&memory,received-1,0xC6);
+    CHECK(hn_group4_callback(&memory,0x080C8740,0,&consumed)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,received)==0xC6&&hn_read8(&memory,received+127)==0xC6);
+    /* Synthetic descriptors, never extracted resource payloads. */
+    const unsigned descriptor=table-0x08000000;
+    for(unsigned i=0;i<4;i++)rom[descriptor+8+i]=(uint8_t)(0x02001800u>>(i*8));
+    rom[descriptor+0x16]=3;hn_write8(&memory,controls+0x181,5);
+    hn_write8(&memory,0x02001800,7);hn_write8(&memory,0x02001801,8);hn_write8(&memory,0x02001802,9);
+    CHECK(hn_group4_callback(&memory,0x080C8740,0,&consumed)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,received)==0xC6&&hn_read8(&memory,received+17)==7&&hn_read8(&memory,received+19)==9&&hn_read8(&memory,received+20)==0);
+    hn_write8(&memory,controls+0x60,0);hn_write8(&memory,controls+0x62,0xA7);
+    hn_write8(&memory,received+17,0);hn_write8(&memory,received+18,1);
+    CHECK(hn_group4_callback(&memory,0x080C6EDD,0,&consumed)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,controls+0x61)==0&&hn_read8(&memory,controls+0x62)==0xA7);
+    hn_write8(&memory,received+19,255);
+    CHECK(hn_group4_callback(&memory,0x080C6EDC,0,&consumed)==HN_SCENE_OK&&hn_read8(&memory,controls+0x61)==1);
+    hn_write8(&memory,controls+0x60,1);hn_write8(&memory,received+19,0x34);
+    CHECK(hn_group4_callback(&memory,0x080C6EDC,0,&consumed)==HN_SCENE_OK&&hn_read8(&memory,controls+0x61)==1);
+    hn_write8(&memory,controls+0x60,2);rom[descriptor+0x16]=10;
+    for(unsigned i=0;i<10;i++)rom[0x6E906A+i]=(uint8_t)(0x50+i);
+    for(unsigned n=0;n<=10;n++){
+        for(unsigned i=0;i<10;i++)hn_write8(&memory,received+17+i,(uint8_t)(i<n?11+i:0));
+        CHECK(hn_group4_callback(&memory,0x080C6EDC,0,&consumed)==HN_SCENE_OK);
+        CHECK(hn_read8(&memory,controls+0x62)==(n<=4?1:n<=7?2:n<=9?3:0));
+        CHECK(hn_read8(&memory,controls+0x61)==(n==10));
+    }
+    /* The availability scan selects its descriptor with control 4, not 0x180. */
+    rom[descriptor+28+0x16]=2;hn_write8(&memory,controls+4,1);
+    hn_write8(&memory,received+17,2);hn_write8(&memory,received+18,255);
+    hn_write8(&memory,0x03002180+(71>>3),1u<<(71&7));
+    CHECK(hn_group4_callback(&memory,0x080C8E99,0,&consumed)==HN_SCENE_OK&&hn_read8(&memory,controls+0x60)==0);
+    hn_write8(&memory,0x03002180+(324>>3),1u<<(324&7));
+    CHECK(hn_group4_callback(&memory,0x080C8E98,0,&consumed)==HN_SCENE_OK&&hn_read8(&memory,controls+0x60)==1);
+    CHECK(hn_group4_callback(&memory,0x080C8744,0,&consumed)==HN_SCENE_UNKNOWN&&consumed==0);
+    CHECK(!memory.fault);free(rom);reset();
+}
 int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
     text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();indicator_contract();book_contract();actor_snapshot_contract();preset_contract();map_choice_contract();particles_contract();scene_motion_contract();bank2_contract();wander_contract();scene_actor_contract();actor_presets_contract();records_contract();wave_contract();counter_scene_contract();shared_motion_contract();runtime_contract();
-    scene_effects_contract();bank3_contract();bank4_contract();bank5_contract();bank6_contract();bank6_chain_contract();bank7_contract();presentation_contract();group3_contract();record_menu_contract();item_selection_contract();record_selection_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
+    scene_effects_contract();bank3_contract();bank4_contract();bank5_contract();bank6_contract();bank6_chain_contract();bank7_contract();presentation_contract();group3_contract();group4_contract();record_menu_contract();item_selection_contract();record_selection_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

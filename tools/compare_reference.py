@@ -2383,9 +2383,11 @@ def main() -> None:
 
     @timed
     def record_checks():
-        from reference_records import check_records
+        from reference_records import check_records,check_group4
         check_records(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,
                       both=both,fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
+        check_group4(entries=entries,rom=rom,memory=memory,bind=bind,call=call,
+                     both=both,fresh=fresh,equal=equal,compare=compare)
 
     @timed
     def wave_checks():

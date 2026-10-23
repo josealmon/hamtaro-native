@@ -78,9 +78,11 @@ oracle, in 678.102 seconds on the development machine. The preceding log spanned
 approximately 1,238 seconds; that older value comes from file timestamps. Concurrent
 native route replays ran during both executions, so the roughly 45% reduction is
 an observed local comparison, not a portable performance guarantee. Those measurements preceded the scene-copy and paired-actor additions.
-The expanded suite now passes 4,208,502 checks in 613.221 seconds, with the same
-exhaustive domains and oracles plus scene-copy, paired-actor and render-selection
-contracts; the Sandy Bay native and host replays ran concurrently.
+The current expanded suite passes 4,236,281 checks in 590.054 seconds, with the same
+exhaustive domains and oracles plus scene-copy, paired-actor, render-selection and
+five local SaveGroup4 contracts. This retains all 4,208,502 prior checks and adds
+27,779; native story replays ran concurrently. The preceding expanded run took
+613.221 seconds. These local timings are observations, not a portable speed guarantee.
 
 `compare_reference.py` prints elapsed time and assertion counts per family and for
 its complete invocation. Optional `--timings-json PATH_OUTSIDE_CHECKOUT` retains a
@@ -166,7 +168,22 @@ bottle flag 0x195 retained. The combined 143,084-update SDK replay also passes i
 216.04 seconds. A fresh SDK process reopens the host-written file and checks the
 saved flags and the board selection (control 0x180 = 1) in 2,255 updates.
 The source SRAM stays unchanged.
-This does not establish the complete Sandy Bay story or a desktop playthrough.
+
+The extension preserves all 143,084 prior inputs/checkpoints and adds the ten-note
+melody (asserting each note/counter), its original save, hidden cache and gem,
+Captain/Fussfuss gate, additional shop word, ferry Yep-P choice, island arrival,
+Pashmina/Penelope scarf scenes, Hif-hif pickup and music hall entry/movement/save.
+The combined 191,915-update SDK replay passes in 301.12 seconds. From the saved
+wooden-board checkpoint, the focused 50,592-update SDK route passes in 79.50 seconds
+and 54,387 host-session checks pass in 84.18 seconds. The endpoint is map 4:13 at
+x=128.5, z=196.5 with 32 words, 22 seeds, four loves and Bijou. Flags 0x11F/0x121/
+0x143/0x97/0x14F/0xA6/0x194 and controls 0x84=3, 0x87=2, 0x89=3, 0x8B=1, 0x91=2
+are retained by original save/Continue and fresh disk continuation. Host SRAM
+matches the SDK export byte for byte; source saves remain unchanged. A fresh SDK
+reload independently checks the host-written file. The current core also passes
+the complete 281,135-update erased-SRAM Sunny Peak route again in 467.18 seconds.
+These are SDK/host-session results. The fifth reconciliation, complete Sandy Bay
+story, later Sunny Peak visits and a desktop playthrough remain unverified.
 The prerequisite is reproducible from erased SRAM without duplicating the opening:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_peak.json --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_PROFILE
@@ -655,7 +672,7 @@ Additional focused area-dependency checks use:
     python -B tools/compare_reference.py --counter-scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
 These pass 41,470 scene actor comparisons, 95,870 actor preset comparisons,
-30,930 record comparisons and 16,497 scanline-wave comparisons. The scene group
+58,709 record/local-SaveGroup4 comparisons and 16,497 scanline-wave comparisons. The scene group
 covers 45 functions across 16 families and one shared bank-3 condition, including
 approach completion, signed limits, all ARM shift counts, direction constructors,
 snapshots, copy aliases and the three-byte render-selection Main callback. Its
@@ -667,7 +684,16 @@ byte selectors at 0, 1, 254 and 255. Record checks cover
 allocation/empty/full slots, twelve-byte result views, consuming zero counts,
 sentinel counters, arithmetic wrap and allocation callbacks. Batch allocation checks
 cover all 65 occupancy values, zero/full capacity, amount and animation timing
-boundaries, inactive mapped slots and byte-wise argument aliases. Wave checks cover
+boundaries, inactive mapped slots and byte-wise argument aliases. The record group
+retains its 30,930 prior comparisons and adds 27,779 for the five shared offline
+SaveGroup4 Main callbacks, taking 4.313 seconds in the focused run. These check
+both context/control copy directions, every byte value and record column, all
+14 ROM descriptors, clear-before-copy and forward aliases, retained headers,
+available-word flags, every classification mode and category-rank thresholds.
+Payloads and category tables come from the player's ROM. The compared RAM covers
+all EWRAM and 0x7000 bytes of game IWRAM; the original ARM call stack is outside
+this serialized callback contract. This supports music hall entry without
+implementing link transport. Wave checks cover
 all 228 scanlines, blend thresholds, signed wrapping, frame-end phase updates and
 typed Main/F4/HBlank calls. Public synthetic game tests cover these boundaries
 without original assets. These comparisons do not establish full-area progression,

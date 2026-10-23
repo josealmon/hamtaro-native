@@ -72,6 +72,7 @@ statically. A separate clean-machine validation remains pending.
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
+| Local SaveGroup4 dependencies | Partial | Five Main callbacks compared: context/control byte copies, local/ROM record selection, payload classification and available-word flags; music hall entry and original save/Continue run natively; Cable Link transport and complete music activity remain outside this evidence |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; complete Items/Gems and timed raster integration remain pending |
 | Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; complete workshop progression remains pending |
@@ -121,7 +122,7 @@ optional activities and later visits remain unverified.
 `sandy_bay.json` continues from the exact saved Clubhouse endpoint above. Boss's
 Hamha conversation sets pending destination flag 0x183; the original map unlock
 consumes it and enables flag 0x43. Selection 4 enters Sandy Bay (map bank 4; bank 3
-is a separate area). The 143,084-update route retains the first arrival and map 4:2
+is a separate area). The 191,915-update route retains the first arrival and map 4:2
 beach conversation/save. It continues west to the swimming lesson and word 26,
 then the Lookie conversation in map 4:4 and changed entrance scene. Tinglie raises
 the word count to 27; using it at the cart obtains the ball. The team receives it,
@@ -141,9 +142,24 @@ and bottle/board acquisition. The unchanged 138,742-update prefix previously pas
 the SDK replay and 145,216 host-session checks. The extension passes a separate
 6,103-update SDK replay and 8,209 host-session checks, including SRAM-file
 persistence and fresh continuation; board flags 0xA6/0x194 remain set.
-The combined 143,084-update SDK replay also passes in 216.04 seconds.
-A separate SDK process reloads the host-written SRAM and rechecks the saved flags,
-scene controls, map, position and counters. The complete Sandy Bay story, remaining
+The prior combined 143,084-update SDK replay passed in 216.04 seconds; all of its
+inputs and checkpoints remain unchanged in the extension.
+
+The continuation completes and saves the ten-note melody, opens the hidden cache,
+collects its gem with Hif-hif and reaches the Captain through Digdig. Fussfuss enables
+the ferry and anniversary continuation. A shop interaction learns one additional
+word, then an explicit Yep-P choice takes the ferry to Treasure Island. Pashmina's
+introduction, Penelope's scarf scene and its Hif-hif pickup precede the music hall.
+The combined route passes 191,915 native updates in 301.12 seconds. A focused
+50,592-update replay from the wooden-board SRAM passes in 79.50 seconds, followed
+by 54,387 host-session checks in 84.18 seconds. Original save/Continue and a fresh
+disk session retain map 4:13 at x=128.5, z=196.5 with 32 words, 22 seeds, four loves
+and Bijou, including melody/cache/gem flags and Captain/ferry/scarf phases.
+The host-written 32 KiB SRAM equals the SDK export, and the input saves are unchanged.
+The full erased-SRAM Sunny Peak route also passes again on this core: 281,135
+updates in 467.18 seconds. A separate SDK process reloads the host-written island
+SRAM and rechecks the saved flags, scene controls, map, position and counters.
+The fifth reconciliation, complete Sandy Bay story, remaining
 activities and later visits remain unverified. The input SRAM is a private output of the erased-SRAM
 Sunny Peak route; the versioned continuation contains only buttons and scalar checkpoints.
 
@@ -559,11 +575,11 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue Sandy Bay's team/ball story from the saved ball acquisition. Its bank-4 source
-   families are adapted; review literal task/animation dependencies alongside the
-   reachable story route and adapt any missing complete families. Its normal Boss
-   unlock, swimming lesson, Tinglie and ball acquisition now have native input
-   coverage with original saves and story-flag assertions.
+1. Continue Treasure Island from the saved music hall toward the fifth reconciliation,
+   reviewing the dressing-room and elder story dependencies. The team/ball story,
+   fourth reconciliation, melody, Captain, ferry and scarf now have native input
+   coverage and original saves. Use this progress to unlock later Sunny Peak visits;
+   the temple, workshop and remaining optional activities still need integration proof.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.
@@ -825,9 +841,17 @@ established. The bounds helper leaves outputs unchanged for an invalid direction
 path roots require an active facing of 1..4. Malformed nonterminating paths and
 rejection loops fail explicitly at bounded limits rather than hanging the host.
 
-Bank 4's three recovered script sources declare 506 functions, with explicit
-dispatch for 502. The four remaining declarations belong to Cable Link, outside
-the first release. This remains a structural inventory: literal indirect targets,
+Bank 4's three recovered script sources declare 506 functions, all with explicit
+native dispatch. Four declarations previously classified as link-only are also
+used by the offline music hall. save_group4.c adapts these local operations and
+the inverse context-copy helper: five Main contracts, without link transport.
+They retain the 32-bit context pointer, packed halfword arguments, clear-before-copy
+record selection, forward byte aliases and retained headers. Record data, lengths
+and category flags are read from the player's ROM. Classification preserves
+ignored zero/one payload bytes, the special marker and category-rank thresholds;
+the availability scan uses control 4 rather than the selection row.
+Music hall entry/movement and an original save/Continue now exercise these dependencies.
+This remains a structural inventory: literal indirect targets,
 complete bank-4 progression, activities and actual-window integration need
 separate validation. The existing opening scenario is an earlier-area regression.
 

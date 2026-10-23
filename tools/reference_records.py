@@ -5,6 +5,66 @@ import random
 import struct
 
 
+def check_group4(*,entries,rom,memory,bind,call,both,fresh,equal,compare):
+    """Shared offline save-group-4 operations used by the music hall.
+
+    Transport and exchange callbacks remain outside this native contract set.
+    """
+    names={"ScriptCallbackCopyControlByteToCommunicationContext",
+           "ScriptCallbackCopyCommunicationByteToControl","ScriptCallbackSelectCommunicationRecord",
+           "ScriptCallbackClassifyCommunicationPayload","ScriptCallbackCheckReceivedCommunicationFlags"}
+    rows={row["name"]:row for row in entries if row["name"] in names}
+    equal(set(rows),names,"five offline group4 dependency contracts")
+    callback=bind("hn_group4_callback",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+    controls=0x02004520;received=0x03003D30;context=0x02010000;args=0x02001001
+    # Game RAM, as in the existing comparisons. The reference's ARM call stack
+    # is outside the host callback's serialized memory contract.
+    ranges=((0x02000000,0x40000),(0x03000000,0x7000))
+    rng=random.Random(0x48334734)
+    descriptors=[(struct.unpack_from("<I",rom,0x6E8CCC+row*28+8)[0],rom[0x6E8CCC+row*28+0x16]) for row in range(14)]
+    categories=[value-0x45 for value in rom[0x6E906A:0x6E9074]]
+    def fixture(row):
+        fresh();both(controls,rng.randbytes(512));both(received,rng.randbytes(512))
+        both(context,rng.randbytes(0x5000));both(0x03002BB0,struct.pack("<I",context))
+        both(0x03002180,rng.randbytes(96));both(controls+0x180,bytes([row]))
+    def exercise(name):
+        consumed=C.c_uint32(0xFFFF)
+        equal(callback(memory,rows[name]["address"]|1,args,C.byref(consumed)),1,name+" native Main ABI")
+        equal(consumed.value,call(name,args),name+" argument consumption")
+        compare(name+" EWRAM/game IWRAM",ranges)
+    for name in ("ScriptCallbackCopyControlByteToCommunicationContext","ScriptCallbackCopyCommunicationByteToControl"):
+        for offset in (0,0x36,0x1FF,0xFFFF):
+            for value in range(256):
+                fixture(0);both(args,struct.pack("<H",offset))
+                both(context+0x2B18,bytes([value]));both(controls+offset,bytes([value^0xA5]))
+                exercise(name)
+    for row in range(14):
+        for column in range(256):
+            fixture(row);both(controls+0x181,bytes([column]));exercise("ScriptCallbackSelectCommunicationRecord")
+    for offset in (-64,-1,0,1,16,17,64):
+        fixture(0);both(controls+0x181,b"\0");both(0x03002BB0,struct.pack("<I",received+offset))
+        both(received-64,rng.randbytes(640));exercise("ScriptCallbackSelectCommunicationRecord")
+    for row,(data,length) in enumerate(descriptors):
+        original=rom[data-0x08000000:data-0x08000000+length]
+        equal(len(original),length,"group4 descriptor points into the player ROM")
+        patterns=[bytes(length),bytes([1])*length,original,bytes([0xFE])*length,rng.randbytes(length)]
+        if length:patterns.append(bytes(length-1)+b"\x34")
+        patterns.extend(bytes(categories[:n])+bytes(max(0,length-n)) for n in range(11))
+        for mode in (0,1,2,3,255):
+            for pattern in patterns:
+                fixture(row);both(controls+0x60,bytes([mode]));both(received+17,pattern[:length])
+                exercise("ScriptCallbackClassifyCommunicationPayload")
+        for kind in range(8):
+            fixture((row+1)%14);both(controls+4,bytes([row]))
+            pattern=(bytes(length) if kind==0 else bytes([1])*length if kind==1 else
+                     bytes([2])*length if kind==2 else bytes([255])*length if kind==3 else rng.randbytes(length))
+            both(received+17,pattern)
+            if kind in (2,4):both(0x03002180,bytes(96))
+            if kind in (3,5):both(0x03002180,bytes([255])*96)
+            exercise("ScriptCallbackCheckReceivedCommunicationFlags")
+    print("Five shared local group4 callbacks matched; full byte/control and column domains, aliases, flags and classification modes. Link transport remains unsupported.")
+
+
 def check_records(*, entries, rom, memory, cpu, bind, call, both, fresh,
                   equal, compare, native_bytes, command):
     families = {"src/save/game_records.c", "src/save/game_record_allocator.c",

@@ -8,7 +8,9 @@ configures keyboard/gamepad input and manages compatible saves. Native input
 replays cover the first Sunny Peak story, three reconciliations and a saved return
 to Clubhouse, followed by Sandy Bay's normal unlock, swimming lesson, Tinglie,
 ball delivery, perfect six/twelve-rally games, Spat's trap, Seamore and Barrette's
-reconciliation, the bottle message, wooden board, Items panel and saved continuation.
+reconciliation, the bottle message, wooden board and Items panel. The continuation
+plays the ten-note melody, opens the Captain's passage, takes the ferry to Treasure
+Island, recovers the scarf and saves inside the music hall.
 This development build still stops at unfinished functions; complete story, optional activities,
 remaining minigames and desktop playthrough coverage remain unverified.
 See docs/architecture.md for the current evidence.
