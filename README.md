@@ -7,9 +7,10 @@ The application imports and validates a ROM, runs adapted native game logic,
 configures keyboard/gamepad input and manages compatible saves. Native input
 replays cover the first Sunny Peak story, three reconciliations and a saved return
 to Clubhouse, followed by Sandy Bay's normal unlock, swimming lesson, Tinglie,
-ball acquisition and saved continuation. This development build still stops at unfinished functions;
-complete story, optional activities, minigames and desktop playthrough coverage
-remain unverified. See docs/architecture.md for the current evidence.
+ball delivery, perfect six/twelve-rally games and saved continuation. This development
+build still stops at unfinished functions; complete story, optional activities,
+remaining minigames and desktop playthrough coverage remain unverified.
+See docs/architecture.md for the current evidence.
 
 ## Build
 

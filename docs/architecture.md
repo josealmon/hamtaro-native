@@ -121,17 +121,21 @@ optional activities and later visits remain unverified.
 `sandy_bay.json` continues from the exact saved Clubhouse endpoint above. Boss's
 Hamha conversation sets pending destination flag 0x183; the original map unlock
 consumes it and enables flag 0x43. Selection 4 enters Sandy Bay (map bank 4; bank 3
-is a separate area). The 71,670-update route retains the first arrival and map 4:2
+is a separate area). The 92,220-update route retains the first arrival and map 4:2
 beach conversation/save. It continues west to the swimming lesson and word 26,
 then the Lookie conversation in map 4:4 and changed entrance scene. Tinglie raises
-the word count to 27; using it at the cart obtains the ball. Original End Game/Continue
-restores map 4:7 at x=48.5, z=184.5, 27 words, two seeds, three loves and Bijou.
-The full route passes 71,670 SDK updates and 75,627 host-session checks, including
-SRAM-file persistence and fresh continuation.
-Flag assertions establish the destination unlock, both learned words and ball
-acquisition, including their presence after Continue. Full Sandy Bay story and
-activities remain unverified. The input SRAM is a private output of the erased-SRAM Sunny Peak route;
-the versioned continuation contains only buttons and scalar checkpoints.
+the word count to 27; using it at the cart obtains the ball. The team receives it,
+then the six-rally practice and twelve-rally challenge finish with zero errors.
+The practice advances team phase 0x83 to 3; the challenge awards twenty seeds.
+Original End Game/Continue restores map 4:2 at x=32.5, z=64.5, 27 words, 22 seeds,
+three loves and Bijou. The full route passes 92,220 SDK updates and 96,963
+host-session checks, including SRAM-file persistence and fresh continuation.
+Read-only flag and control-byte assertions establish the unlocks, words, ball
+delivery, rally totals, zero errors, reward and retained team phase. A separate SDK
+process reloads the host-written SRAM and checks the saved challenge flag and
+team phase as well as map, position and counters. Full Sandy Bay story and remaining
+activities remain unverified. The input SRAM is a private output of the erased-SRAM
+Sunny Peak route; the versioned continuation contains only buttons and scalar checkpoints.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

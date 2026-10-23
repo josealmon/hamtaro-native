@@ -148,11 +148,13 @@ seeds, three loves, Bijou present). It checks the normal destination unlock,
 Sandy Bay arrival and beach conversation/save, then the swimming lesson and word 26.
 The Lookie conversation changes the entrance scene and makes the Tinglie lesson
 available. Tinglie raises the word count to 27 and obtains the ball at the cart.
-The route passes 71,670 SDK updates in 108.42 seconds and 75,627 host-session
-checks in 114.64 seconds, including SRAM-file persistence and fresh continuation.
-It ends with original save/Continue in map 4:7
-at x=48.5, z=184.5, 27 words, two seeds, three loves and Bijou. The source SRAM
-stays unchanged. This does not establish the complete Sandy Bay story.
+The ball is delivered to the team, followed by a perfect six-rally practice and
+twelve-rally challenge. Checkpoints require six/twelve completed rallies, zero
+errors, team phase 3 and the twenty-seed reward. The route passes 92,220 SDK
+updates in 136.24 seconds and 96,963 host-session checks in 140.50 seconds,
+including SRAM-file persistence and fresh continuation. It ends with original
+save/Continue in map 4:2 at x=32.5, z=64.5, 27 words, 22 seeds, three loves and Bijou.
+The source SRAM stays unchanged. This does not establish the complete Sandy Bay story.
 The prerequisite is reproducible from erased SRAM without duplicating the opening:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_peak.json --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_PROFILE
@@ -161,14 +163,17 @@ The prerequisite is reproducible from erased SRAM without duplicating the openin
 The first command requires a new profile directory outside the checkout. The
 second reads its SRAM without changing it and tests a separate temporary session.
 
-Checkpoints can include `"flags": {"0x77": true, "0x198": false}`. IDs are decimal
-or hexadecimal strings within the 96-byte game flag block (0 through 767), unique
-after parsing, with boolean values. These are read-only assertions. Malformed IDs,
-out-of-range IDs, numeric aliases and nonboolean values fail validation. Both words
-and ball flags are checked after original Continue; an intentionally incorrect
-expectation is also rejected by the native ROM-backed test. A separate SDK process
-also reloads the host-written SRAM and verifies Tinglie/ball flags, map and position
-in a 1,922-update continuation.
+Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
+`"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. IDs are decimal or hexadecimal
+strings, unique after parsing. Flags address the 96-byte game flag block (0 through
+767) and require boolean values; controls address the 512-byte control block (0
+through 511) and require integer bytes (0 through 255). Both mappings are nonempty
+read-only assertions. Malformed/out-of-range IDs, numeric aliases and incorrect
+value types fail validation; booleans are rejected as control bytes. Deliberately
+incorrect flag/control expectations are also rejected by ROM-backed tests.
+Original Continue checks both word flags, ball acquisition/delivery and retained
+team progress. A separate SDK process reloads the host-written SRAM and verifies
+the challenge flag, team phase, map, position and counters in 1,922 updates (2.28 seconds).
 
 `--until "CHECKPOINT LABEL"` stops after exactly one named top-level checkpoint,
 while omitting it retains the entire scenario. An unknown or ambiguous label fails.
