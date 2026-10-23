@@ -150,11 +150,15 @@ The Lookie conversation changes the entrance scene and makes the Tinglie lesson
 available. Tinglie raises the word count to 27 and obtains the ball at the cart.
 The ball is delivered to the team, followed by a perfect six-rally practice and
 twelve-rally challenge. Checkpoints require six/twelve completed rallies, zero
-errors, team phase 3 and the twenty-seed reward. The route passes 92,220 SDK
-updates in 136.24 seconds and 96,963 host-session checks in 140.50 seconds,
-including SRAM-file persistence and fresh continuation. It ends with original
-save/Continue in map 4:2 at x=32.5, z=64.5, 27 words, 22 seeds, three loves and Bijou.
-The source SRAM stays unchanged. This does not establish the complete Sandy Bay story.
+errors, team phase 3 and the twenty-seed reward. The continuation learns Blanko
+and Ta-dah, uses Lookie to enable Barrette's request and runs Spat's shore scene.
+Gasp-P is then used with Seamore in Clubhouse: rescue flag 0x1AB must change from
+false to true before the return to Sandy Bay. The rescue teaches Trust-T and
+raises the love count from three to four. Hif-hif retrieves the bottle message.
+The route passes 138,742 SDK updates in 205.90 seconds and 145,216 host-session
+checks in 209.97 seconds. It ends with original save/Continue in map 4:5 at x=152.5,
+z=24.5, 31 words, 22 seeds, four loves and Bijou. The source SRAM stays unchanged.
+This does not establish the complete Sandy Bay story or a desktop playthrough.
 The prerequisite is reproducible from erased SRAM without duplicating the opening:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_peak.json --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_PROFILE
@@ -171,9 +175,10 @@ through 511) and require integer bytes (0 through 255). Both mappings are nonemp
 read-only assertions. Malformed/out-of-range IDs, numeric aliases and incorrect
 value types fail validation; booleans are rejected as control bytes. Deliberately
 incorrect flag/control expectations are also rejected by ROM-backed tests.
-Original Continue checks both word flags, ball acquisition/delivery and retained
-team progress. A separate SDK process reloads the host-written SRAM and verifies
-the challenge flag, team phase, map, position and counters in 1,922 updates (2.28 seconds).
+Original Continue checks word flags, ball acquisition/delivery, team progress and
+the final rescue/bottle state. A separate SDK process reloads the host-written
+SRAM and checks the challenge, rescue, word and bottle flags, scene controls, map,
+position and counters in 1,922 updates.
 
 `--until "CHECKPOINT LABEL"` stops after exactly one named top-level checkpoint,
 while omitting it retains the entire scenario. An unknown or ambiguous label fails.
