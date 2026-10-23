@@ -84,7 +84,7 @@ statically. A separate clean-machine validation remains pending.
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | The versioned Sunny Peak scenario passes 246,720 updates from erased SRAM through two reconciliations, Hamigos, oilcan/cart return and Rubrub (24 words, two loves); original End Game/Continue and host-file/fresh-session checks are recorded below. A separate post-Libert-T continuation verifies Lovedove and three loves; merging that branch into the full route, optional activities and full desktop story coverage remain pending |
+| New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Later areas, full optional activities and complete desktop story coverage remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -96,122 +96,48 @@ and opens the menu with a private runtime-error.log diagnostic. It never switche
 to guest instruction execution. The language selector and menu music establish a
 native desktop boot milestone, not a completed title/story/playthrough.
 
-The private opening scenario leaves the bedroom, reaches the Clubhouse, displays
-the initial ten-word Ham-Chat book and returns to the conversation. It then performs
-Hamha, Tack-Q, Hif-hif and Digdig, including a rejected word and successful retry,
-and receives ten sunflower seeds. It exercises native clocked updates from fresh
-SRAM with fixed input and script/position/counter checkpoints, without state injection.
-It then opens the destination map, checks both directions between Clubhouse and
-Sunny Peak, confirms travel and reaches control in map 2:1. Walking north then enters
-the river scene, advances its dialogue, performs Hamha and opens the bridge's
-filtered word menu. Selecting Tack-Q returns to player control in map 2:11.
-It reopens that menu, selects Lookie, advances the response and walks east to
-x=203.5, z=200.5. It then enters map 2:17, reaches player control, opens an actor's
-word menu, chooses Hamha and completes the conversation. Its last checkpoint
-returns control at x=156.5, z=208.5 with the ten learned words and ten seeds retained.
-The route then returns west, crosses the northern path into map 2:20, climbs the
-stairs to map 2:2 and triggers the stump conversation. It learns Heyhoo, increasing
-the word count from ten to eleven, opens the updated book, enters its first page
-and returns to movement.
-Select then opens the status display. The route selects End Game, confirms the
-original SRAM write, returns to the title and chooses Continue. The restored state
-has the same map 2:2, position, eleven words and ten seeds. It then talks to Oxnard
-to learn Bluhoo, walks east and completes the handkerchief scene to learn Gogo.
-A second End Game/Continue restores map 2:3, position, thirteen words and ten seeds.
-The route then crosses the upper maps and descends two vines to the boat dock.
-Lookie with Arnie teaches Pakapaka. The player boards the boat, cuts its rope and
-drifts west to map 2:17, then disembarks and talks to the wandering hamster.
-Answering Yep-P teaches Putput. A third End Game/Continue restores map 2:17,
-x=131.5, z=208.5, fifteen words and ten seeds.
-Heyhoo then summons Seamore, whose dialogue teaches Offdoff. Removing the bridge's
-battery and placing it in the boat enables powered travel, including a roundtrip
-through map 2:18 and docking on the north bank of map 2:17. Bijou's conversation
-teaches Mega-Q and enables her as the player's partner. A fourth End Game/Continue
-restores x=168.5, z=80.5, seventeen words, ten seeds, the joined-partner flag and
-follower slot 13. Returning by boat and climbing the western path reaches the
-Ham-lift lesson. The pair then lowers Pepper from the vine, selects Bluhoo, learns
-Oopsie and Gossip-P and completes the first reconciliation. Player control returns
-in map 2:2 at x=112.5, z=88.5 with twenty words, ten seeds and one rescued love.
-Select displays the retained counters; a fifth End Game/Continue restores that
-position, Bijou and the same counters. The subsequent Spat scene leads to Harmony
-and a destination-map return to the Clubhouse. A sixth End Game/Continue restores
-map 1:1 at x=144.5, z=256.5 with twenty-one words, ten seeds, Bijou and one rescued
-love. These checkpoints establish the word count, not which dialogue line teaches
-the additional word. The next route enters the photo room, completes the greeting
-and returns to its action menu. A seventh End Game/Continue restores map 1:3,
-x=130.5, z=80.5, the same twenty-one words, ten seeds, Bijou and one rescued love.
-The route then opens Items, exercises direction/read/cancel inputs, returns to
-Status and opens Gems. Closing both panels restores the same photo-room actors,
-position and counters. An eighth End Game/Continue and a fresh host Session
-retain those fields. These inventories are empty in the canonical scenario's save;
-multi-item inventory and full Sunny Peak/photo-activity coverage remain pending.
-The scenario counts 144,204 input updates in total; the runtime frame counter resets
-on returning to the title. A separate replay through the actual host Session API writes private
-32 KiB SRAM files, stops the session and starts a fresh one from disk. Continue
-restores the same nine story/position/partner/counter fields; this replay passes
-151,630 host-session checks without retaining its temporary profile. A separate
-earlier review launches the actual Windows executable with its own private
-Clubhouse profile. Continue restores the Clubhouse
-scene; Select, assigned to V, displays twenty-one learned words, ten seeds and one rescued
-love. End Game returns to the title and writes the 32 KiB file, with the preceding
-file's exact bytes retained as its backup. Closing and relaunching the executable,
-then choosing Continue, restores the scene and the same three visible counters.
-WASD menu navigation and copied control settings were also reviewed. This establishes
-bounded desktop save/continuation evidence.
+The current `tests/scenarios/sunny_peak.json` route starts from erased SRAM and
+covers the basic lessons, Bijou's rescue, Pepper/Oxnard, Harmony, the photo-room
+training-seat request/delivery, Sesam-E, the cave maze, Arnie's reunion and Hamigos.
+It explicitly completes the missing-partner conversation (flag 0x187) before the
+two Hamigos confrontations with Spat and Pakapaka's Libert-T lesson. Lovedove
+restores the third love. The pair returns to Clubhouse, completes Boss's room
+announcement and uses original End Game/Continue again. The final checkpoint is
+map 1:1, x=144.5, z=256.5, 25 words, two seeds, three loves and Bijou in follower
+slot 13. The scenario passes 281,135 native updates and 293,049 host-session checks,
+including exact SRAM-file persistence and a fresh host continuation. The runtime frame counter
+resets at the title, while the runner's total remains cumulative. Inputs and scalar
+checkpoints are versioned; no ROM, resource, save or captured state is included.
 
-An additional private route starts from erased SRAM, repeats the opening through
-the Clubhouse and travels by boat to Arnie. It covers the training-seat request
-and a seventh End Game/Continue roundtrip in map 2:18 at x=249.5, z=56.5, retaining
-21 words, ten seeds, Bijou and one rescued love. It passes 147,635 native updates
-and 155,127 host-session checks, including continuation from private SRAM files
-in a fresh host session. This is separate from the canonical 144,204-update route.
-A subsequent private SDK scout follows the request through an in-game save,
-uses Lookie with Seamore in the photo room and receives the training seat. Items
-shows its icon and description, accepts navigation/read input and returns to the
-scene. A further in-game save and Continue retains that item. The exported original
-SRAM also restores the scene and item in a separate SDK process. An extended route
-then returns the seat to Arnie, follows him up the vines and learns Sesam-E. From
-erased SRAM, all 179,239 native input updates pass; a second replay passes 187,706
-host-session checks and restores map 2:7 at x=72.5, z=80.5 with 22 words, ten seeds,
-Bijou and one rescued love from private 32 KiB SRAM in a fresh host session. An SDK
-inspection after Continue also shows the empty Items panel after handing over the
-seat. These are compiled runtime, host-file and native PPU observations; the actual
-desktop route and complete Sunny Peak progression remain pending.
+`opening.json` retains the first-reconciliation regression. The shorter
+`sunny_peak_reunion.json` starts from an original post-Libert-T SRAM checkpoint
+(map 2:20, 24 words, two loves) and covers Lovedove, Clubhouse and saved continuation
+in 21,978 updates. The optional `sunny_peak_rubrub.json` starts from original
+cart-area SRAM (23 words, two loves) and passes 11,469 SDK updates plus 13,692 host
+checks through the cart ride, Rubrub lesson and save/reload. The story route skips
+that optional ride, so its word count describes a different route. Full Sunny Peak
+optional activities and later visits remain unverified.
 
-A longer private input-only route completes the cave maze, reunites Arnie and his
-brother, learns Hamigos and rescues the second love. From erased SRAM, 218,961
-native updates and 228,856 host-session checks pass. Original End Game/Continue
-and a fresh file-backed session retain map 2:9 at x=96.5, z=80.5, 23 words, one
-seed, Bijou and two rescued loves. This extends compiled-runtime and save evidence;
-the corresponding complete desktop route remains unverified.
+Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
+session and start a new one to compare map, position, words, seeds, partner and
+rescued loves. Focused input saves are read-only; all writes use disposable profiles.
+The actual Windows executable was previously reviewed with the 21-word Clubhouse
+save, including visible status counters, keyboard menus, End Game, exact backup
+retention and relaunch/Continue. That bounded desktop evidence does not establish
+the new full desktop story route. Book pages, dialogs and the new story scenes have
+also been inspected through native PPU output. Game captures stay outside Git.
 
-Returning to map 2:12 after using the oilcan exposes an original floating-bus
-read: a saved animation variable is reused as the collision-list source. A private
-mGBA replay from the same SRAM retains that list and continues normally. The three
-reviewed record-index LDRH sites read the ROM-prefetched Thumb halfword when the
-record address is above 0x0FFFFFFF, which terminates the list before reading flags.
-The native adapters preserve those reads, including odd-address rotation. Ordinary
-memory accesses and unreviewed record-field reads retain explicit faults. This is
-a bounded calling-site adaptation, not general CPU or floating-bus emulation.
-The extended erased-SRAM route passes 237,173 native input updates through the
-oilcan purchase/use, lever interaction, map 2:12 entry and original End Game/Continue.
-It retains x=32.5, z=128.5, 23 words, two seeds, Bijou and two rescued loves.
-A second replay passes 247,641 host-session checks and restores the same fields
-from private 32 KiB SRAM files in a fresh session.
-This proves the reported return/save path; complete cart activity and remaining
-Sunny Peak progression still require validation.
-
-A separate private follow-up starts from that read-only cart-area SRAM. Putput
-uses the oilcan on the cart, Gogo completes its ride to map 2:23, and the following
-conversation teaches Rubrub. All 11,469 input updates, including original End
-Game/Continue, pass with 24 words, two seeds, two rescued loves and Bijou at
-x=72.5, z=96.5. A new SDK process loads the exported 32 KiB SRAM and repeats
-1,922 startup/Continue updates, restoring those fields. This is bounded compiled
-runtime/save evidence; it does not establish full workshop or desktop progression.
-
-Book pages, word menus, rewards, the destination map and Sunny Peak have been
-visually inspected through native PPU output; the full desktop story playthrough
-is still pending. No game capture is stored in this repository.
+Two original bus contracts are retained at their reviewed calling sites. Collision
+record-index LDRH reads above 0x0FFFFFFF use the ROM-prefetched Thumb halfword,
+including odd-address rotation, and terminate before invalid record fields. The
+scene-parameter copy in ConfigureRenderXZCollisionScene uses 32 forward LDMIA word
+loads, with word alignment, overlap order and SRAM byte replication. Its reserved
+bus reads use the halfword prefetched at 0x08006690 in both word lanes; a native
+return from the third reconciliation had otherwise stopped on a leftover script
+variable used as the optional parameter pointer. Independent mGBA replay confirms
+the original continues with those words. Ordinary memory access and unreviewed
+regions keep their explicit faults. These are native calling-site contracts, not
+CPU execution or a runtime emulator fallback.
 
 The runtime follows the source's VBlank service, input, Main, follower motion,
 actors, tasks, background/object/graphics scripts, mosaic and PRNG update order.
@@ -602,45 +528,19 @@ fresh-session continuation. A separate Windows process also restores the exporte
 scene and status counters. Invalid
 group selectors are rejected; the unused group-0 record write/load path is not exposed.
 
-The versioned `tests/scenarios/sunny_peak.json` now reproduces the complete route
-from erased SRAM through the cave reunion, Hamigos, oilcan/cart return and Rubrub:
-246,720 native updates, 24 learned words and two rescued loves. Original End Game/
-Continue checkpoints retain position, seeds and Bijou. The same 246,720 inputs also
-pass 257,437 host-session checks, including file persistence and a fresh-session
-continuation with the same story, position and partner fields. The shorter opening scenario
-remains the first-reconciliation regression. This is integration coverage of that
-route, not completion of Sunny Peak or its optional activities.
-
-A separate input-only continuation reviews the missing-partner conversation's
-flag 0x187 in map 2:20, the two Hamigos confrontations in map 2:14 and Pakapaka's
-Libert-T lesson. The native scout reaches the automatic reunion and Lovedove,
-then restores map 2:20 at x=176.5, z=176.5 with 25 words, two seeds, three loves and
-Bijou through original End Game/Continue. That branch has not yet been merged into
-the erased-SRAM scenario above. It skips Rubrub, so its word count describes a
-different route. No guest state or progress flags were injected.
-
-`tests/scenarios/sunny_peak_reunion.json` separately reproduces the reunion from
-an original private post-Libert-T save (map 2:20, 24 words, two loves). Its 11,161
-updates check Lovedove, the third love and original save/Continue; 13,405 host checks
-also verify file persistence and fresh-session continuation. The input save
-is required explicitly and is never shipped. Full Sunny Peak optional activities,
-later return visits and actual-window story coverage remain pending.
-
 ## Remaining integration order
 
-1. Merge the missing-partner/Spat/Libert-T/Lovedove branch into the erased-SRAM
-   Sunny Peak scenario and verify the return to the Clubhouse. Select complete
-   source families along this reachable dependency path; later-area function counts
-   do not take priority over this milestone.
-2. Keep the current Sunny Peak input route reproducible from erased SRAM. Use
-   read-only private saves for focused continuations, then verify the combined route,
-   original in-game saves and fresh host-session continuation.
-3. Extend actual-window coverage of the same route and its Items/Gems/photo UI.
-   Complete Sunny Peak story coverage does not imply all optional activities or
-   later return visits have been tested.
-4. Continue later story areas, secondary activities and minigames by their reachable
-   dependencies. Compare canonical RGBA, state, SRAM and pre-device PCM alongside
-   timed raster/IRQ and audio integration.
+1. Verify the next mission unlock from the saved three-love Clubhouse state, then
+   continue into Sandy Bay. Its declared
+   bank-3 source families are adapted; review literal task/animation dependencies
+   alongside the reachable story route and adapt any missing complete families.
+2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
+   continuations while implementing, then verify original saves and fresh host
+   sessions at a coherent integration boundary.
+3. Extend actual-window coverage of Sunny Peak and its Items/Gems/photo/Rubrub UI.
+   First-visit story evidence does not establish every optional activity or later visit.
+4. Continue remaining story areas, secondary activities and minigames. Compare
+   canonical RGBA, state, SRAM and pre-device PCM alongside timed raster/IRQ/audio.
 5. Verify physical controllers and the packaged app on Windows without development
    tools. Public CI stays ROM-free; private reference checks take user paths.
 
@@ -709,6 +609,15 @@ source's no-op behavior. The extended native scenario now exercises these famili
 through eastern-map entry, wandering actors, facing and a complete conversation.
 The longer native scenario now includes the first reconciliation and Clubhouse
 return. Complete Sunny Peak coverage and later areas remain pending.
+
+The complete 22-function actor_class_animation_pairs.c family composes existing
+presets for paired/triple actors, neighbor slots and indicators. Separate source
+calls reload live class selectors. Flag 0x17 is consumed by the next animation
+setter, transferring its bit to that render slot while preserving other flags.
+The original functions are void/F4 targets; Main must not invent an argument count.
+All 22 entries, task calls, inactive byte selectors, overlapping selector writes
+and flag consumption are compared. This enables Boss's post-Sunny Peak room
+announcement in the native story route.
 
 The shared actor preset implementation covers all 476 void functions across
 actor_animation_linked_presets.c, actor_animation_neighbor_presets.c,

@@ -7,7 +7,7 @@ import struct
 
 
 def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
-                        both, fresh, equal, compare, native_bytes, animation_families=False, sequence_family=False):
+                        both, fresh, equal, compare, native_bytes, animation_families=False, sequence_family=False, pair_family=False):
     sources = {"src/actors/actor_animation_linked_presets.c",
                "src/actors/actor_animation_neighbor_presets.c",
                "src/actors/actor_class_animation_presets.c",
@@ -18,8 +18,9 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
                    "src/actors/actor_directional_animation_presets.c",
                    "src/actors/actor_extended_animation_presets.c"}
     if sequence_family:sources={"src/actors/actor_render_sequence_presets.c"}
+    if pair_family:sources={"src/actors/actor_class_animation_pairs.c"}
     rows = [row for row in entries if row["source"] in sources]
-    equal(len(rows), 48 if sequence_family else 446 if animation_families else 476, "complete actor preset source inventory")
+    equal(len(rows), 22 if pair_family else 48 if sequence_family else 446 if animation_families else 476, "complete actor preset source inventory")
     for row in rows:
         source = (reference / row["source"]).read_text(encoding="utf-8")
         equal(bool(re.search(r"void\s+" + re.escape(row["name"]) + r"\(void\)", source)), True,
@@ -43,7 +44,7 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
         both(0x03003070, struct.pack("<I", 0x02015000))
         both(0x03002E10, b"\x10")
         both(0x03002180, rng.randbytes(96))
-        both(0x03002182, bytes([128 | (case & 1)]))
+        both(0x03002182, bytes([((128 if case&2 else 0) if pair_family else 128) | (case & 1)]))
         both(0x03002170, b"\xA5")
         for i, address in enumerate((0x03002C0C, 0x03001F50, 0x03002C04, 0x03002C00)):
             both(address, bytes([(10, 13, 16, 19)[(i + case) % 4]]))
@@ -80,7 +81,7 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
     if animation_families:
         selectors = (("SelectExtendedAnimationForXZDirection14744", 0x03002C00),
                      ("SelectActorAnimationForXZDirection16788", 0x03002C04))
-    if sequence_family:selectors=()
+    if sequence_family or pair_family:selectors=()
     for name, selector in selectors:
         row = next(row for row in rows if row["name"] == name)
         for dx, dz in ((0, 0), (-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1),
@@ -108,6 +109,7 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
                    ("ConfigureDirectionalAnimationSlots1799C", 0x03002C04),
                    ("ConfigureDirectionalAnimationSlots17A2C", 0x03002C00))
     if sequence_family:aliases=()
+    if pair_family:aliases=(("ConfigureActorAnimationAndPreviousSlot21DE0",0x03002C04),)
     for name, selector in aliases:
         row = next((row for row in rows if row["name"] == name), None)
         if row is None:
@@ -125,7 +127,7 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
             both(0x03003070, struct.pack("<I", 0x02015000));both(0x03002E10, b"\x10")
             for i, address in enumerate((0x03002C0C, 0x03001F50, 0x03002C04, 0x03002C00)):
                 both(address, bytes([(10, 13, 16, 19)[(i + case) % 4]]))
-            both(0x03002182, bytes([128 | (case & 1)]))
+            both(0x03002182, bytes([((128 if case&2 else 0) if pair_family else 128) | (case & 1)]))
             equal(apply(memory, row["address"] | 1), 1, "actor auxiliary aliased selector")
             call(name)
             compare(f"actor auxiliary aliased selector {name}/{case}", ranges)
@@ -136,7 +138,9 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
                 both(address, bytes([case]))
             equal(apply(memory, row["address"] | 1), 1, f"mapped inactive actor/neighbor byte selectors {row['name']}/{case}")
             call(row["name"]);compare("mapped inactive actor/graphics records", ranges)
-    if sequence_family:
+    if pair_family:
+        print("All 22 actor animation pair/triple entries and typed F4 contracts passed, including live aliases and flag 17.")
+    elif sequence_family:
         # Separate source calls reload selectors after a constructor can write
         # the selector itself. Test both neighbor offsets and three source paths.
         for name in ("ConfigureClass2NextSlot22328", "ConfigureClass2NextSlot22378", "ConfigureClass2NextSlot223CC"):

@@ -3,11 +3,12 @@
 Windows x64 native-port work for Hamtaro: Ham-Ham Heartbreak (European AH3P revision 0).
 You must provide your own compatible .gba file. No game assets or ROM are included.
 
-The application imports and validates a ROM, runs the adapted native game loop,
-configures keyboard/gamepad input, and manages compatible saves. The native window
-reaches the language selector with music. This development build still stops at
-unfinished functions; complete story and minigame coverage remain unverified.
-See docs/architecture.md for coverage.
+The application imports and validates a ROM, runs adapted native game logic,
+configures keyboard/gamepad input and manages compatible saves. Native input
+replays cover the first Sunny Peak story, three reconciliations and a saved return
+to Clubhouse. This development build still stops at unfinished functions;
+complete story, optional activities, minigames and desktop playthrough coverage
+remain unverified. See docs/architecture.md for the current evidence.
 
 ## Build
 

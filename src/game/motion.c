@@ -420,6 +420,17 @@ bool hn_motion_rebuild_route(HNMemory *m)
     hn_write16(m,point+12,z_first?(uint16_t)(dx>>16):0);hn_write16(m,point+14,z_first?0:(uint16_t)(dz>>16));
     return !m->fault;
 }
+static uint32_t scene_parameter_word(HNMemory *m,GameAddr source)
+{
+    /* The original 32-word copy uses LDMIA at 0800668C. Reserved bus reads
+       return the prefetched Thumb halfword at 08006690 in both word lanes.
+       Keep this contract local; ordinary invalid memory reads still fault. */
+    if((source>=0x00004000u&&source<0x02000000u)||source>=0x10000000u){
+        uint32_t half=hn_read16(m,0x08006690);return half|(half<<16);
+    }
+    if((source>>24)==14||(source>>24)==15)return hn_read8(m,source)*0x01010101u;
+    return hn_read32(m,source&~3u);
+}
 bool hn_motion_configure(HNMemory *m,uint32_t leader,uint32_t follower,uint32_t control,uint32_t secondary,
                          uint32_t flags,uint32_t width,uint32_t height,GameAddr resource,GameAddr parameters)
 {
@@ -432,7 +443,10 @@ bool hn_motion_configure(HNMemory *m,uint32_t leader,uint32_t follower,uint32_t 
         if((hn_read16(m,resource)&15)==1){if(!hn_bios_lz77(m,resource,HN_COLLISION_DEFAULT,0x1200))return false;}
         else if(!hn_bios_cpu_set(m,resource,HN_COLLISION_DEFAULT,0x04000480))return false;
     }
-    if(parameters){if(!hn_memory_copy(m,0x030021F0,parameters,128))return false;}
+    if(parameters){
+        for(unsigned i=0;i<32&&!m->fault;i++)
+            hn_write32(m,0x030021F0+i*4,scene_parameter_word(m,parameters+i*4));
+    }
     else for(unsigned i=0;i<32;i++)hn_write32(m,0x030021F0+i*4,0);
     for(unsigned layer=0;layer<4;layer++)if(!layer||(flags&(1u<<(layer-1)))){
         GameAddr bounds=HN_BACKGROUND_BOUNDS+layer*12;

@@ -99,6 +99,7 @@ def main():
     parser.add_argument("--rom",type=Path,required=True)
     parser.add_argument("--scenario",type=Path,required=True)
     parser.add_argument("--save",type=Path,help="Optional read-only 32 KiB SRAM input")
+    parser.add_argument("--until",help="Stop after a uniquely named top-level checkpoint for a focused replay")
     parser.add_argument("--library",type=Path,default=ROOT/"build/Release/hn_reference_probe.dll")
     parser.add_argument("--session-test",type=Path,help="Also replay through the host session executable and verify SRAM-file continuation")
     parser.add_argument("--desktop-profile",type=Path,help="Retain validated ROM and tested SRAM in a new private profile for desktop review")
@@ -122,6 +123,11 @@ def main():
     scenario=json.loads(args.scenario.read_text(encoding="utf-8"))
     if not isinstance(scenario,dict) or set(scenario)!={"name","steps"}:raise ValueError("Invalid scenario document.")
     count=validate_steps(scenario["steps"])
+    if args.until:
+        matches=[i for i,step in enumerate(scenario["steps"]) if "expect" in step and step.get("label")==args.until]
+        if len(matches)!=1:raise ValueError("--until must name exactly one top-level checkpoint.")
+        scenario=dict(name=f"{scenario['name']} (through {args.until})",steps=scenario["steps"][:matches[0]+1])
+        count=validate_steps(scenario["steps"])
     start=time.perf_counter();game=NativeGame(args.library,rom,saved)
     try:run_steps(game,scenario["steps"])
     finally:game.close()

@@ -17,7 +17,9 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   and explicit missing-resource failures. Actor checks cover Main-state restoration,
   waits, same-frame activation, stop, padding and bounded/unsupported script failures.
   Counter checks cover palette/template banks, signed digits and the low yield byte.
-  Motion checks cover route edges/obstacle order, collision setup and resource branches.
+  Motion checks cover route edges/obstacle order, collision setup and resource branches,
+  aligned forward word copies, overlapping scene parameters, SRAM replication and
+  a reserved-bus copy without weakening ordinary invalid-read failures.
   Following checks cover walk/run speeds, boot-gated position updates, near-leader
   stopping, delayed idle animation, asymmetric quantization and circular route bends.
   Collision checks cover signed map wrapping, edge masks, event staging, inclusive
@@ -75,8 +77,10 @@ full 16-bit domains, 30 independent PPU snapshots and the existing floating-bus
 oracle, in 678.102 seconds on the development machine. The preceding log spanned
 approximately 1,238 seconds; that older value comes from file timestamps. Concurrent
 native route replays ran during both executions, so the roughly 45% reduction is
-an observed local comparison, not a portable performance guarantee. Current longest
-named phases are bank 4 (151 s), bank 5 (95 s) and bank 6 (90 s).
+an observed local comparison, not a portable performance guarantee. Those measurements preceded the scene-copy and paired-actor additions.
+The expanded suite now passes 4,204,830 checks in 700.669 seconds, with the same
+exhaustive domains and oracles plus the new contracts; the full native and host
+story replays ran concurrently.
 
 `compare_reference.py` prints elapsed time and assertion counts per family and for
 its complete invocation. Optional `--timings-json PATH_OUTSIDE_CHECKOUT` retains a
@@ -85,6 +89,14 @@ setup and coupled checks outside named families. Reports and logs are never vers
 Plain RAM snapshots use bounded bulk copies; device IO, mirrors, wrapping and partial
 faults keep the original bus path. Python reuses snapshot buffers by size. The content
 audit reads historical objects with one Git batch process and checks the same blobs.
+
+The bus oracle's `--scene-copy` mode supplies independent mGBA LDMIA responses:
+28 complete scene copies (all four RAM alignments and six reserved-address groups)
+and 24 Main20 variable-resolved copies. The native side reads the player's ROM at
+the typed prefetch site. Reference-only fixtures supply the original reserved-bus
+values. Unicorn's generic Thumb LDM lacks ARM7 alignment, so mapped pointer arguments
+are aligned only for that CPU reference call; all four hardware alignments are also
+checked against mGBA. No existing cases or comparison regions are removed.
 
 The optional private ROM check is:
 
@@ -113,22 +125,30 @@ The executable also accepts:
 Exit code 0 means identity and full SHA-256 match; 2 means the content does not
 match. No profile import is performed by this command.
 
-The longer `tests/scenarios/sunny_peak.json` route retains input/checkpoint evidence
-through the cave reunion, Hamigos, oilcan, cart return and Rubrub. It contains only
-button durations and expected scalar state; players still supply the ROM.
-The full route passes 246,720 SDK updates and 257,437 host-session checks, including
-original in-game saves and fresh-session continuation (24 words, two loves). The shorter
-`opening.json` remains useful for the first reconciliation. These are distinct test
-scopes, not counts of completed areas. Run the longer route with the same command
-below, replacing the scenario filename.
+The main `tests/scenarios/sunny_peak.json` route starts from erased SRAM and checks
+281,135 updates through the first Sunny Peak story, Lovedove, three rescued loves,
+Boss's room announcement and original save/Continue back in Clubhouse. It retains
+explicit story, position and counter checkpoints. `opening.json` remains the earlier
+first-reconciliation regression. Scenarios contain only input durations and scalar
+metadata; the player still supplies the ROM. The 281,135-update SDK replay passes
+in 582.42 seconds; the same input stream passes 293,049 host-session checks in
+568.441 seconds, including exact SRAM-file persistence and fresh continuation.
 
-`tests/scenarios/sunny_peak_reunion.json` is a focused continuation, not a new game.
-Supply an original SRAM checkpoint after Libert-T, when map 2:20 is about to show
-the reunion (24 words, two loves, Bijou present). It checks Lovedove and three loves,
-then original End Game/Continue at x=176.5, z=176.5. The 11,161-update SDK replay
-passes, followed by 13,405 host-session checks including persisted SRAM and fresh
-session continuation; a save with different prerequisites fails its initial checkpoint. No save
-or game data is included in this repository.
+`sunny_peak_reunion.json` is a 21,978-update focused continuation. Supply original
+SRAM after Libert-T, with map 2:20 about to show the reunion (24 words, two loves,
+Bijou present). It checks Lovedove, the Clubhouse return and original save/Continue.
+`sunny_peak_rubrub.json` instead starts from original cart-area SRAM (map 2:12,
+23 words, two loves) and retains the optional ride, Rubrub and save/reload coverage:
+11,469 SDK updates and 13,692 host checks. Different prerequisites fail the initial
+checkpoint; no input save or resource data is shipped.
+
+`--until "CHECKPOINT LABEL"` stops after exactly one named top-level checkpoint,
+while omitting it retains the entire scenario. An unknown or ambiguous label fails.
+The 7,310-update Bedroom control prefix is independently checked. Use a checkpoint
+after an original in-game save when combining this option with `--session-test`,
+because that test compares the persisted state after restarting. This can produce
+a private reusable profile at the cart or Clubhouse milestone without repeating
+all later steps during focused development.
 
 For a focused continuation, `--save PATH_TO_PRIVATE_SRAM --session-test
 build/Release/hn_session_tests.exe` starts both replays from the same private SRAM
@@ -141,52 +161,13 @@ An input-only native runtime scenario uses the optional test DLL:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/opening.json
 
-It runs 144,204 clocked native updates from erased SRAM, confirms bedroom control,
-walks to the Clubhouse, displays the initial ten-word book and returns to the room.
-It performs Hamha, Tack-Q, Hif-hif and Digdig, checks a wrong-word response and retry,
-and confirms the ten-seed reward and subsequent conversation. Destination checkpoints
-then select Sunny Peak, return the highlight to Clubhouse, select Sunny Peak again
-and confirm travel to player control in map 2:1. The route then enters the river
-scene, advances dialogue, executes Hamha, opens the bridge's filtered word menu,
-selects Tack-Q and returns to player control. It then reopens the menu, selects
-Lookie, advances the response and walks to the river's eastern approach. It enters
-map 2:17, reaches control, opens an actor word menu, selects Hamha and completes
-the conversation, returning to movement with its words and seed count retained.
-It then returns to the river, takes the northern path through map 2:20, climbs the
-stairs to map 2:2 and triggers the stump conversation. Heyhoo acquisition increases
-the word count from ten to eleven; the scenario opens the updated book, enters its
-first page and returns to the same movement position. Select opens the status
-display; the route moves to End Game, confirms the original SRAM write, returns
-to the title and chooses Continue. The same map, position, eleven learned words
-and ten seeds are restored. Oxnard's conversation then teaches Bluhoo, and the
-eastern handkerchief scene teaches Gogo. A second status/End Game/Continue restores
-map 2:3 at the same position with thirteen words and ten seeds.
-Crossing the upper maps and descending the vines reaches Arnie and the boat dock.
-Lookie teaches Pakapaka; cutting the boat's rope carries the player west to map
-2:17. Hamha and Yep-P with the wandering hamster teach Putput. A third
-status/End Game/Continue restores map 2:17 at x=131.5, z=208.5 with fifteen words
-and ten seeds.
-Heyhoo summons Seamore and learns Offdoff. The route removes the bridge's battery,
-places it in the boat, exercises powered travel through map 2:18 and docks beside
-Bijou. Mega-Q increases the count to seventeen; the joined-partner flag and
-follower slot 13 are checked after returning to movement. A fourth End Game/Continue
-retains that state at map 2:17, x=168.5, z=80.5. Returning by boat reaches the Ham-lift
-lesson. The pair lowers Pepper from the vine, chooses Bluhoo, learns Oopsie and
-Gossip-P and completes the first reconciliation. Control returns in map 2:2 at
-x=112.5, z=88.5 with twenty words and one rescued love. Select/status and a fifth
-End Game/Continue retain the map, position, ten seeds and Bijou as well. The later
-Spat conversation leads to Harmony and the destination map. Returning to Clubhouse
-and a sixth End Game/Continue restore map 1:1 at x=144.5, z=256.5, twenty-one words,
-ten seeds, the joined partner and one rescued love. The checkpoints establish the
-word count rather than the exact dialogue line that teaches it. The runtime
-frame counter resets at the title, while the runner's update total stays cumulative.
-Complete Sunny Peak coverage remains unverified. The JSON contains only button inputs
-and metadata checkpoints. The default replay writes no
-save or capture, rejects unknown inputs and fails on any native runtime fault or
-checkpoint mismatch. --save PATH supplies optional read-only 32 KiB SRAM input.
-This is native runtime scenario evidence, not a desktop playthrough or an independent
-full-machine comparison. Manual book navigation, later scenes and the complete
-desktop story playthrough remain pending.
+The opening regression covers the basic lessons and reward, wrong-word retry,
+book/status, boat/battery travel, Bijou, Ham-lift, Pepper/Oxnard and Harmony, followed
+by Clubhouse/photo-room continuation and empty Items/Gems panels. It runs 144,204
+updates and retains repeated original save/Continue checks. The runner rejects
+unknown inputs and stops on any runtime fault or checkpoint mismatch. By default
+it writes no save or capture. These are native runtime checks, not proof of a full
+desktop playthrough or independent full-machine parity.
 
 To replay the same inputs through the application's host Session API and test
 actual SRAM-file persistence, add:
@@ -201,8 +182,8 @@ host-session checks pass. The partner checkpoints describe the
 returned overworld state; UI scenes can reuse the same render-class slots.
 The original ROM and player's profile are untouched; temporary input traces and
 SRAM files are removed. Trace scratch uses HAMTARO_NATIVE_WORK or the private
-.hamtaro-native-dev profile outside the checkout. This option starts from erased
-SRAM and cannot be combined with --save. It does not create an SDL gameplay window
+.hamtaro-native-dev profile outside the checkout. It starts from erased SRAM unless --save supplies a read-only
+32 KiB starting image for both replays. It does not create an SDL gameplay window
 or prove a complete desktop playthrough.
 
 For desktop review, append --desktop-profile PATH_TO_NEW_PRIVATE_PROFILE. The

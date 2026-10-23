@@ -476,6 +476,26 @@ static void motion_contract(void)
     CHECK(hn_motion_configure(&memory,10,13,0,0,0,256,256,0x02020000,0));
     CHECK(!memcmp(memory.ewram+(HN_COLLISION_DEFAULT-0x02000000),"ABCDEFGHIJKLMNOP",16));
     CHECK(hn_read32(&memory,HN_COLLISION_DEFAULT+16)==0x23402340&&hn_read32(&memory,0x030021F0)==0);
+    /* Original parameter copies are aligned, forward word loads, not memcpy. */
+    for(unsigned i=0;i<132;i++)hn_write8(&memory,0x02022000+i,(uint8_t)i);
+    for(unsigned low=0;low<4;low++){
+        CHECK(hn_motion_configure(&memory,10,13,0,0,0,256,256,HN_COLLISION_DEFAULT,0x02022000+low));
+        CHECK(hn_read32(&memory,0x030021F0)==0x03020100&&hn_read32(&memory,0x0300226C)==0x7F7E7D7C);
+    }
+    hn_write32(&memory,0x030021EC,0x12345678);
+    CHECK(hn_motion_configure(&memory,10,13,0,0,0,256,256,HN_COLLISION_DEFAULT,0x030021EC));
+    for(unsigned i=0;i<32;i++)CHECK(hn_read32(&memory,0x030021F0+i*4)==0x12345678);
+    uint8_t synthetic_rom[0x6700]={0};synthetic_rom[0x6690]=0xCD;synthetic_rom[0x6691]=0xAB;
+    memory.rom=synthetic_rom;memory.rom_size=sizeof(synthetic_rom);
+    CHECK(hn_motion_configure(&memory,10,13,0,0,0,256,256,HN_COLLISION_DEFAULT,0x00A48080));
+    for(unsigned i=0;i<32;i++)CHECK(hn_read32(&memory,0x030021F0+i*4)==0xABCDABCD);
+    CHECK(!memory.fault);
+    hn_write8(&memory,0x0E000001,0x7D);
+    CHECK(hn_motion_configure(&memory,10,13,0,0,0,256,256,HN_COLLISION_DEFAULT,0x0E000001));
+    CHECK(hn_read32(&memory,0x030021F0)==0x7D7D7D7D);
+    CHECK(!hn_motion_configure(&memory,10,13,0,0,0,256,256,HN_COLLISION_DEFAULT,0x080066FC));
+    CHECK(memory.fault&&memory.fault_address==0x08006700);memory.fault=false;
+    CHECK(!memcmp(memory.iwram+0x21F0,synthetic_rom+0x66FC,4));
     HNScript script;hn_script_init(&script,&memory,NULL,0);
     const uint8_t config[]={10,13,0,0,0xC0,0,1,0,2,0,0,0,0,1,0,0,0};
     memcpy(memory.ewram+0x20000,config,sizeof(config));hn_write32(&memory,0x03002BB0,HN_COLLISION_DEFAULT);
@@ -1667,6 +1687,18 @@ static void actor_presets_contract(void)
     CHECK(hn_preset_apply(&memory,0x0801499D)==HN_SCENE_OK&&hn_read32(&memory,hn_render_slot(&memory,255)+4)==0x088C5C71);
     CHECK(hn_preset_apply(&memory,0x08013385)==HN_SCENE_OK&&hn_read32(&memory,hn_render_slot(&memory,255)+4)==0x088B5325);
     CHECK(hn_scene_callback(&memory,0x0801499D,0,&consumed)==HN_SCENE_UNKNOWN&&!memory.fault);
+    reset();hn_write32(&memory,HN_RENDER_SLOTS,0x02010000);hn_write8(&memory,HN_RENDER_INFO+16,40);
+    hn_write32(&memory,HN_GRAPHICS_SCRIPTS,0x02018000);hn_write8(&memory,HN_GRAPHICS_COUNT,16);
+    hn_write8(&memory,0x03002C04,16);hn_write8(&memory,0x03002C00,19);
+    CHECK(hn_preset_apply(&memory,0x08021DD1)==HN_SCENE_OK);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,19)+4)==0x088C1933);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,18)+4)==0x088E3957&&hn_read8(&memory,hn_render_slot(&memory,18)+0x65)==19);
+    CHECK(hn_read32(&memory,0x02018000+4*44+0x18)==0x088E137B);
+    consumed=99;CHECK(hn_scene_callback(&memory,0x08021DD1,0,&consumed)==HN_SCENE_UNKNOWN&&consumed==0);
+    hn_write8(&memory,0x03002182,8);CHECK(hn_preset_apply(&memory,0x08021EAD)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,0x03002182)==8&&hn_read32(&memory,hn_render_slot(&memory,19)+4)==0x088C5C60&&(hn_read8(&memory,hn_render_slot(&memory,19)+0x61)&64));
+    CHECK(hn_preset_apply(&memory,0x08021DE1)==HN_SCENE_OK);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,15)+4)==0x088BA603&&hn_read8(&memory,hn_render_slot(&memory,15)+0x65)==16);
 }
 static void records_contract(void)
 {
