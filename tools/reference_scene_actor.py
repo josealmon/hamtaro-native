@@ -7,6 +7,61 @@ import struct
 from inventory_reference import body
 
 
+def check_actor_mirror(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compare,native_bytes):
+    rows=[r for r in entries if r['source']=='src/graphics/actor_animation_mirror.c']
+    equal(len(rows),1,'complete actor animation reflection family')
+    row=rows[0];equal(row['name'],'AnimationCallbackMirrorActorZAndAnimation','reflection source contract')
+    animate=bind('hn_scene_animation_callback',C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32),C.POINTER(C.c_uint32))
+    main=bind('hn_scene_callback',C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
+    task=bind('hn_scene_actor_task',C.c_int,C.c_void_p,C.c_uint32)
+    rng=random.Random(0x4D495252);base=0x02010000;output=0x0202F000
+    ranges=((0x02000000,0x40000),(0x03000000,0x7000))
+    def word(a,v):both(a,struct.pack('<I',v&0xFFFFFFFF))
+    def fixture(case,render_base=base):
+        fresh();both(render_base-104,rng.randbytes(258*104))
+        for table,count,start in ((0x02002D60,23,0x08100000),(0x02002DBC,18,0x08200000),
+                                  (0x02002E04,23,0x08300000),(0x02002E60,18,0x08400000)):
+            both(table,struct.pack(f'<{count}I',*(start+i*8 for i in range(count))))
+        word(0x03002D98,render_base);both(0x03002C0C,b'\x0A');both(0x03001F50,b'\x0D')
+        both(0x02004543,bytes([case%256]));both(0x03002182,bytes([case&1]))
+        both(0x0201DCA8,struct.pack('<H',(0,1,0x7FFF,0x8000,0xFFFF)[case%5]))
+        both(0x03002DC0,b'\x01')  # Mapped inactive slots remain writable.
+    def check(label):
+        consumed=C.c_uint32(99);yielded=C.c_uint32(0xA5B6C7D8);word(output,yielded.value)
+        equal(animate(memory,row['address']|1,0,0,C.byref(consumed),C.byref(yielded)),1,label+' native ABI')
+        equal(consumed.value,call(row['name'],0,0,output),label+' consumed')
+        equal(yielded.value,int.from_bytes(cpu.mem_read(output,4),'little'),label+' yield')
+        word(output,yielded.value);compare(label,ranges)
+    for primary in range(24):
+        for secondary in range(19):
+            for mode in range(3):
+                case=primary*57+secondary*3+mode;fixture(case)
+                target=base+(case%256)*104
+                word(base+10*104+4,0x08100000+primary*8)
+                word(base+13*104+4,0x08200000+secondary*8)
+                if mode==1:
+                    word(target+4,0x08300000+primary*8);word(target-104+4,0x08400000+secondary*8)
+                if mode==2:both(0x03001F50,b'\x0A')
+                check(f'mirror lookups/fallback/same animation {primary}/{secondary}/{mode}')
+    for index in range(256):
+        for enabled in (0,1):
+            fixture(index);both(0x03002C0C,bytes([index]));both(0x03001F50,bytes([255-index]))
+            both(0x03002182,bytes([enabled]));both(0x02004543,bytes([255-index]))
+            word(base+index*104+0x20,(0,1,0x7FFFFFFF,0x80000000,0xFFFFFFFF)[index%5])
+            check(f'mirror full-byte slots and wrapped Z {index}/{enabled}')
+    for render_base in (0x02002D60-10*104-4,0x02002E04-7*104-0x20,
+                        0x02004543-7*104-0x20,0x0201DCA8-7*104-0x20):
+        for case in range(32):
+            fixture(case,render_base);both(0x02004543,b'\x07')
+            word(render_base+10*104+4,0x08100000+(case%23)*8)
+            word(render_base+13*104+4,0x08200000+(case%18)*8)
+            check('mirror mutable tables/control/class aliases and captured destination')
+    fixture(0);consumed=C.c_uint32(99)
+    equal(main(memory,row['address']|1,0,C.byref(consumed)),0,'reflection rejected through Main ABI')
+    equal(task(memory,row['address']|1),0,'reflection rejected through task ABI')
+    print('Actor reflection animation family matched: both tables/fallbacks, retained offsets, byte slots, wrapped Z, aliases and typed yield.')
+
+
 def check_scene_actors(*, entries, reference, rom, memory, cpu, bind, call, both,
                        fresh, equal, compare, native_bytes, command):
     sources = {

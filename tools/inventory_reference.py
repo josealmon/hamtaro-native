@@ -61,6 +61,7 @@ def dispatches() -> dict[int, list[str]]:
         ("main", "wander.c", "hn_wander_callback"),
         ("main", "scene_actor.c", "simple_presets"),
         ("main", "scene_actor.c", "hn_scene_actor_callback"),
+        ("animation", "scene_actor.c", "hn_scene_actor_animation"),
         ("main", "bank3.c", "hn_bank3_callback"),
         ("text-task", "bank3.c", "hn_bank3_callback"),
         ("text-task", "bank3.c", "late_presets"),

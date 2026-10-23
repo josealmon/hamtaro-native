@@ -563,6 +563,7 @@ HNSceneResult hn_scene_animation_callback(HNMemory *m,GameAddr callback,GameAddr
     bank=hn_presentation_animation(m,callback,slot,arguments,consumed,yield);if(bank!=HN_SCENE_UNKNOWN)return bank;
     HNSceneResult map=hn_map_choice_animation(m,callback,slot,arguments,consumed,yield);if(map!=HN_SCENE_UNKNOWN)return map;
     HNSceneResult motion=hn_scene_motion_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;
+    motion=hn_scene_actor_animation(m,callback,consumed,yield);if(motion!=HN_SCENE_UNKNOWN)return motion;
     switch(callback&~1u){
     case 0x08020260:{
         GameAddr target=hn_render_slot(m,hn_read16(m,0x0201DC40+56*2));

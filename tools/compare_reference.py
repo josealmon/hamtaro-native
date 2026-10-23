@@ -2368,10 +2368,12 @@ def main() -> None:
 
     @timed
     def scene_actor_checks():
-        from reference_scene_actor import check_scene_actors
+        from reference_scene_actor import check_scene_actors,check_actor_mirror
         check_scene_actors(entries=entries,reference=args.reference,rom=rom,memory=memory,cpu=cpu,
                            bind=bind,call=call,both=both,fresh=fresh,equal=equal,compare=compare,
                            native_bytes=native_bytes,command=command)
+        check_actor_mirror(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,
+                          both=both,fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes)
 
     @timed
     def actor_preset_checks():

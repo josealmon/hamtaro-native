@@ -78,11 +78,12 @@ oracle, in 678.102 seconds on the development machine. The preceding log spanned
 approximately 1,238 seconds; that older value comes from file timestamps. Concurrent
 native route replays ran during both executions, so the roughly 45% reduction is
 an observed local comparison, not a portable performance guarantee. Those measurements preceded the scene-copy and paired-actor additions.
-The current expanded suite passes 4,236,281 checks in 590.054 seconds, with the same
+The current expanded suite passes 4,246,325 checks in 591.669 seconds, with the same
 exhaustive domains and oracles plus scene-copy, paired-actor, render-selection and
-five local SaveGroup4 contracts. This retains all 4,208,502 prior checks and adds
-27,779; native story replays ran concurrently. The preceding expanded run took
-613.221 seconds. These local timings are observations, not a portable speed guarantee.
+five local SaveGroup4 contracts and actor reflections. This retains all 4,236,281
+prior checks and adds 10,044; native story replays ran concurrently. The preceding
+expanded run took 590.054 seconds. These local timings are observations, not a
+portable speed guarantee.
 
 `compare_reference.py` prints elapsed time and assertion counts per family and for
 its complete invocation. Optional `--timings-json PATH_OUTSIDE_CHECKOUT` retains a
@@ -181,16 +182,34 @@ x=128.5, z=196.5 with 32 words, 22 seeds, four loves and Bijou. Flags 0x11F/0x12
 are retained by original save/Continue and fresh disk continuation. Host SRAM
 matches the SDK export byte for byte; source saves remain unchanged. A fresh SDK
 reload independently checks the host-written file. The current core also passes
-the complete 281,135-update erased-SRAM Sunny Peak route again in 467.18 seconds.
-These are SDK/host-session results. The fifth reconciliation, complete Sandy Bay
-story, later Sunny Peak visits and a desktop playthrough remain unverified.
+the complete 281,135-update erased-SRAM Sunny Peak route again in 464.68 seconds.
+The separate `treasure_island.json` continuation leaves those 191,915 inputs and
+checkpoints unchanged and starts from the saved music hall in a fresh process.
+Replaying that prerequisite on the current core passes in 295.419 seconds and
+exports exactly the same 32 KiB SRAM as the earlier focused music-hall checkpoint.
+It follows the
+demonstration's Yep-P choice, guard access, dressing-room mirror, Stickie/Heyhoo
+impostor scene, first lighthouse encounter and elder's two Heyhoo conversations.
+It asserts Tuggie's book acquisition, its use at the lighthouse, the fifth love,
+follow-up word, story phase 0x34=6 and flags 0x72/0x5B/0x138/0x182. The focused
+44,850-update route passes in 74.35 seconds from the current prerequisite;
+48,522 host-session checks pass in 79.54 seconds. Original save/Continue and a fresh SDK reload retain map 4:12 at
+x=128.5, z=128.5 with 34 words, 22 seeds, five loves and Bijou. Host SRAM matches
+the SDK export exactly; source saves are unchanged. The fresh SDK process also
+opens Status and renders its counters in 2,103 updates.
+These are SDK/host-session results. Complete Sandy Bay activities, later Sunny
+Peak visits and a desktop playthrough remain unverified.
+Concatenating the focused recording directly after the earlier in-process
+Continue diverges at room navigation. The supported scenario chain uses an
+explicit SRAM reload between stages, not a claim of one uninterrupted recording.
 The prerequisite is reproducible from erased SRAM without duplicating the opening:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_peak.json --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_PROFILE
-    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay.json --save PATH_TO_NEW_PRIVATE_SUNNY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay.json --save PATH_TO_NEW_PRIVATE_SUNNY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_ISLAND_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/treasure_island.json --save PATH_TO_NEW_PRIVATE_ISLAND_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_FIFTH_PROFILE
 
-The first command requires a new profile directory outside the checkout. The
-second reads its SRAM without changing it and tests a separate temporary session.
+Each output profile must be new and outside the checkout. Every continuation
+reads its prerequisite SRAM without changing it and tests a fresh host session.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. IDs are decimal or hexadecimal
@@ -671,13 +690,23 @@ Additional focused area-dependency checks use:
     python -B tools/compare_reference.py --wave-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
     python -B tools/compare_reference.py --counter-scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-These pass 41,470 scene actor comparisons, 95,870 actor preset comparisons,
+These pass 51,514 scene actor comparisons, 95,870 actor preset comparisons,
 58,709 record/local-SaveGroup4 comparisons and 16,497 scanline-wave comparisons. The scene group
 covers 45 functions across 16 families and one shared bank-3 condition, including
 approach completion, signed limits, all ARM shift counts, direction constructors,
 snapshots, copy aliases and the three-byte render-selection Main callback. Its
 primary/secondary paths cover every byte selection, inactive mapped records and
-arguments overwritten by slot reset. The preset group covers all 498 functions in six
+arguments overwritten by slot reset. Its 41,470 previous comparisons remain and
+the complete one-function actor_animation_mirror.c family adds 10,044. The focused
+scene group takes 3.171 seconds. Reflection checks cover both 23/18-entry mutable
+lookup tables, matched/changed/retained animation offsets, both fallbacks, wrapped
+Z and baseline boundaries, the companion branch, every byte slot index, inactive
+mapped slots and table/control/class aliases. The animation ABI returns zero
+consumed bytes and a full-word yield of one; Main and task calls reject it.
+The fixture compares all EWRAM and game IWRAM without the original ARM call stack.
+Public synthetic checks also cover the last primary row, retained flags/offsets,
+fallback clearing and companion overflow. No original animation tables are embedded.
+The preset group covers all 498 functions in six
 families, Main rejection of void callbacks, F4 dispatch, direction sectors,
 captured auxiliary arguments versus live selector aliases and inactive mapped
 byte selectors at 0, 1, 254 and 255. Record checks cover

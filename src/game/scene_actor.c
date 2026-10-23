@@ -506,3 +506,34 @@ HNSceneResult hn_scene_actor_task(HNMemory *m,GameAddr callback)
     default:return HN_SCENE_UNKNOWN;
     }
 }
+static void mirror_actor(HNMemory *m,GameAddr source,GameAddr destination,uint32_t baseline,
+                         GameAddr origins,GameAddr images,unsigned count,GameAddr fallback)
+{
+    hn_write32(m,destination+0x20,0xFFF00000u-2u*(hn_read32(m,source+0x20)-baseline));
+    unsigned i=0;
+    while(i<count&&!m->fault&&hn_read32(m,source+4)!=hn_read32(m,origins+i*4))i++;
+    if(i==count){
+        hn_write32(m,destination+4,fallback);hn_write8(m,destination+0x63,0);hn_write16(m,destination+0x4C,0);
+    }else if(hn_read32(m,destination+4)!=hn_read32(m,images+i*4)){
+        hn_write32(m,destination+4,hn_read32(m,images+i*4));
+        hn_write8(m,source+0x63,0);hn_write8(m,destination+0x63,0);
+        hn_write16(m,destination+0x4C,hn_read16(m,source+0x4C));
+    }
+}
+HNSceneResult hn_scene_actor_animation(HNMemory *m,GameAddr callback,uint32_t *consumed,uint32_t *yield)
+{
+    switch(callback&~1u){
+    case 0x080CD39C:{
+        *yield=1;uint32_t baseline=(uint32_t)hn_read16(m,0x0201DCA8)<<16;
+        GameAddr source=hn_render_slot(m,hn_read8(m,HN_RENDER_CLASS_LEADER));
+        GameAddr destination=hn_render_slot(m,hn_read8(m,HN_SCENE_CONTROLS+0x23));
+        mirror_actor(m,source,destination,baseline,0x02002D60,0x02002E04,23,0x088FC9F9);
+        if(flag(m,16)){
+            source=hn_render_slot(m,hn_read8(m,HN_RENDER_CLASS_FOLLOWER));
+            mirror_actor(m,source,destination-104,baseline,0x02002DBC,0x02002E60,18,0x088FCA01);
+        }
+        *consumed=0;return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+    }
+    default:return HN_SCENE_UNKNOWN;
+    }
+}

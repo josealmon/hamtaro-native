@@ -2812,9 +2812,42 @@ static void group4_contract(void)
     CHECK(hn_group4_callback(&memory,0x080C8744,0,&consumed)==HN_SCENE_UNKNOWN&&consumed==0);
     CHECK(!memory.fault);free(rom);reset();
 }
+static void actor_mirror_contract(void)
+{
+    reset();hn_write32(&memory,HN_RENDER_SLOTS,0x02010000);
+    hn_write8(&memory,HN_RENDER_CLASS_LEADER,10);hn_write8(&memory,HN_RENDER_CLASS_FOLLOWER,13);
+    hn_write8(&memory,HN_SCENE_CONTROLS+0x23,20);hn_write16(&memory,0x0201DCA8,3);
+    GameAddr source=hn_render_slot(&memory,10),target=hn_render_slot(&memory,20);
+    for(unsigned i=0;i<23;i++){
+        hn_write32(&memory,0x02002D60+i*4,0x08100000+i*8);
+        hn_write32(&memory,0x02002E04+i*4,0x08200000+i*8);
+    }
+    hn_write32(&memory,source+4,0x081000B0);hn_write32(&memory,source+0x20,0x00051234);
+    hn_write16(&memory,source+0x4C,0xABCD);hn_write8(&memory,source+0x63,0xE7);
+    hn_write8(&memory,target+0x63,0xC3);uint32_t consumed=99,yield=0xA5B6C7D8;
+    CHECK(hn_scene_animation_callback(&memory,0x080CD39D,0,0,&consumed,&yield)==HN_SCENE_OK&&consumed==0&&yield==1);
+    CHECK(hn_read32(&memory,target+0x20)==0xFFEBDB98&&hn_read32(&memory,target+4)==0x082000B0);
+    CHECK(hn_read16(&memory,target+0x4C)==0xABCD&&hn_read8(&memory,target+0x63)==0&&hn_read8(&memory,source+0x63)==0);
+    hn_write16(&memory,target+0x4C,0x1357);hn_write8(&memory,target+0x63,0x71);hn_write8(&memory,source+0x63,0x72);
+    CHECK(hn_scene_actor_animation(&memory,0x080CD39C,&consumed,&yield)==HN_SCENE_OK);
+    CHECK(hn_read16(&memory,target+0x4C)==0x1357&&hn_read8(&memory,target+0x63)==0x71&&hn_read8(&memory,source+0x63)==0x72);
+    hn_write32(&memory,source+4,0x08123456);
+    CHECK(hn_scene_actor_animation(&memory,0x080CD39C,&consumed,&yield)==HN_SCENE_OK);
+    CHECK(hn_read32(&memory,target+4)==0x088FC9F9&&hn_read16(&memory,target+0x4C)==0&&hn_read8(&memory,target+0x63)==0);
+    hn_write8(&memory,0x03002182,1);source=hn_render_slot(&memory,13);
+    hn_write32(&memory,0x02002DBC,0x08300000);hn_write32(&memory,0x02002E60,0x08400000);
+    hn_write32(&memory,source+4,0x08300000);hn_write32(&memory,source+0x20,0x80000001);
+    hn_write16(&memory,source+0x4C,0x2468);
+    CHECK(hn_scene_actor_animation(&memory,0x080CD39C,&consumed,&yield)==HN_SCENE_OK);
+    CHECK(hn_read32(&memory,target-104+0x20)==0xFFF5FFFE&&hn_read32(&memory,target-104+4)==0x08400000);
+    CHECK(hn_read16(&memory,target-104+0x4C)==0x2468);
+    CHECK(hn_scene_callback(&memory,0x080CD39D,0,&consumed)==HN_SCENE_UNKNOWN);
+    CHECK(hn_scene_actor_task(&memory,0x080CD39D)==HN_SCENE_UNKNOWN);
+    CHECK(!memory.fault);reset();
+}
 int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
     text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();indicator_contract();book_contract();actor_snapshot_contract();preset_contract();map_choice_contract();particles_contract();scene_motion_contract();bank2_contract();wander_contract();scene_actor_contract();actor_presets_contract();records_contract();wave_contract();counter_scene_contract();shared_motion_contract();runtime_contract();
-    scene_effects_contract();bank3_contract();bank4_contract();bank5_contract();bank6_contract();bank6_chain_contract();bank7_contract();presentation_contract();group3_contract();group4_contract();record_menu_contract();item_selection_contract();record_selection_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
+    scene_effects_contract();bank3_contract();bank4_contract();bank5_contract();bank6_contract();bank6_chain_contract();bank7_contract();presentation_contract();group3_contract();group4_contract();actor_mirror_contract();record_menu_contract();item_selection_contract();record_selection_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

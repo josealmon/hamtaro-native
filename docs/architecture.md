@@ -50,6 +50,7 @@ statically. A separate clean-machine validation remains pending.
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
 | Scene actor snapshots | Adapted | Four 104-byte render snapshots, active-slot restoration and six modal map roundtrips compared; idle animation variants, optional slots and script cursor retention preserved |
+| Actor reflections | Adapted | Complete actor_animation_mirror.c animation contract compared: 23/18-entry mutable tables, wrapped Z, changed/retained animation offsets, fallbacks and companion aliases; dressing-room introduction and movement execute natively |
 | Shared scene actor control | Adapted | All 40 functions in class_anchor_presets.c and scene_control_callbacks.c compared: anchors/modes, vectors, signed rectangles/corridors, aiming, background alignment/offsets and clone phases; later-activity runtime integration remains pending |
 | Scene render presets | Adapted | All 77 functions in script_callbacks_render_presets.c and 28 required actor helpers compared; typed F4/task calls and 35 defined-zero Main callbacks, linked slots, indicators, graphics and live class selectors; full area/activity integration remains pending |
 | Bank-2 actor and scene families | Adapted | All 120 functions in map_bank2_render_callbacks.c, map_bank2_scene_control.c, map_bank2_scene_presets.c and map_bank2_height_callbacks.c compared; 116 argument-free task targets, 70 Main contracts, panel stages, randomized motion, height latches and one full-word animation yield; complete Sunny Peak integration remains pending |
@@ -150,17 +151,33 @@ collects its gem with Hif-hif and reaches the Captain through Digdig. Fussfuss e
 the ferry and anniversary continuation. A shop interaction learns one additional
 word, then an explicit Yep-P choice takes the ferry to Treasure Island. Pashmina's
 introduction, Penelope's scarf scene and its Hif-hif pickup precede the music hall.
-The combined route passes 191,915 native updates in 301.12 seconds. A focused
+The 191,915-update SDK prerequisite passes again on the current core in 295.419
+seconds. Its exported 32 KiB SRAM matches the earlier focused music-hall file
+byte for byte. A focused
 50,592-update replay from the wooden-board SRAM passes in 79.50 seconds, followed
 by 54,387 host-session checks in 84.18 seconds. Original save/Continue and a fresh
 disk session retain map 4:13 at x=128.5, z=196.5 with 32 words, 22 seeds, four loves
 and Bijou, including melody/cache/gem flags and Captain/ferry/scarf phases.
 The host-written 32 KiB SRAM equals the SDK export, and the input saves are unchanged.
-The full erased-SRAM Sunny Peak route also passes again on this core: 281,135
-updates in 467.18 seconds. A separate SDK process reloads the host-written island
+The current core also passes the full erased-SRAM Sunny Peak route: 281,135
+updates in 464.68 seconds. A separate SDK process reloads the host-written island
 SRAM and rechecks the saved flags, scene controls, map, position and counters.
-The fifth reconciliation, complete Sandy Bay story, remaining
-activities and later visits remain unverified. The input SRAM is a private output of the erased-SRAM
+`treasure_island.json` preserves the earlier scenario as a separate prerequisite
+and starts from its saved music hall in a fresh native process. It follows the
+music demonstration's Yep-P choice, guard access, dressing-room reflection and
+Stickie/Heyhoo impostor scene. The first lighthouse encounter enables the elder's
+two Heyhoo conversations, Tuggie and its book entry. Tuggie then exposes the
+lighthouse impostor, restores the fifth love and teaches the follow-up word.
+A 44,850-update replay from the current prerequisite passes in 74.35 seconds and
+48,522 host-session checks pass in 79.54 seconds. Original save/Continue and a fresh SDK process
+retain map 4:12 at x=128.5, z=128.5 with 34 words, 22 seeds, five loves and Bijou,
+including flags 0x72/0x5B/0x138/0x182 and story phase 0x34=6. The host-written
+32 KiB SRAM equals the SDK export. The fresh reload also opens Status through
+native input; its five-love counters are inspected through native PPU output.
+The two scenarios do not claim one uninterrupted deterministic button recording:
+verbatim concatenation after an in-process Continue diverges at room navigation.
+Complete Sandy Bay activities, later visits and full desktop progression remain unverified.
+The input SRAM is a private output of the erased-SRAM
 Sunny Peak route; the versioned continuation contains only buttons and scalar checkpoints.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
@@ -575,11 +592,12 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue Treasure Island from the saved music hall toward the fifth reconciliation,
-   reviewing the dressing-room and elder story dependencies. The team/ball story,
-   fourth reconciliation, melody, Captain, ferry and scarf now have native input
-   coverage and original saves. Use this progress to unlock later Sunny Peak visits;
-   the temple, workshop and remaining optional activities still need integration proof.
+1. Continue from the saved fifth reconciliation through Sandy Bay's remaining
+   prerequisites and Fun Land toward the sixth love and green marble. The original
+   route reaches Sunny Peak's temple/workshop after obtaining all three marbles,
+   including the jungle wedding's red marble; keep these dependencies explicit.
+   Sunny Peak's later hat story, temple, workshop and optional activities still
+   need native integration proof.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.
