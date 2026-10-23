@@ -14,7 +14,7 @@ run=MODULE["run_steps"]
 
 class ScenarioTests(unittest.TestCase):
     def test_schedule_preserves_input_order_and_observes_state(self):
-        document=parse("# synthetic\n2 0 -\n1 312 checkpoint # comment\n", "synthetic")
+        document=parse("# synthetic\n0 0 initial\n2 0 -\n0 0 -\n1 312 checkpoint # comment\n", "synthetic")
         class Game:
             def __init__(self):self.keys=[];self.observed=[]
             def frame(self,keys):self.keys.append(keys)
@@ -22,7 +22,7 @@ class ScenarioTests(unittest.TestCase):
         game=Game()
         with contextlib.redirect_stdout(io.StringIO()) as output:run(game,document["steps"])
         self.assertEqual(game.keys,[0,0,0x312])
-        self.assertEqual(game.observed,[3])
+        self.assertEqual(game.observed,[0,3])
         self.assertIn("Observation checkpoint",output.getvalue())
 
     def test_malformed_or_ambiguous_schedules_fail(self):

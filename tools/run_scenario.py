@@ -34,12 +34,13 @@ def input_schedule(text: str, name: str) -> dict:
         except ValueError as error:
             raise ValueError(f"Schedule line {number}: invalid duration or key mask.") from error
         if not 0<=keys<1024:raise ValueError(f"Schedule line {number}: key mask must use only the ten GBA buttons.")
-        steps.append(dict(frames=frames,buttons=[button for button,mask in BUTTONS.items() if keys&mask]))
+        if not 0<=frames<=1000000:raise ValueError(f"Schedule line {number}: invalid input duration.")
+        if frames:steps.append(dict(frames=frames,buttons=[button for button,mask in BUTTONS.items() if keys&mask]))
         label=fields[2]
         if label!="-":
             if label in labels:raise ValueError(f"Schedule line {number}: duplicate label {label}.")
             labels.add(label);steps.append(dict(observe=label))
-    if not steps:raise ValueError("An input schedule must contain updates.")
+    if not steps:raise ValueError("An input schedule must contain updates or observations.")
     validate_steps(steps)
     return dict(name=name,steps=steps)
 

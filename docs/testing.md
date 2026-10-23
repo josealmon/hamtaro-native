@@ -199,8 +199,9 @@ all later steps during focused development.
 External reference schedules can be read directly with `--input-schedule PATH`
 instead of `--scenario`. Each non-comment line is a decimal frame count, a
 hexadecimal GBA button mask and a label (`-` omits the label). Blank lines and
-`#` comments are accepted. Invalid masks, duplicate labels, nonpositive durations
-and malformed lines fail before execution. The same two-million-update total
+`#` comments are accepted. Zero-frame labels observe state without advancing the
+game; unlabeled zero-frame lines are no-ops. Invalid masks, duplicate labels,
+negative durations and malformed lines fail before execution. The same two-million-update total
 budget applies to text and JSON, including repeated steps. `--until LABEL` can
 stop a text replay at a unique observation after the entire input is validated.
 
