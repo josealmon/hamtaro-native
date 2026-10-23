@@ -366,6 +366,22 @@ The five remaining rocks need a higher love-meter strength; other optional
 activities, 22 words, populated crafting/store branches and full desktop
 progression remain pending.
 
+The separate `postgame.json` chapter starts from that verified Sunny save and
+collects both cave rocks through Hif-hif and Tack-Q. Rubrub identifies two Glass
+Beads. Two normal Digdig visits provide ten more seeds. Original Save/Continue
+retains the same Clubhouse room, position, 64 words, five rocks, ten loves and
+Bijou, now with 22 seeds, two Glass Beads and one additional partial common-rock
+polish. The 49,102-update, 11-checkpoint chapter asserts collection counters and
+remaining-polish fields as well as the previous story flags and scalar state.
+It passes the SDK in 91.19 seconds and 52,513 host-session checks in 92.93 seconds;
+SDK, host and scout match all 32 KiB. A separate 2,103-update SDK reload/Status
+inspection passes in 2.734 seconds and retains all checked counters and slots.
+The source Sunny save remains unchanged. No native functional sources changed.
+The preceding 177,048-update scenario remains unchanged; unchanged native code
+can reuse its verified save for focused extensions. This preserves every earlier
+scenario and the full comparison suite. Accessory crafting, the remaining words,
+higher love-meter strength and complete desktop progression remain pending.
+
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
 rescued loves. Focused input saves are read-only; all writes use disposable profiles.

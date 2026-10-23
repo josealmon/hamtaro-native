@@ -375,6 +375,32 @@ Only normal inputs and scalar expectations are stored in the scenario.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --save PATH_TO_PRIVATE_POSTGAME_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_OPTIONAL_PROFILE
 
+`postgame.json` continues from the final `sunny_optional.json` save. It collects
+the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
+then obtains five seeds on each of two room visits. Rubrub identifies both new
+rocks as Glass Beads. The summary and original Save/Continue retain map 1:4 at
+x=80.5, z=80.5, 64 words, 22 seeds, five rocks, ten loves and Bijou. The route
+also retains one additional partial polish on a common rock. Explicit collection
+counter and packed rock-count expectations check the ingredients independently
+of the total number of rocks. Crafting and delivery remain pending.
+
+This chapter passes 49,102 SDK input updates and 11 checkpoints in 91.19 seconds,
+then 52,513 host-session checks in 92.93 seconds. SDK, host and scout match all
+32 KiB. A separate 2,103-update SDK reload/Status check passes in 2.734 seconds
+and verifies the individual collection counters and all eight original rock
+slots. The source Sunny save remains unchanged. The ten scenario-parser unit
+tests retain all eight prior cases and add bounded inventory IDs/values, packed
+field reads and rejection of incorrect gem/count expectations.
+
+Keep the preceding
+177,048-update scenario unchanged: when native functional sources have not changed,
+its verified save can start this chapter without replaying the completed prefix
+for every extension. This reduces repeated integration work without dropping any
+prior scenario, assertion or reference-comparison domain. Functional changes still
+require the relevant regressions and a full comparison at a coherent batch boundary.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --save PATH_TO_PRIVATE_SUNNY_OPTIONAL_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_MATERIALS_PROFILE
+
 The other 22 words, the higher love meter needed for the remaining rocks,
 populated crafting/store branches, other activities and the complete desktop
 playthrough remain unverified.
@@ -385,7 +411,12 @@ Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 strings, unique after parsing. Flags address the 96-byte game flag block (0 through
 767) and require boolean values; controls address the 512-byte control block (0
 through 511) and require integer bytes (0 through 255). Classes address the first
-256 scene halfwords and require integers from 0 through 65,535. These mappings are nonempty
+256 scene halfwords and require integers from 0 through 65,535.
+`"record_counters": {"29": 2}` reads the 32 collection-counter bytes; 255 means
+undiscovered and stays distinct from zero. `"rock_counts": {"0": 0, "63": 31}`
+reads the remaining-polish field of the 64 packed rock slots, excluding the key
+and other packed bits. These mappings require unsigned integer bytes and counts
+from 0 through 31 respectively. All mappings are nonempty
 read-only assertions. Malformed/out-of-range IDs, numeric aliases and incorrect
 value types fail validation; booleans are rejected as numeric values. Deliberately
 incorrect flag/control expectations are also rejected by ROM-backed tests.

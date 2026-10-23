@@ -70,9 +70,40 @@ class ScenarioTests(unittest.TestCase):
         actual=MODULE["NativeGame"].checkpoint(game,classes={"0xE0":3600,"0xE1":600})
         self.assertEqual(actual["classes"],{"0xE0":3600,"0xE1":600})
         self.assertEqual(calls[-2:],[(0x0201DE00,2),(0x0201DE02,2)])
-        game.checkpoint=lambda flags,controls,classes: {"classes":{"0xE1":599}}
+        game.checkpoint=lambda flags,controls,classes,record_counters,rock_counts: {"classes":{"0xE1":599}}
         with contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,"expected.*600.*got.*599"):
             run(game,[dict(label="score",expect={"classes":{"0xE1":600}})])
+
+    def test_inventory_checkpoints_reject_truncation_and_aliases(self):
+        for field,limit,maximum in (("record_counters",32,255),("rock_counts",64,31)):
+            self.assertEqual(validate([dict(expect={field:{"0":0,str(limit-1):maximum}})]),0)
+            for values in ({"0":True},{"0":-1},{"0":maximum+1},{str(limit):0},
+                           {"-1":0},{"1":1,"0x1":2},{},[]):
+                with self.subTest(field=field,values=values),self.assertRaises(ValueError):
+                    validate([dict(expect={field:values})])
+
+    def test_inventory_checkpoints_read_packed_counts_and_enforce_gems(self):
+        calls=[]
+        def value(address,size=4,signed=False):
+            calls.append((address,size))
+            return {0x0201CC20:255,0x0201CC3F:2,0x0201CB20:0xF07C,
+                    0x0201CC1C:0xFFFF}.get(address,0)
+        game=SimpleNamespace(check=lambda:[0,0,0,0,9],value=value)
+        actual=MODULE["NativeGame"].checkpoint(game,record_counters={"0":255,"31":2},
+                                               rock_counts={"0":0,"63":31})
+        self.assertEqual(actual["record_counters"],{"0":255,"31":2})
+        self.assertEqual(actual["rock_counts"],{"0":0,"63":31})
+        self.assertEqual(calls[-4:],[(0x0201CC20,1),(0x0201CC3F,1),
+                                    (0x0201CB20,2),(0x0201CC1C,2)])
+        def checkpoint(flags,controls,classes,record_counters,rock_counts):
+            self.assertEqual(record_counters,{"29":2})
+            self.assertEqual(rock_counts,{"6":0})
+            return inventory
+        game.checkpoint=checkpoint
+        for counters,rocks,message in ((1,0,"record_counters"),(2,1,"rock_counts")):
+            inventory={"record_counters":{"29":counters},"rock_counts":{"6":rocks}}
+            with self.subTest(field=message),contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,message):
+                run(game,[dict(label="gems",expect={"record_counters":{"29":2},"rock_counts":{"6":0}})])
 
 
     def test_saved_profile_requires_every_sdk_byte(self):

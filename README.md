@@ -11,7 +11,9 @@ defeat, the complete credits and saved postgame control. An additional Sunny Pea
 route learns Blushie, Bestest, Bloat-T and Hamtast, completes Panda's bridge and
 collects the Rainbow Key. With Tran-Q from Clubhouse, the dictionary reaches
 64 words. The extension also collects Condor's Wings and Great Springs, identifies
-Banana Stone, Crystal and Ammonite, and opens their Gems entries.
+Banana Stone, Crystal and Ammonite, and opens their Gems entries. A separate
+continuation collects and polishes two Glass Beads and saves 22 seeds for the
+accessory workshop.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 
