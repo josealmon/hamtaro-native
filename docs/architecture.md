@@ -78,7 +78,7 @@ statically. A separate clean-machine validation remains pending.
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; three owned Gems entries and wrap navigation inspected in the SDK; complete Items/Gems and timed raster integration remain pending |
 | Record messages and eligible-item count | Adapted | All 12 game_record_messages.c functions and the save_counter_prefix.s Main51 leaf compared; five-language text, byte-index wrap, live aliases, eleven void animation presets and the excluded final counter byte; the Clubhouse desk's empty-inventory greeting completes in the SDK; populated activity branches remain pending |
-| Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; complete crafting activity coverage remains pending |
+| Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; paid artisan Pooie Earrings and delivery tested; manual crafting, resale and other recipes remain separate |
 | Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; empty entry/return and a one-item training-seat SDK view/save/reload run; multi-item inventories and complete activity integration remain pending |
 | Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
 | Rock use, counters and captions | Adapted | All 18 functions in game_record_use.c, script_callbacks_game_record_counter.c and record_display.c compared: 15 Main, 14 F4 contracts and two direct helpers; native SDK Rubrub identifies Banana Stone, Crystal and Ammonite, retains partial rocks and enforces the love-meter strength limit; complete crafting and store branches remain pending |
@@ -379,8 +379,27 @@ inspection passes in 2.734 seconds and retains all checked counters and slots.
 The source Sunny save remains unchanged. No native functional sources changed.
 The preceding 177,048-update scenario remains unchanged; unchanged native code
 can reuse its verified save for focused extensions. This preserves every earlier
-scenario and the full comparison suite. Accessory crafting, the remaining words,
-higher love-meter strength and complete desktop progression remain pending.
+scenario and the full comparison suite. At that checkpoint accessory crafting,
+the remaining words, higher love-meter strength and complete desktop progression
+remain pending.
+
+The continuation obtains the Pooie Earrings recipe from the Wildwoods palace,
+commissions the accessory at the Clubhouse and checks the exact costs: twenty
+seeds, one Ammonite, one Banana Stone and two Glass Beads. The artisan's branch
+stores the completed accessory without calling the manual-crafting random-outcome
+handler. A further workshop interaction retains it. Ta-dah at the palace removes
+that accessory and grants the Star Key. The key opens Spat Tower's cave door; the
+complete scene teaches Swellie and increases rescued loves to eleven. Original
+Save/Continue returns to map 9:1 at x=104.5, z=96.5 with 65 words, two seeds,
+five rocks, eleven loves and Bijou. The three spent gem counters remain zero;
+Crystal remains one and the undiscovered counter remains 255. All earlier
+49,102 updates and eleven checkpoints remain in the expanded chapter. The full
+102,283-update chapter passes twenty SDK checkpoints in 184.14 seconds and
+107,506 host-session checks in 186.82 seconds. All 32 KiB of SDK, host and scout
+SRAM match; a fresh SDK reload and Status inspection pass in 2.876 seconds and
+retain the checked flags, counters and rock slots. The source profiles remain
+unchanged. No native functional sources changed. Manual crafting, the other
+twenty-one words, the full love meter and full desktop progression remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

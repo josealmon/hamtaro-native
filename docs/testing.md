@@ -382,7 +382,7 @@ rocks as Glass Beads. The summary and original Save/Continue retain map 1:4 at
 x=80.5, z=80.5, 64 words, 22 seeds, five rocks, ten loves and Bijou. The route
 also retains one additional partial polish on a common rock. Explicit collection
 counter and packed rock-count expectations check the ingredients independently
-of the total number of rocks. Crafting and delivery remain pending.
+of the total number of rocks. That checkpoint precedes crafting and delivery.
 
 This chapter passes 49,102 SDK input updates and 11 checkpoints in 91.19 seconds,
 then 52,513 host-session checks in 92.93 seconds. SDK, host and scout match all
@@ -401,8 +401,29 @@ require the relevant regressions and a full comparison at a coherent batch bound
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --save PATH_TO_PRIVATE_SUNNY_OPTIONAL_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_MATERIALS_PROFILE
 
-The other 22 words, the higher love meter needed for the remaining rocks,
-populated crafting/store branches, other activities and the complete desktop
+The continuation receives the Pooie Earrings recipe, selects that accessory with
+all requirements available and commissions it for twenty seeds and the four
+required gems. A further workshop interaction retains the paid accessory and
+seed balance.
+Ta-dah at the Wildwoods palace delivers it and obtains the Star Key. The tower's
+key door opens normally and its complete rescue teaches Swellie. Original
+Save/Continue retains map 9:1 at x=104.5, z=96.5 with 65 words, two seeds,
+five rocks, eleven loves and Bijou. Checkpoints retain the key, recipe, word and
+ending flags, the three zero spent-gem counters, the remaining Crystal, the
+undiscovered 255 counter and all eight original packed rock counts. The artisan
+branch does not invoke the separate manual-crafting failure/refund handler.
+
+The expanded chapter retains every earlier update and checkpoint: 102,283 SDK
+updates and twenty checkpoints pass in 184.14 seconds, followed by 107,506
+host-session checks in 186.82 seconds. SDK, host and scout match all 32 KiB of
+SRAM byte for byte. A fresh SDK reload and Status inspection pass 2,103 updates
+in 2.876 seconds, checking the saved flags, collection counters and packed rock
+counts. Both source profiles remain unchanged. The ten scenario-parser tests,
+eleven CTest suites and app smoke test also pass. Native functional sources are
+unchanged, so the prior full reference comparison still applies.
+
+The other 21 words, the higher love meter needed for the remaining rocks,
+manual crafting/resale branches, other activities and the complete desktop
 playthrough remain unverified.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and

@@ -12,8 +12,9 @@ route learns Blushie, Bestest, Bloat-T and Hamtast, completes Panda's bridge and
 collects the Rainbow Key. With Tran-Q from Clubhouse, the dictionary reaches
 64 words. The extension also collects Condor's Wings and Great Springs, identifies
 Banana Stone, Crystal and Ammonite, and opens their Gems entries. A separate
-continuation collects and polishes two Glass Beads and saves 22 seeds for the
-accessory workshop.
+continuation collects and polishes two Glass Beads, commissions Pooie Earrings,
+trades them for the Star Key and completes its rescue. Swellie increases the
+dictionary to 65 words and the rescued-love count to eleven.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 
