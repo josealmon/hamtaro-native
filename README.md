@@ -33,6 +33,10 @@ The following saved stage recovers the thermal egg, learns Clingie, Thank-Q,
 Hulahula and Hamscope, crafts the slingshot, shoots the beehive and recovers the
 red marble. The second jungle wedding teaches Vast-T and restores the ninth love,
 retained through original Save and Continue and fresh SDK/host sessions.
+The temple continuation retrieves the returned red marble and Sandy Bay's blue
+marble, uses the mine cart and places all three marbles in Sunny Peak's altar.
+The spoon and inventor-couple story reach the tenth reconciliation, retained
+through original Save and Continue, exact SDK/host SRAM equality and a fresh reload.
 This development build still stops at unfinished functions; complete story, optional activities,
 remaining minigames and desktop playthrough coverage remain unverified.
 See docs/architecture.md for the current evidence.

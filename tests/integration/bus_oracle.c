@@ -43,7 +43,9 @@ int main(int argc,char **argv)
             if(fwrite(words,sizeof(words),1,stdout)!=1||fflush(stdout))return 3;
             continue;
         }
-        if(command[0]<0x10000000u)return 2;
+        uint32_t io=command[0]&0x00FFFFFEu;
+        bool floating_io=(command[0]>>24)==4&&io>=0x400&&io!=0x800&&io!=0x802&&io!=0xFFF780;
+        if(command[0]<0x10000000u&&!floating_io)return 2;
         uint32_t result=GBALoad16(&cpu,command[0],NULL);
         if(fwrite(&result,sizeof(result),1,stdout)!=1||fflush(stdout))return 3;
     }

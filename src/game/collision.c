@@ -10,10 +10,15 @@ static GameAddr render_slot(HNMemory *m,unsigned index)
 static uint32_t record_index(HNMemory *m,GameAddr record,GameAddr prefetch)
 {
     /* These three ROM LDRH sites read the prefetched Thumb halfword on the
-       unmapped bus above 0x0FFFFFFF. Oilcan animation variables can supply
-       such a list entry in the original game. Keep that terminating read;
+       unmapped bus. Oilcan and cart animation variables can supply such a
+       list entry, including unassigned I/O above the normal register block.
+       Keep extended memory-control and debug-enable registers unsupported
+       here: those are assigned registers, not floating-bus reads.
+       Keep the terminating index read local;
        ordinary memory reads and later record fields retain their checks. */
-    if(record>=0x10000000u){
+    uint32_t io=record&0x00FFFFFEu;
+    bool floating_io=(record>>24)==4&&io>=0x400&&io!=0x800&&io!=0x802&&io!=0xFFF780;
+    if(record>=0x10000000u||floating_io){
         uint32_t value=hn_read16(m,prefetch);
         return record&1?(value>>8)|(value<<24):value;
     }

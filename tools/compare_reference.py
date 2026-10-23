@@ -893,7 +893,9 @@ def main() -> None:
             # Independent mGBA bus loads supply the original LDRH results.
             # The three reviewed ROM sites all stop before reading flags.
             sites=(0x08007D40,0x08007EC8,0x08008274)
-            addresses=(0x10000000,0x20001235,0xFFFFFFFE,0xFFFFFFFF)
+            addresses=(0x10000000,0x20001235,0xFFFFFFFE,0xFFFFFFFF,
+                       0x04000400,0x04000401,0x040007FE,0x040007FF,0x04000804,0x04000805,
+                       0x0480011C,0x0480011D,0x04FFF77E,0x04FFF77F,0x04FFF782,0x04FFF783,0x04FFFFFE,0x04FFFFFF)
             requests=[]
             for site in sites:
                 offset=site-0x08000000
@@ -921,7 +923,7 @@ def main() -> None:
                             else:
                                 equal(native("hn_collision_records",3,C.c_bool)(memory,0,10,site_index==1),True,"native floating-bus record scan")
                             compare("floating-bus terminating record preserves RAM",ranges)
-            print("6144 collision-list scans matched independent floating-bus termination, including every render count.")
+            print(f"{len(addresses)*3*256*2} collision-list scans matched independent floating-bus termination, including every render count.")
         else:
             print("Floating-bus collision checks skipped; supply --bus-oracle to include them.")
         for case in range(192):

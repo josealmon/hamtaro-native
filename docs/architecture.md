@@ -76,7 +76,7 @@ statically. A separate clean-machine validation remains pending.
 | Local SaveGroup4 dependencies | Partial | Five Main callbacks compared: context/control byte copies, local/ROM record selection, payload classification and available-word flags; music hall entry and original save/Continue run natively; Cable Link transport and complete music activity remain outside this evidence |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; complete Items/Gems and timed raster integration remain pending |
-| Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; complete workshop progression remains pending |
+| Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; complete crafting activity coverage remains pending |
 | Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; empty entry/return and a one-item training-seat SDK view/save/reload run; multi-item inventories and complete activity integration remain pending |
 | Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
 | Status counters and stage sequence | Adapted | All 13 functions in map10_4_counter_sequence.c compared, including the complete 16-bit counter domain, five tile banks, windows, stage/scroll graphics and sequence phases; nine Main and twelve argument-free task contracts; later-stage live integration remains pending |
@@ -86,8 +86,8 @@ statically. A separate clean-machine validation remains pending.
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
-| New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Later areas, full optional activities and complete desktop story coverage remain pending |
-| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House and the jungle wedding's ninth reconciliation; original Save/Continue and exact SRAM equality checked at stage boundaries; later Sunny Peak and full desktop progression remain pending |
+| New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Full optional activities and complete desktop story coverage remain pending |
+| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding and Sunny Peak's temple/workshop tenth reconciliation; original Save/Continue and exact SRAM equality checked at stage boundaries; final tower, credits and full desktop progression remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -264,6 +264,23 @@ as a blue marble: the actual blue-marble prerequisite is 0xAA, obtained with
 Digdig in map 4:3. That pickup, the temple/workshop and complete desktop
 playthrough coverage remain outside this ninth-stage proof.
 
+`sunny_temple.json` continues from that saved ninth reconciliation in a fresh
+process. It obtains the couple's returned red marble and the actual blue marble
+with Digdig on Sandy Bay's west beach, then asserts all three inventory flags.
+The earlier oil purchase and open lever remain intact. Oil applied to the mine
+cart, Gogo and the Rubrub lesson reach the temple. Putput consumes flags
+0xAA/0xAB/0xAC in order and sets 0x11B/0x11A/0x119; the spoon sets 0xAD/0x11C.
+The route returns through the previously failing cave exit, examines the tower
+gate, and uses Ta-dah in the inventor-couple story. Its tenth reconciliation and
+new lesson survive original Save/Continue: map 6:6 at x=112.5, z=88.5, 58 words,
+12 seeds and Bijou, with 0xAD cleared, 0x119/0x11A/0x11B/0x11C set and
+control 0x8C=4. All 89,944 input updates and 21 checkpoints pass in 215.79 seconds;
+the same full stream passes 95,059 host-session checks in 176.98 seconds.
+All 32 KiB match SDK, host and scout. A separate 2,103-update SDK reload/Status
+inspection passes in 2.701 seconds. The input SRAM remains unchanged; no state
+injection is used. The final tower, credits, optional activities and full desktop
+playthrough remain pending.
+
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
 rescued loves. Focused input saves are read-only; all writes use disposable profiles.
@@ -274,8 +291,13 @@ the new full desktop story route. Book pages, dialogs and the new story scenes h
 also been inspected through native PPU output. Game captures stay outside Git.
 
 Two original bus contracts are retained at their reviewed calling sites. Collision
-record-index LDRH reads above 0x0FFFFFFF use the ROM-prefetched Thumb halfword,
-including odd-address rotation, and terminate before invalid record fields. The
+record-index LDRH reads above 0x0FFFFFFF and at unassigned I/O above 0x040003FF
+use the ROM-prefetched Thumb halfword, including odd-address rotation, and
+terminate before invalid record fields. The original temple-cart return to map
+2:7 retains 0x0480011C as its first animation-derived list entry. The local
+index adapter now covers that unassigned-register read; extended memory-control
+and debug-enable registers retain explicit faults. Independent loads cover all
+three sites, even/odd boundaries and every byte-sized render count. The
 scene-parameter copy in ConfigureRenderXZCollisionScene uses 32 forward LDMIA word
 loads, with word alignment, overlap order and SRAM byte replication. Its reserved
 bus reads use the halfword prefetched at 0x08006690 in both word lanes; a native
@@ -680,12 +702,11 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from the saved ninth reconciliation through the couple's returned
-   red marble and Sandy Bay's actual blue-marble pickup (flag 0xAA).
-   Sunny Peak's temple/workshop (tenth) requires all three marbles; keep these
-   dependencies explicit and assert the inventory flags rather than pickup labels.
-   The temple, workshop and optional activities still need native integration
-   proof. Keep their story prerequisites ahead of unrelated optional detours.
+1. Continue from the saved tenth reconciliation through the inventor's catapult,
+   final tower, sliding puzzle, shot upgrade, Spat's battle and credits.
+   Preserve the actual input-only temple/three-marble prerequisites and verify
+   battle outcomes rather than relying on fixed input timings or capture labels.
+   Keep the remaining story ahead of unrelated optional detours.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.

@@ -72,11 +72,12 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 4,247,109 checks in 758.571 seconds. It retains
-all 4,246,997 preceding cases and adds 112 protected-BIOS scene-copy checks.
+The latest complete suite passes 4,318,831 checks in 713.902 seconds. It retains
+all 4,247,109 preceding cases and adds 71,722 checks for unassigned-I/O collision
+indices, including even/odd register boundaries and every render count.
 Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
 enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
-11 CTest suites pass, including 15,588 game checks. Story replays ran concurrently,
+11 CTest suites pass in 1.97 seconds, including 15,650 game checks. Story replays ran concurrently,
 so these are local observations, not portable performance guarantees.
 Earlier optimization reduced the same 4,200,342-check suite from approximately
 1,238 seconds (log timestamps) to 678.102 seconds without reducing coverage.
@@ -198,8 +199,8 @@ follow-up word, story phase 0x34=6 and flags 0x72/0x5B/0x138/0x182. The focused
 x=128.5, z=128.5 with 34 words, 22 seeds, five loves and Bijou. Host SRAM matches
 the SDK export exactly; source saves are unchanged. The fresh SDK process also
 opens Status and renders its counters in 2,103 updates.
-These are SDK/host-session results. Complete Sandy Bay activities, later Sunny
-Peak visits and a desktop playthrough remain unverified.
+These are SDK/host-session results. Other Sandy Bay activities and a complete
+desktop playthrough remain unverified.
 Concatenating the focused recording directly after the earlier in-process
 Continue diverges at room navigation. The supported scenario chain uses an
 explicit SRAM reload between stages, not a claim of one uninterrupted recording.
@@ -295,8 +296,26 @@ establish possession of the blue marble (0xAA).
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/jungle_wedding.json --save PATH_TO_PRIVATE_HAT_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WEDDING_PROFILE
 
-These results cover the SDK and host session. The later Sunny Peak
-temple/workshop and complete desktop playthrough remain unverified.
+`sunny_temple.json` starts from that saved wedding stage. Its 89,944 updates and
+21 checkpoints retrieve the couple's returned red marble and the actual blue
+marble with Digdig in map 4:3. It asserts all three inventory flags before the
+altar. Existing oil/open-lever progress is retained; the cart is oiled and ridden
+with Gogo, and Rubrub is learned. Putput consumes 0xAA/0xAB/0xAC and sets
+0x11B/0x11A/0x119; the spoon sets 0xAD/0x11C. The cave exit covers the repaired
+unassigned-I/O record scan. Tower-gate checks precede the inventor's introduction,
+the wife's Yep-P request and Ta-dah's spoon delivery. The tenth reconciliation
+and lesson survive original Save/Continue in map 6:6 at x=112.5, z=88.5,
+58 words, 12 seeds and Bijou; 0xAD clears and control 0x8C becomes 4.
+The complete SDK replay passes in 215.79 seconds; the full host replay passes
+95,059 checks in 176.98 seconds. SDK, host and scout match all 32 KiB, and a
+separate 2,103-update SDK reload/Status inspection passes in 2.701 seconds.
+The prior save is unchanged. Inputs and scalar assertions contain no captured
+state or proprietary resources.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_temple.json --save PATH_TO_PRIVATE_WEDDING_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_TEMPLE_PROFILE
+
+These results cover the SDK and host session. The final tower, credits and
+complete desktop playthrough remain unverified.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
@@ -646,9 +665,9 @@ leader movement; the complete game loop remains unverified.
 
 Motion and live follower comparisons can be run separately:
 
-    python -B tools/compare_reference.py --motion-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+    python -B tools/compare_reference.py --motion-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bus-oracle PATH_TO_HN_BUS_ORACLE
 
-This passes 15,768 private comparisons. In addition to motion setup/routes, it
+This passes 16,095 private comparisons with the independent bus oracle. In addition to motion setup/routes, it
 checks 1,024 direction/classification/quantization cases, 320 circular route
 extensions, 1,280 follower updates and 320 gated-following updates. Cases cover
 fractional/negative coordinates, route consumption and wrap, proximity resets,
@@ -668,7 +687,8 @@ mGBA 0.10.5's arithmetic helpers directly; no ROM, BIOS image or CPU execution i
 The native adaptation is isolated in src/gba/bios_math.c with its MPL 2.0 notice.
 Hardware BIOS arithmetic and instruction latency remain unverified.
 
-The collision subset with both oracles passes 35,855 private comparisons, including 216 independent
+The collision subset with both oracles passes 107,577 private comparisons in
+2.292 seconds, including 216 independent
 angular responses. It covers mask classification, sample pointers, shape containment,
 interaction queries, solid-record responses, record lists, map flags/scripts,
 action/reset controls, leader movement, combined updates and Main's movement wait.
@@ -678,11 +698,18 @@ comparison requires --bios-oracle; other focused suites can run without it.
 The isolated bus oracle executes mGBA's halfword-load implementation without a
 ROM, BIOS or CPU instruction loop. It checks the three reviewed ROM prefetch sites
 used by collision-record scans, with even/odd addresses and every byte-sized
-render count. All 6,144 list scans retain RAM and terminate at the same bus-derived
+render count. All 27,648 list scans retain RAM and terminate at the same bus-derived
 index, including a preceding mapped inactive record. A separate private input-only
 replay reaches map 2:12 after the oilcan sequence; the original mGBA game also
 continues from the same SRAM and retains the same animation-derived list. The
-adapter covers those reads above 0x0FFFFFFF; other floating-bus sites and detailed
+adapter covers those reads above 0x0FFFFFFF and unassigned I/O above 0x040003FF.
+The temple-cart return independently retains 0x0480011C as its first list entry
+in the original map 2:7 snapshot; its halfword index is a prefetched instruction,
+so the original scan stops before reading record fields. New cases retain all
+6,144 previous scans and cover both alignments, the extended memory-control
+boundaries and the debug-enable boundary. The assigned extended memory-control
+and debug-enable registers remain unsupported by this local adapter; unit checks
+require their explicit faults. Ordinary memory reads are unchanged. Other floating-bus sites and detailed
 bus/DMA timing remain unverified. Without --bus-oracle these additional checks are
 explicitly skipped.
 

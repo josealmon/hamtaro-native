@@ -997,8 +997,10 @@ static void collision_contract(void)
     const unsigned prefetch[]={0x7D40,0x7EC8,0x8274};
     for(unsigned i=0;i<3;i++){rom[prefetch[i]]=0xFF;rom[prefetch[i]+1]=1;}
     hn_write32(&memory,0x030021F4,0x01000000);
-    const GameAddr unmapped[]={0x10000000,0x20001235,0xFFFFFFFE,0xFFFFFFFF};
-    for(unsigned i=0;i<4;i++){
+    const GameAddr unmapped[]={0x10000000,0x20001235,0xFFFFFFFE,0xFFFFFFFF,
+        0x04000400,0x04000401,0x040007FE,0x040007FF,0x04000804,0x04000805,
+        0x0480011C,0x0480011D,0x04FFF77E,0x04FFF77F,0x04FFF782,0x04FFF783,0x04FFFFFE,0x04FFFFFF};
+    for(unsigned i=0;i<sizeof(unmapped)/sizeof(unmapped[0]);i++){
         hn_write32(&memory,0x030021F0,unmapped[i]);
         CHECK(hn_collision_has_record(&memory,100,100,&result)&&result==0);
         CHECK(hn_collision_records(&memory,0,0,true));CHECK(hn_collision_records(&memory,0,0,false));
@@ -1009,6 +1011,13 @@ static void collision_contract(void)
     rom[0x7D40]=2;rom[0x7D41]=0;hn_write32(&memory,0x030021F0,0x10000000);
     CHECK(!hn_collision_has_record(&memory,100,100,&result)&&memory.fault);
     memory.fault=false;memory.fault_address=0;hn_write32(&memory,0x030021F0,record);hn_write32(&memory,0x030021F4,0);
+    const GameAddr assigned_io[]={0x04000800,0x04000801,0x04000802,0x04000803,0x04FFF780,0x04FFF781};
+    for(unsigned i=0;i<sizeof(assigned_io)/sizeof(assigned_io[0]);i++){
+        hn_write32(&memory,0x030021F0,assigned_io[i]);
+        CHECK(!hn_collision_has_record(&memory,100,100,&result)&&memory.fault);
+        memory.fault=false;memory.fault_address=0;
+    }
+    hn_write32(&memory,0x030021F0,record);
     hn_write16(&memory,HN_KEY_STATE+2,2);hn_write8(&memory,0x030021E0,2);hn_motion_control(&memory);
     CHECK(hn_read8(&memory,0x03000785)==8&&hn_read8(&memory,0x03002C50)==1);
     hn_write16(&memory,HN_KEY_STATE+2,1);hn_write8(&memory,0x030021E0,8);hn_write8(&memory,0x03002C50,7);hn_motion_control(&memory);
