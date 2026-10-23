@@ -11,6 +11,7 @@
 #include "game/record_selection.h"
 #include "game/presentation.h"
 #include "game/save_group3.h"
+#include "game/save_group4.h"
 #include "game/record_menu.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
@@ -213,6 +214,7 @@ static bool task_callback(HNMemory *m,GameAddr callback)
         result=hn_record_selection_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_presentation_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_group3_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
+        result=hn_group4_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_record_menu_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_counter_scene_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_scene_actor_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;

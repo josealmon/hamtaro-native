@@ -72,13 +72,14 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 4,380,026 checks in 651.863 seconds. It retains
-all 4,318,831 preceding cases and adds 61,195 six/eight-choice room comparisons.
-The preceding 71,722 unassigned-I/O collision checks, including even/odd register
-boundaries and every render count, remain enabled.
+The latest complete suite passes 4,446,989 checks in 610.014 seconds. It retains
+all 4,380,026 preceding cases and adds 66,963 local music/record comparisons.
+The preceding 61,195 six/eight-choice room checks and 71,722 unassigned-I/O
+collision checks, including even/odd register boundaries and every render count,
+remain enabled.
 Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
 enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
-11 CTest suites pass, including 16,751 game checks. Story replays ran concurrently,
+11 CTest suites pass, including 17,295 game checks. Story replays ran concurrently,
 so these are local observations, not portable performance guarantees.
 Earlier optimization reduced the same 4,200,342-check suite from approximately
 1,238 seconds (log timestamps) to 678.102 seconds without reducing coverage.
@@ -328,8 +329,23 @@ save is unchanged. No captured CPU/RAM state is injected into this playthrough.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/spat_tower.json --save PATH_TO_PRIVATE_TEMPLE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_TOWER_PROFILE
 
-These results cover the SDK and host session. Spat's defeat, credits and the
-complete desktop playthrough remain unverified.
+`spat_battle.json` continues from the saved Hamscope upgrade. Normal input
+advances both battle phases and lands the shot into Spat's open mouth. Eleven
+checkpoints assert the battle outcomes, 59th learned word, credits entry and
+progress, complete credits return, restored postgame control and original
+Save/Continue. The saved result is map 7:3 at x=116.5, z=160.5, 59 words,
+12 seeds, ten loves and Bijou, controls 0xCF=5/0xD1=4 and ending flag 0x190 set.
+The 38,099-update SDK replay passes in 58.15 seconds; the same input stream
+passes 40,937 host-session checks in 60.53 seconds. SDK, host and scout match
+all 32 KiB. A separate 2,103-update SDK reload/Status inspection passes in
+2.758 seconds. The prior save is unchanged. The scenario stores button inputs
+and scalar expectations, with no captured CPU/RAM state or resource bytes.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/spat_battle.json --save PATH_TO_PRIVATE_TOWER_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_POSTGAME_PROFILE
+
+These results establish the saved main-story ending in the SDK and host session.
+The remaining 27 words, optional activities and complete desktop playthrough
+remain unverified.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
@@ -1115,6 +1131,20 @@ aliases, four-byte record strides, a matching empty record before an occupied
 duplicate in slot 63, and all counter values. The focused run takes 1.939 seconds.
 These checks also run in the full comparison. Complete room/activity progression
 remains a separate integration requirement.
+
+The local music/record presentation and selection families have a focused command:
+
+    python -B tools/compare_reference.py --group4-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+Its 66,963 comparisons account for all 29 entries in two complete source families,
+28 Main contracts and one void layout task. Checks cover byte selectors, all
+14 original song descriptors and restart, raw resource readers, affine allocation
+and exhaustion, render/base/control aliases, suffix collisions, depth/number
+boundaries and both SRAM copies. Audio fixtures synchronize VCOUNT after the
+oracle's initialization wait and compare the baseline before calling the selected
+song callback. The focused run takes 12.305 seconds. All previous five local
+group4 dependency comparisons remain in the full suite; link transport and
+complete music-activity progression are separate requirements.
 
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:

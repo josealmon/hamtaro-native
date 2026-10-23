@@ -74,7 +74,7 @@ statically. A separate clean-machine validation remains pending.
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
-| Local SaveGroup4 dependencies | Partial | Five Main callbacks compared: context/control byte copies, local/ROM record selection, payload classification and available-word flags; music hall entry and original save/Continue run natively; Cable Link transport and complete music activity remain outside this evidence |
+| Local music and SaveGroup4 support | Adapted | All 29 functions in communication_record_callbacks.c and communication_record_selection.c compared: 28 Main callbacks and one void layout task, plus the prior payload classifier; resource songs/readers, render layout/aliases, affine selection, record numbering/depth, both SRAM copies and local/ROM selection; complete music activity and Cable Link transport remain outside this evidence |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; complete Items/Gems and timed raster integration remain pending |
 | Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; complete crafting activity coverage remains pending |
@@ -88,7 +88,7 @@ statically. A separate clean-machine validation remains pending.
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Full optional activities and complete desktop story coverage remain pending |
-| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding, Sunny Peak's tenth reconciliation, tower puzzle and Hamscope upgrade; original Save/Continue and exact SRAM equality checked at stage boundaries; Spat's defeat, credits and full desktop progression remain pending |
+| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding, Sunny Peak's tenth reconciliation, tower puzzle, Spat's defeat, complete credits and postgame control; original Save/Continue, exact SRAM equality and fresh reload checked at stage boundaries; full desktop progression and optional completion remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -292,8 +292,21 @@ x=184.5, z=64.5, 58 words, 12 seeds, ten loves and Bijou, with flags
 All 58,579 input updates and 12 checkpoints pass in 105.19 seconds; the same
 full stream passes 62,902 host-session checks in 97.81 seconds. SDK, host and
 scout match all 32 KiB. A separate 2,103-update SDK reload/Status inspection
-passes in 2.684 seconds. The prior save is unchanged. Spat's defeat, credits,
-remaining activities and full desktop playthrough remain pending.
+passes in 2.684 seconds. The prior save is unchanged. The following battle stage
+is described below; remaining activities and full desktop playthrough remain pending.
+
+`spat_battle.json` resumes from the saved Hamscope upgrade. Normal movement and
+shots advance both battle phases, including a shot into Spat's open mouth. The
+ending learns the 59th word, runs the complete credits in map 10:11, returns to
+the tower and restores postgame control. Original Save/Continue retains map 7:3
+at x=116.5, z=160.5, 59 words, 12 seeds, ten loves and Bijou, flags
+0xCA/0x190/0x1AD set, 0x2A8 cleared and controls 0xCF=5/0xD1=4.
+All 38,099 input updates and 11 checkpoints pass in 58.15 seconds; the same
+full stream passes 40,937 host-session checks in 60.53 seconds. SDK, host and
+scout match all 32 KiB. A separate 2,103-update SDK reload/Status inspection
+passes in 2.758 seconds. The prior save is unchanged. This establishes a saved
+native main-story ending along the tested stage chain; the remaining 27 words,
+optional activities and full desktop route remain outside this evidence.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -716,16 +729,15 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from the saved Hamscope upgrade through Spat's battle and credits.
-   Preserve the actual input-only temple/three-marble prerequisites and verify
-   battle outcomes rather than relying on fixed input timings or capture labels.
-   Keep the remaining story ahead of unrelated optional detours.
+1. Preserve the input-only story chain through all ten reconciliations, Spat's
+   defeat, complete credits and saved postgame. Keep its actual temple/three-marble
+   prerequisites and semantic battle checkpoints rather than relying on capture labels.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.
 3. Extend actual-window coverage of Sunny Peak and its Items/Gems/photo/Rubrub UI.
    First-visit story evidence does not establish every optional activity or later visit.
-4. Continue remaining story areas, secondary activities and minigames. Compare
+4. Complete remaining secondary activities, words and minigames. Compare
    canonical RGBA, state, SRAM and pre-device PCM alongside timed raster/IRQ/audio.
 5. Verify physical controllers and the packaged app on Windows without development
    tools. Public CI stays ROM-free; private reference checks take user paths.
@@ -991,6 +1003,16 @@ and category flags are read from the player's ROM. Classification preserves
 ignored zero/one payload bytes, the special marker and category-rank thresholds;
 the availability scan uses control 4 rather than the selection row.
 Music hall entry/movement and an original save/Continue now exercise these dependencies.
+The complete local record/presentation and record-selection families are now
+adapted in the same module: 29 source functions, 28 Main contracts and one void
+layout task. Credits share the original resource-song, duration and payload
+readers with the music hall. Resource pointers, animations, positions and tables
+stay in the player's ROM. Local record updates retain suffix collisions, depth
+and byte-number wrapping, header/padding writes, two original save records and
+both SRAM copies. A received kind-3 pattern longer than its nine-byte source
+buffer stops explicitly. Layout/indicator helpers preserve captured versus live
+selectors, raw inactive slots, zero-count comparisons before byte conversion and
+affine allocation/exhaustion. These local helpers do not start link transport.
 This remains a structural inventory: literal indirect targets,
 complete bank-4 progression, activities and actual-window integration need
 separate validation. The existing opening scenario is an earlier-area regression.
@@ -1095,8 +1117,8 @@ window styles are limited to the eight pointers copied by the original stack fra
 the located recovered callers use styles 0..3. An undefined larger style or removal
 of a task absent from the list fails explicitly. These malformed-state guards do
 not establish original caller-stack or invalid-list parity. Source resources remain
-in the player's ROM; complete credits/window sequences and timed desktop presentation
-still require integration checks.
+in the player's ROM. The ending route now exercises the complete credits sequence;
+other window sequences and timed desktop presentation still require integration checks.
 
 The bank-7 tile-board and scene-preset families use bank7.c. All 32 original
 entries have reviewed contracts: five Main callbacks, 30 argument-free task
