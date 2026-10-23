@@ -25,12 +25,14 @@ int main(int argc,char **argv)
     static uint32_t ram[0x10000];
     for(unsigned i=0;i<sizeof(ram);i++)((uint8_t *)ram)[i]=(uint8_t)(i*37+13);
     gba.memory.wram=ram;
+    /* Protected BIOS reads after the reference's BIOS service return. */
+    gba.memory.biosPrefetch=0xE3A02004u;
     cpu.master=&gba.d;gba.cpu=&cpu;cpu.executionMode=MODE_THUMB;cpu.gprs[ARM_PC]=0x08001004;
     uint32_t command[3];
     while(fread(command,sizeof(command),1,stdin)==1){
         cpu.prefetch[0]=command[1];cpu.prefetch[1]=command[2];
         if(scene_copy){
-            if(!((command[0]>=0x4000u&&command[0]<=0x01FFFF80u)||
+            if(!((command[0]<=0x01FFFF80u)||
                  (command[0]>=0x02000000u&&command[0]<=0x0203FF80u)||
                  (command[0]>=0x10000000u&&command[0]<=0xFFFFFF80u)))return 2;
             cpu.gprs[ARM_PC]=0x08006690;gba.memory.activeRegion=8;

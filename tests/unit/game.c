@@ -490,6 +490,15 @@ static void motion_contract(void)
     memory.rom=synthetic_rom;memory.rom_size=sizeof(synthetic_rom);
     CHECK(hn_motion_configure(&memory,10,13,0,0,0,256,256,HN_COLLISION_DEFAULT,0x00A48080));
     for(unsigned i=0;i<32;i++)CHECK(hn_read32(&memory,0x030021F0+i*4)==0xABCDABCD);
+    /* The tile-game return resolves variable zero to 0x612. Cover that
+       protected read and copies crossing from BIOS into reserved memory. */
+    const GameAddr protected_sources[]={4,0x610,0x3F80,0x3FFC};
+    for(unsigned j=0;j<4;j++)for(unsigned low=0;low<4;low++){
+        GameAddr source=protected_sources[j]+low;
+        CHECK(hn_motion_configure(&memory,10,13,0,0,0,256,256,HN_COLLISION_DEFAULT,source));
+        for(unsigned i=0;i<32;i++)CHECK(hn_read32(&memory,0x030021F0+i*4)==
+            (source+i*4<0x4000?0xE3A02004u:0xABCDABCDu));
+    }
     CHECK(!memory.fault);
     hn_write8(&memory,0x0E000001,0x7D);
     CHECK(hn_motion_configure(&memory,10,13,0,0,0,256,256,HN_COLLISION_DEFAULT,0x0E000001));

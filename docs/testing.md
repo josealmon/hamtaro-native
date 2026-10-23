@@ -72,25 +72,17 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The optimized complete suite passed the same 4,200,342 assertions, including the
-full 16-bit domains, 30 independent PPU snapshots and the existing floating-bus
-oracle, in 678.102 seconds on the development machine. The preceding log spanned
-approximately 1,238 seconds; that older value comes from file timestamps. Concurrent
-native route replays ran during both executions, so the roughly 45% reduction is
-an observed local comparison, not a portable performance guarantee. Those measurements preceded the scene-copy and paired-actor additions.
-The preceding expanded suite passed 4,246,325 checks in 591.669 seconds, with the same
-exhaustive domains and oracles plus scene-copy, paired-actor, render-selection and
-five local SaveGroup4 contracts and actor reflections. This retains all 4,236,281
-prior checks and adds 10,044; native story replays ran concurrently. The preceding
-expanded run took 590.054 seconds. These local timings are observations, not a
-portable speed guarantee.
-
-The latest run passes 4,246,997 checks in 705.157 seconds, retaining all of those
-cases and adding 672 checks for hidden primary actors across the six modal-map
-roundtrips. Story replays ran concurrently. The focused script/transition group
-passes in 7.026 seconds; use it during iteration, then the full suite at the next
-functional batch boundary. Synthetic unit cases also restore the active follower
-in all four directions while retaining the inactive primary actor and script cursor.
+The latest complete suite passes 4,247,109 checks in 758.571 seconds. It retains
+all 4,246,997 preceding cases and adds 112 protected-BIOS scene-copy checks.
+Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
+enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
+11 CTest suites pass, including 15,588 game checks. Story replays ran concurrently,
+so these are local observations, not portable performance guarantees.
+Earlier optimization reduced the same 4,200,342-check suite from approximately
+1,238 seconds (log timestamps) to 678.102 seconds without reducing coverage.
+Use focused groups during iteration and the complete suite at a functional batch
+boundary. Hidden-primary modal roundtrips and all four active-follower directions
+remain covered.
 
 `compare_reference.py` prints elapsed time and assertion counts per family and for
 its complete invocation. Optional `--timings-json PATH_OUTSIDE_CHECKOUT` retains a
@@ -101,10 +93,12 @@ faults keep the original bus path. Python reuses snapshot buffers by size. The c
 audit reads historical objects with one Git batch process and checks the same blobs.
 
 The bus oracle's `--scene-copy` mode supplies independent mGBA LDMIA responses:
-28 complete scene copies (all four RAM alignments and six reserved-address groups)
-and 24 Main20 variable-resolved copies. The native side reads the player's ROM at
-the typed prefetch site. Reference-only fixtures supply the original reserved-bus
-values. Unicorn's generic Thumb LDM lacks ARM7 alignment, so mapped pointer arguments
+44 complete scene copies and 40 Main20 variable-resolved copies, retaining all
+previous sources and adding protected BIOS addresses, the observed 0x612 tile-game
+return and the BIOS/reserved boundary, each with all four alignments. The native
+side models the reviewed post-service BIOS prefetch and reads the player's ROM at
+the reserved-bus prefetch site. Reference-only fixtures supply independent bus
+responses. Unicorn's generic Thumb LDM lacks ARM7 alignment, so mapped pointer arguments
 are aligned only for that CPU reference call; all four hardware alignments are also
 checked against mGBA. No existing cases or comparison regions are removed.
 
@@ -236,12 +230,12 @@ retained. The full SDK stage passes in 138.71 seconds and the host replay passes
 90,912 checks in 140.82 seconds, including original disk persistence and a fresh
 session. SDK and host SRAM match across all 32 KiB. Another independent SDK
 reload/Status inspection passes 2,103 updates in 2.589 seconds and rechecks the
-saved flags, controls, position and counters. Later Sunny Peak, the rest of Haunted House,
-remaining activities and full desktop progression remain unverified.
+saved flags, controls, position and counters. Later Sunny Peak, remaining activities and full desktop progression remain
+unverified.
 No earlier scenario, exhaustive reference domain or independent oracle was removed.
 
 The Haunted House route continues from the saved sixth reconciliation in a fresh
-process. Its 142,196 updates and 43 scalar checkpoints retain the entrance scene,
+process. Its 204,853 updates and 68 scalar checkpoints retain the entrance scene,
 Hif-hif seed pickup, Digdig passage, two Blash-T price reductions, five-seed ID card
 purchase and Ta-dah entry. Heyhoo at reception teaches Thump-P and opens its book;
 another Ta-dah earns the bronze card. Every earlier bronze-card and Save/Continue
@@ -249,14 +243,22 @@ checkpoint remains unchanged. Go-P opens the mirror passage; three ghost capture
 earn the silver card, followed by the plank passage, Hamlift, Hamspar and Nopookie.
 An original Save/Continue preserves Hamtaro's capture and Bijou-only control.
 Nok-nok, Pushie, Heyhoo and Libert-T then complete the prison rescue, seventh
-reconciliation and Flipflop lesson. The final original Save/Continue retains
-map 5:14, x=128.5, z=144.5, 46 words, 17 seeds, seven loves and both characters,
-flags 0x7D/0x10/0x164 set, 0x15B cleared and control 0x97=5. The SDK replay passes
-in 239.36 seconds; 149,423 host-session checks pass in 217.99 seconds, including
-byte-for-byte SDK/host SRAM equality and fresh continuation. A separate
-2,103-update SDK reload/Status inspection passes in 3.144 seconds with the same
-saved fields. The gold-card
-challenge, quiz, Spat and jungle unlock remain outside this stage.
+reconciliation and Flipflop lesson. All 142,196 preceding inputs and 43 checkpoints
+remain unchanged. The extension loses the tile challenge, returns normally,
+retries successfully and earns the gold card. Hamlift opens the upper floor;
+Thump-P teaches Perksie, two Tack-Q actions open the wall, and three quiz answers
+lead to Spat. Flipflop and Nopookie drive him away. Clubhouse unlocks the jungle.
+The final original Save/Continue retains map 1:1 at x=144.5, z=192.5, 47 words,
+17 seeds, seven loves and both characters, flags 0x45/0xB8/0x7B/0x7D/0x1B2/
+0x1B3/0x10 set, 0x185/0x15B cleared and controls 0x91=2, 0x90=6, 0xD0=7.
+The complete composed SDK replay passes in 370.114 seconds. Host coverage uses
+two chained legs on the same code: the 163,285-update gold-card prefix passes
+171,343 checks in 342.02 seconds; a fresh session from that exact saved SRAM
+passes the 43,329-update upper-floor/quiz/jungle leg, 46,968 checks in 106.50 seconds.
+The composed SDK, final host file and input-only scout match across all 32 KiB.
+These are chained host legs, not one uninterrupted full host invocation.
+A separate 2,103-update SDK reload/Status inspection passes in 2.598 seconds.
+Optional Haunted House activities and complete desktop progression remain unverified.
 Literal input recordings from the original guide agree at
 entry but diverge later in this native route; their observation labels are not
 semantic assertions and the divergent recording is not used as native proof.

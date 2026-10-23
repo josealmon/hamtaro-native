@@ -422,6 +422,10 @@ bool hn_motion_rebuild_route(HNMemory *m)
 }
 static uint32_t scene_parameter_word(HNMemory *m,GameAddr source)
 {
+    /* Main20 can resolve a stale scalar to a protected BIOS address. This
+       post-SWI ROM copy sees the return prefetch word, as in the BIOS-free
+       reference, rather than firmware bytes. Keep this local to the copy. */
+    if(source<0x00004000u)return 0xE3A02004u;
     /* The original 32-word copy uses LDMIA at 0800668C. Reserved bus reads
        return the prefetched Thumb halfword at 08006690 in both word lanes.
        Keep this contract local; ordinary invalid memory reads still fault. */

@@ -722,7 +722,8 @@ def main() -> None:
             call("ConfigureRenderXZCollisionScene",*values[:-1],address&~3,limit=1000000)
             compare(f"aligned/overlapping scene parameter words {address:08X}",ranges)
         if args.bus_oracle:
-            addresses=(0x00008000,0x00A48080,0x01FFF000,0x10000000,0x20CA24A0,0xFFFFF000,0x02012000)
+            addresses=(0x00008000,0x00A48080,0x01FFF000,0x10000000,0x20CA24A0,0xFFFFF000,0x02012000,
+                       0x00000004,0x00000610,0x00003F80,0x00003FFC)
             requests=[(address+low,int.from_bytes(rom[0x668E:0x6690],"little"),
                        int.from_bytes(rom[0x6690:0x6692],"little")) for address in addresses for low in range(4)]
             environment=os.environ.copy()
@@ -731,13 +732,16 @@ def main() -> None:
                                  input=b"".join(struct.pack("<3I",*row) for row in requests),
                                  stdout=subprocess.PIPE,check=True,env=environment,timeout=30).stdout
             equal(len(reply),len(requests)*128,"complete independent LDM scene-copy responses")
-            for page in (address&~4095 for address in addresses if address<0x02000000 or address>=0x10000000):cpu.mem_map(page,4096)
+            pages=sorted({page for address in addresses if address<0x02000000 or address>=0x10000000
+                          for page in range(address&~4095,((address+130)&~4095)+1,4096)})
+            for page in pages:cpu.mem_map(page,4096)
             try:
                 for index,(address,_,_) in enumerate(requests):
                     prepare(index);both(0x0201EE60,bytes(0x1200))
                     expected=reply[index*128:(index+1)*128]
                     # Only the reference's bus fixture is supplied by mGBA.
-                    # The native side reads the player's ROM at the typed load site.
+                    # The native side models protected post-SWI BIOS loads and
+                    # reads the player's ROM at the reserved-bus load site.
                     mapped=address>=0x02000000 and address<0x03000000
                     if mapped:both(address&~3,bytes(((i+(address&~3)-0x02000000)*37+13)&255 for i in range(132)))
                     else:cpu.mem_write(address,expected)
@@ -753,8 +757,8 @@ def main() -> None:
                     call("MainScriptConfigure065D8",0x02020000,limit=1000000)
                     compare("Main20 bus parameter copy",ranges)
             finally:
-                for page in (address&~4095 for address in addresses if address<0x02000000 or address>=0x10000000):cpu.mem_unmap(page,4096)
-            print("28 scene copies, including all four RAM alignments, and 24 Main20 bus copies matched independent mGBA LDM responses.")
+                for page in pages:cpu.mem_unmap(page,4096)
+            print("44 scene copies, including protected BIOS/boundary loads and all four RAM alignments, and 40 Main20 bus copies matched independent mGBA LDM responses.")
         else:print("Scene-copy floating-bus checks skipped; supply --bus-oracle to include them.")
         rng.setstate(previous_rng)
 

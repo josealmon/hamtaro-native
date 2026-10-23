@@ -200,11 +200,11 @@ scalar assertions. There is no adaptive controller, game data or state injection
 The complete SDK replay passes in 138.71 seconds; 90,912 host-session checks pass
 in 140.82 seconds. Their entire 32 KiB SRAM images match byte for byte. A separate
 2,103-update SDK reload and Status inspection passes in 2.589 seconds with the
-same saved flags, controls and counters. Later Sunny Peak visits, the rest of Haunted House,
-remaining activities and complete desktop progression remain pending.
+same saved flags, controls and counters. Later Sunny Peak visits, remaining activities and complete desktop progression
+remain pending.
 
-`haunted_house.json` starts from the saved sixth reconciliation. Its 142,196
-updates and 43 scalar checkpoints retain the entrance scene, Hif-hif seed pickup,
+`haunted_house.json` starts from the saved sixth reconciliation. Its 204,853
+updates and 68 scalar checkpoints retain the entrance scene, Hif-hif seed pickup,
 Digdig passage, two Blash-T price reductions and purchase of the ID card for five
 seeds. Ta-dah opens the entrance; Heyhoo at the reception desk teaches Thump-P,
 and another Ta-dah earns the bronze card. All earlier bronze-card and original
@@ -213,15 +213,22 @@ three ghost captures, the silver card, the plank passage, Hamlift access,
 Hamspar and Nopookie. Hamtaro's capture passes an original Save/Continue with
 Bijou alone; she learns Nok-nok and Pushie, opens the prison and uses Heyhoo
 and Libert-T to complete the rescue. The seventh reconciliation and Flipflop
-survive another original Save/Continue in map 5:14, x=128.5, z=144.5, with
-46 words, 17 seeds and both characters. Flags 0x7D/0x10/0x164 remain set,
-0x15B is cleared and control 0x97=5. The SDK replay passes in 239.36 seconds;
-149,423 host-session checks pass in 217.99 seconds, with exact 32 KiB SDK/host
-SRAM equality. A separate 2,103-update SDK reload/Status inspection passes in
-3.144 seconds with the same saved fields. Haunted House's gold-card challenge, quiz, Spat confrontation
-and jungle unlock remain pending. An exploratory tile-challenge recording
-faults during the return to the preceding room; it is not passing coverage.
-This input-only route contains no game data or state injection.
+survive another original Save/Continue. All 142,196 preceding updates and
+43 checkpoints remain unchanged. A failed tile challenge now returns normally;
+the retry clears all four tile counters, wins the gold card and survives another
+Save/Continue. The upper floor adds Perksie, the hidden wall, three quiz answers
+and Flipflop/Nopookie against Spat. Clubhouse unlocks the jungle and the final
+original Save/Continue retains map 1:1, x=144.5, z=192.5, 47 words, 17 seeds,
+seven loves and both characters. Flags 0x45/0xB8/0x7B/0x7D/0x1B2/0x1B3/0x10
+remain set, 0x185/0x15B cleared and controls 0x91=2, 0x90=6, 0xD0=7.
+The complete composed SDK route passes in 370.114 seconds. Current-code host
+coverage chains the 163,285-update gold prefix (171,343 checks, 342.02 seconds)
+with a fresh 43,329-update quiz/jungle session (46,968 checks, 106.50 seconds).
+The full SDK export, final host file and input-only scout match across all 32 KiB.
+A separate 2,103-update SDK reload/Status inspection passes in 2.598 seconds.
+This is SDK and chained host-session evidence; optional activities and complete
+desktop progression remain pending. Inputs and scalar assertions contain no
+game resources or state injection.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -239,8 +246,12 @@ scene-parameter copy in ConfigureRenderXZCollisionScene uses 32 forward LDMIA wo
 loads, with word alignment, overlap order and SRAM byte replication. Its reserved
 bus reads use the halfword prefetched at 0x08006690 in both word lanes; a native
 return from the third reconciliation had otherwise stopped on a leftover script
-variable used as the optional parameter pointer. Independent mGBA replay confirms
-the original continues with those words. Ordinary memory access and unreviewed
+variable used as the optional parameter pointer. The tile-challenge loss also
+resolves a leftover scalar to BIOS address 0x612. The BIOS-free original replay
+returns normally and copies its protected post-service prefetch word, 0xE3A02004.
+That reviewed scene-copy path models the word locally, including alignment and
+the BIOS/reserved boundary; it does not read or distribute firmware. Independent
+mGBA LDM responses cover both contracts. Ordinary memory access and unreviewed
 regions keep their explicit faults. These are native calling-site contracts, not
 CPU execution or a runtime emulator fallback.
 
@@ -635,10 +646,10 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from Haunted House's saved seventh reconciliation through the
-   gold-card challenge, quiz, Spat and jungle prerequisites for Sunny Peak's later hat story. The original
-   route reaches Sunny Peak's temple/workshop after obtaining all three marbles,
-   including the jungle wedding's red marble; keep these dependencies explicit.
+1. Continue from the saved Clubhouse jungle unlock through the jungle/hat story
+   (eighth reconciliation), then the jungle wedding and red marble (ninth).
+   The original route reaches Sunny Peak's temple/workshop (tenth) after all
+   three marbles; keep these dependencies explicit.
    Sunny Peak's later hat story, temple, workshop and optional activities still
    need native integration proof. The hat story follows Haunted House and jungle
    prerequisites in the reference route; prioritize these dependencies over

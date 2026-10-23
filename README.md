@@ -22,6 +22,9 @@ Haunted House now covers the ID and bronze cards, Go-P and the mirror passage,
 the ghost challenge and silver card, upper-floor lessons and Bijou's prison
 rescue. The seventh reconciliation and Flipflop survive original Save and Continue,
 including a separate saved continuation while Bijou is alone.
+The upper-floor continuation covers a failed tile challenge and successful retry,
+the gold card, Perksie, the quiz and Spat's escape. Clubhouse then unlocks the
+jungle, and another original Save and Continue retains the completed stage.
 This development build still stops at unfinished functions; complete story, optional activities,
 remaining minigames and desktop playthrough coverage remain unverified.
 See docs/architecture.md for the current evidence.
