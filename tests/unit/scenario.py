@@ -130,6 +130,52 @@ class ScenarioTests(unittest.TestCase):
             with self.subTest(field=field),contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,field):
                 run(game,[dict(label="clothes",expect={"catalog_flags":{"0":255},"catalog_count":1})])
 
+    def test_photo_records_reject_malformed_layouts_and_aliases(self):
+        photo=dict(background=1,outfits=[[0,0],[255,0],[255,0],[0,1],[255,0],[255,0]])
+        self.assertEqual(validate([dict(expect={"photo_records":{"0":photo,"5":photo}})]),0)
+        for photos in ({},[],{"6":photo},{"-1":photo},{1:photo},{"1":photo,"0x1":photo}):
+            with self.subTest(photos=photos),self.assertRaises(ValueError):validate([dict(expect={"photo_records":photos})])
+        for invalid in ({},dict(photo,extra=0),dict(photo,background=True),dict(photo,background=256),
+                        dict(photo,background=-1),dict(photo,background=1.0),dict(photo,outfits=[]),
+                        dict(photo,outfits=photo["outfits"][:-1]),dict(photo,outfits=[[0,0]]*7),
+                        dict(photo,outfits=[(0,0)]*6),dict(photo,outfits=[[0,True]]*6),
+                        dict(photo,outfits=[[256,0]]*6),dict(photo,outfits=[[0,-1]]*6)):
+            with self.subTest(photo=invalid),self.assertRaises(ValueError):validate([dict(expect={"photo_records":{"0":invalid}})])
+
+    def test_photo_records_read_both_characters_without_record_padding(self):
+        expected=dict(background=2,outfits=[[0,0],[255,0],[255,0],[0,1],[255,0],[255,0]])
+        payload=[2,0,0,255,0,255,0,0,1,255,0,255,0];base=0x03003730+5*16;calls=[]
+        def value(address,size=4,signed=False):
+            calls.append((address,size));return payload[address-base] if base<=address<base+13 else 0
+        game=SimpleNamespace(check=lambda:[0,0,0,0,9],value=value)
+        actual=MODULE["NativeGame"].checkpoint(game,photo_records={"5":dict(expected,background=1)})
+        self.assertEqual(actual["photo_records"],{"5":expected})
+        self.assertEqual(calls[-13:],[(base+i,1) for i in range(13)])
+        def checkpoint(*args,**extra):
+            self.assertEqual(extra,{"photo_records":{"5":expected}});return observed
+        game.checkpoint=checkpoint
+        for changed in (dict(expected,background=1),dict(expected,outfits=[[0,1]]+expected['outfits'][1:]),
+                        dict(expected,outfits=expected['outfits'][:3]+[[0,0]]+expected['outfits'][4:])):
+            observed={"photo_records":{"5":changed}}
+            with self.subTest(photo=changed),contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,'photo_records'):
+                run(game,[dict(expect={"photo_records":{"5":expected}})])
+
+    def test_outfit_indices_reject_truncation_and_read_actual_colors(self):
+        expected=[0,0,0,1,0,0]
+        self.assertEqual(validate([dict(expect={"outfit_indices":expected})]),0)
+        for invalid in ([],expected[:-1],expected+[0],[0]*5+[True],[0]*5+[256],[0]*5+[-1],tuple(expected)):
+            with self.subTest(indices=invalid),self.assertRaises(ValueError):validate([dict(expect={"outfit_indices":invalid})])
+        observed=[1,0,0,0,0,0];calls=[]
+        def value(address,size=4,signed=False):
+            calls.append((address,size));return observed[address-0x03003790] if 0x03003790<=address<0x03003796 else 0
+        game=SimpleNamespace(check=lambda:[0,0,0,0,9],value=value)
+        actual=MODULE["NativeGame"].checkpoint(game,outfit_indices=expected)
+        self.assertEqual(actual['outfit_indices'],observed)
+        self.assertEqual(calls[-6:],[(0x03003790+i,1) for i in range(6)])
+        game.checkpoint=lambda *args,**extra:actual
+        with contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,'outfit_indices'):
+            run(game,[dict(expect={"outfit_indices":expected})])
+
     def test_saved_profile_requires_every_sdk_byte(self):
         expected=bytes(32768);verify=MODULE["verify_profile_sram"]
         with tempfile.TemporaryDirectory() as directory:

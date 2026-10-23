@@ -17,6 +17,8 @@ trades them for the Star Key and completes its rescue. Swellie increases the
 dictionary to 65 words and the rescued-love count to eleven.
 The Sunny Boutique continuation buys both Antlers colors, checks insufficient
 funds and sold-out selections, and retains both purchases after saving.
+It also dresses both characters, stores two photos and reloads their outfits
+through the title menu's Dress Up option.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 

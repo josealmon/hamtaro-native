@@ -76,8 +76,8 @@ statically. A separate clean-machine validation remains pending.
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Local music and SaveGroup4 support | Adapted | All 29 functions in communication_record_callbacks.c and communication_record_selection.c compared: 28 Main callbacks and one void layout task, plus the prior payload classifier; resource songs/readers, render layout/aliases, affine selection, record numbering/depth, both SRAM copies and local/ROM selection; complete music activity and Cable Link transport remain outside this evidence |
-| SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
-| Clothing catalog and variations | Adapted | All 40 script_callbacks_pair_list.c functions accounted for and compared: 18 Main, 26 F4 and 13 helper contracts, with overlaps; six ROM-backed lists, five languages, ownership masks, prices, cursors and palettes; Sunny Boutique rejection, cancellation, two Antlers colors, sold-out selection, row navigation and original Save/Continue run natively; other purchases, dressing and photos remain pending |
+| SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; native dressing changes, two saved photos, slot-six navigation, erase rejection, title photo/Dress Up and original Save/Continue exercised; complete wardrobe/gallery and desktop activity coverage remain pending |
+| Clothing catalog and variations | Adapted | All 40 script_callbacks_pair_list.c functions accounted for and compared: 18 Main, 26 F4 and 13 helper contracts, with overlaps; six ROM-backed lists, five languages, ownership masks, prices, cursors and palettes; Sunny Boutique rejection, cancellation, two Antlers colors, sold-out selection, row navigation and original Save/Continue run natively; other purchases and complete wardrobe coverage remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; three owned Gems entries and wrap navigation inspected in the SDK; complete Items/Gems and timed raster integration remain pending |
 | Record messages and eligible-item count | Adapted | All 12 game_record_messages.c functions and the save_counter_prefix.s Main51 leaf compared; five-language text, byte-index wrap, live aliases, eleven void animation presets and the excluded final counter byte; the Clubhouse desk's empty-inventory greeting completes in the SDK; populated activity branches remain pending |
 | Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; paid artisan Pooie Earrings and delivery tested; manual crafting, resale and other recipes remain separate |
@@ -415,16 +415,32 @@ or the balance. The Outfit counter advances once per purchased color, from
 zero to two; the Antlers ownership byte changes from 63 to 191 to 255, while
 the next category remains unchanged.
 
-The 37,274-update chapter has thirteen semantic checkpoints and passes the SDK
-in 67.64 seconds and 40,286 host-session checks in 70.05 seconds. SDK, host and
-input-only scout agree across the entire 32 KiB SRAM. Original Save/Continue
-and a fresh 2,103-update SDK reload/Status check retain map 2:3 at x=128.5,
-z=80.5, 65 words, two seeds, five rocks, eleven loves, Bijou and both colors.
-The fresh check passes in 2.701 seconds, including the earlier gem and rock
-assertions; the source save stays unchanged. Existing postgame and Sunny
-optional chapters remain unchanged. This covers two color purchases, rejected
-and owned selections, cancellation and row navigation. Other clothing purchases,
-dressing, photos and complete optional activity coverage remain pending.
+The original 37,274-update purchase route and thirteen semantic checkpoints
+remain unchanged in the expanded chapter. Existing postgame and Sunny optional
+chapters also remain unchanged.
+
+The extension enters Clubhouse's photo room, dresses Hamtaro in brown Antlers
+and Bijou in white, and saves the first photo with setting 1. Removing Hamtaro's
+worn hat keeps ownership and the stored photo intact. End Game and the title's
+Dress Up option reload both original colors. The extension then swaps the
+colors, saves setting 2 in slot six, declines erasing the first photo, returns
+through Continue and repeats original Save/Continue. Both photos, four empty
+slots, both purchased colors and the earlier story progress are asserted.
+The title's scene counters are temporarily zero while outside the story; the
+world save restores 65 words and eleven loves. Native PPU output confirms the
+two outfits and that the first photo appears behind the title menu.
+
+All 73,776 updates and 29 checkpoints pass the SDK in 131.90 seconds, followed
+by 77,733 host-session checks in 134.03 seconds. SDK, host and input-only scout
+SRAM agree across all 32 KiB. A fresh SDK process passes 2,103 updates in
+2.911 seconds, including Status, both photos, the four empty slots and the earlier
+gem/rock assertions. The endpoint is map 1:3 at x=144.5, z=48.5 with 65 words,
+two seeds, five rocks, eleven loves, Bijou and both purchased colors. The source
+profiles stay unchanged. No native sources or binaries changed in this extension;
+the complete reference-comparison boundary remains applicable.
+
+Other clothing purchases, gallery operations, settings and full desktop activity
+coverage remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

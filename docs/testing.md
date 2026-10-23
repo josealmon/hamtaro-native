@@ -437,16 +437,34 @@ playthrough remain unverified.
 `postgame.json` save. It checks Sunny Boutique's insufficient-funds rejection,
 cancel/return, four ordinary five-seed pickups, both Antlers colors at ten seeds
 each, owned-color rejection, Corsage/Antlers row navigation and original
-Save/Continue. Thirteen checkpoints include prices, seeds, ownership bytes and
-the Outfit counter: one count per acquired color. All 37,274 SDK updates pass
-in 67.64 seconds, followed by 40,286 host-session checks in 70.05 seconds. Host,
-SDK and recorded-input scout SRAM match across all 32 KiB. A fresh SDK process
-passes 2,103 updates in 2.701 seconds, including Status and the prior gem/rock
-assertions. Both colors, 65 words, two seeds, five rocks, eleven loves and Bijou
-remain saved; the input profile is unchanged. The twelve scenario-parser tests
-include acquisition mismatch, byte bounds and numeric-alias rejection. Existing
+Save/Continue. The original thirteen checkpoints include prices, seeds, ownership
+bytes and the Outfit counter: one count per acquired color. Existing
 Sunny optional and postgame scenarios retain every earlier input/checkpoint.
-Other clothing purchases, dressing and photos remain unverified.
+
+The expanded chapter retains all 37,274 preceding updates and thirteen
+checkpoints, then adds dressing and two saved photos. Hamtaro's brown and
+Bijou's white Antlers are stored in slot one with setting 1. Removing Hamtaro's
+worn hat leaves the photo and purchases intact. Title Dress Up reloads both
+stored colors; a second photo swaps them and uses setting 2 in slot six.
+Declining to erase slot one preserves both photos. Continue restores the earlier
+story, and another original Save/Continue retains both records and all four
+unused slots. All 73,776 SDK updates and 29 semantic checkpoints pass in
+131.90 seconds, followed by 77,733 host-session checks in 134.03 seconds.
+SDK, host and input-only scout match all 32 KiB of SRAM. A fresh SDK process
+passes 2,103 updates in 2.911 seconds, including Status, both photo records,
+four unused slots and the previous gem/rock assertions. The endpoint is map 1:3
+at x=144.5, z=48.5 with 65 words, two seeds, five rocks, eleven loves and Bijou.
+Both input profiles are unchanged. Fifteen scenario-parser tests and all eleven
+CTest suites pass, including the actual application smoke test.
+
+The extension changes only scalar checkpoints and recorded input. The native
+source tree, application and probe hashes remain identical to the complete
+reference-comparison boundary; its checks do not need another identical run.
+The canonical route omits 6,370 unasserted scouting updates, retaining every old
+purchase update/checkpoint and the scout's exact final SRAM. Only ordinary
+buttons and read-only scalar assertions are versioned. Other
+clothing purchases, gallery operations/settings and full desktop activity
+coverage remain unverified.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/wardrobe.json --save PATH_TO_PRIVATE_MATERIALS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WARDROBE_PROFILE
 
@@ -468,6 +486,18 @@ bytes; the counter counts acquired variants, not completed categories. All mappi
 read-only assertions. Malformed/out-of-range IDs, numeric aliases and incorrect
 value types fail validation; booleans are rejected as numeric values. Deliberately
 incorrect flag/control expectations are also rejected by ROM-backed tests.
+
+`"outfit_indices": [0, 0, 0, 1, 0, 0]` asserts the six active catalog indices,
+ordered as Hamtaro's head/item/outfit followed by Bijou's. Each is an unsigned
+byte. `"photo_records"` maps unique string slot IDs (0 through 5) to objects with
+`"background"` and `"outfits"`. The background is one byte; outfits are six
+category/variation byte pairs in the same character/part order. Background 0
+denotes an unused slot; category 255 denotes no selected item. The checker reads
+only the thirteen defined record bytes and excludes its three padding bytes.
+These are read-only scalar metadata assertions, with no resource data or state
+injection. Invalid layouts/types, aliases, truncated lists and color/background
+mismatches are rejected by the fifteen asset-free scenario tests.
+
 Original Continue checks word flags, ball acquisition/delivery, team progress and
 the final rescue/bottle state. A separate SDK process reloads the host-written
 SRAM and checks the challenge, rescue, word and bottle flags, scene controls, map,
@@ -641,7 +671,8 @@ counter and sentinel boundaries, palette queues, live aliases and actual Main/F4
 commands. Void animation presets and argument-dependent helpers are rejected by
 the wrong calling interface. The checked render-number guard remains covered
 alongside the explicit raw-slot adapter. Unterminated lists fail explicitly.
-Complete clothing, dressing and photo activity coverage remains separate.
+Complete clothing, dressing and photo activity coverage remains separate from
+these function-level comparisons.
 
 The Main memory and scene-transition group can also run separately:
 
