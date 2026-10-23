@@ -200,8 +200,21 @@ scalar assertions. There is no adaptive controller, game data or state injection
 The complete SDK replay passes in 138.71 seconds; 90,912 host-session checks pass
 in 140.82 seconds. Their entire 32 KiB SRAM images match byte for byte. A separate
 2,103-update SDK reload and Status inspection passes in 2.589 seconds with the
-same saved flags, controls and counters. Later Sunny Peak visits, Haunted House,
+same saved flags, controls and counters. Later Sunny Peak visits, the rest of Haunted House,
 remaining activities and complete desktop progression remain pending.
+
+`haunted_house.json` starts from the saved sixth reconciliation. Its 34,258
+updates and nine scalar checkpoints cover the entrance scene, Hif-hif seed pickup,
+Digdig passage, two Blash-T price reductions and purchase of the ID card for five
+seeds. Ta-dah opens the entrance; Heyhoo at the reception desk teaches Thump-P,
+and another Ta-dah earns the bronze card. Original Save/Continue retains map 5:4
+at x=184.5, z=144.5 with 40 words, 17 seeds, six loves and Bijou, flags
+0xB5/0xBA/0x8D/0x13A and controls 0x8E=3/0x1AA=2. The SDK replay passes in 47.34
+seconds and 37,597 host-session checks pass in 50.19 seconds. SDK and host SRAM
+match across all 32 KiB; a separate 2,103-update SDK reload/Status inspection
+passes in 2.585 seconds with the same flags, controls and counters.
+Haunted House's remaining puzzles and seventh reconciliation are pending.
+This input-only route contains no game data or state injection.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -615,8 +628,8 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from the saved sixth reconciliation through Haunted House and the
-   jungle prerequisites for Sunny Peak's later hat story. The original
+1. Continue from Haunted House's saved bronze card through the seventh
+   reconciliation and jungle prerequisites for Sunny Peak's later hat story. The original
    route reaches Sunny Peak's temple/workshop after obtaining all three marbles,
    including the jungle wedding's red marble; keep these dependencies explicit.
    Sunny Peak's later hat story, temple, workshop and optional activities still

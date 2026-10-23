@@ -208,6 +208,7 @@ The prerequisite is reproducible from erased SRAM without duplicating the openin
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay.json --save PATH_TO_NEW_PRIVATE_SUNNY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_ISLAND_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/treasure_island.json --save PATH_TO_NEW_PRIVATE_ISLAND_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_FIFTH_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land.json --save PATH_TO_NEW_PRIVATE_FIFTH_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SIXTH_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/haunted_house.json --save PATH_TO_NEW_PRIVATE_SIXTH_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_BRONZE_PROFILE
 
 Each output profile must be new and outside the checkout. Every continuation
 reads its prerequisite SRAM without changing it and tests a fresh host session.
@@ -228,9 +229,24 @@ retained. The full SDK stage passes in 138.71 seconds and the host replay passes
 90,912 checks in 140.82 seconds, including original disk persistence and a fresh
 session. SDK and host SRAM match across all 32 KiB. Another independent SDK
 reload/Status inspection passes 2,103 updates in 2.589 seconds and rechecks the
-saved flags, controls, position and counters. Later Sunny Peak, Haunted House,
+saved flags, controls, position and counters. Later Sunny Peak, the rest of Haunted House,
 remaining activities and full desktop progression remain unverified.
 No earlier scenario, exhaustive reference domain or independent oracle was removed.
+
+The Haunted House opening continues from the saved sixth reconciliation in a fresh
+process. Its 34,258 updates and nine scalar checkpoints retain the entrance scene,
+Hif-hif seed pickup, Digdig passage, two Blash-T price reductions, five-seed ID card
+purchase and Ta-dah entry. Heyhoo at reception teaches Thump-P and opens its book;
+another Ta-dah earns the bronze card. Original Save/Continue retains map 5:4 at
+x=184.5, z=144.5, 40 words, 17 seeds, six loves and Bijou, with flags
+0xB5/0xBA/0x8D/0x13A and controls 0x8E=3/0x1AA=2. The SDK replay passes in 47.34
+seconds; 37,597 host-session checks pass in 50.19 seconds, including exact SDK/host
+SRAM equality and fresh continuation. Another 2,103-update SDK reload/Status
+inspection passes in 2.585 seconds with all saved flags and controls retained.
+The seventh reconciliation and the remaining Haunted House puzzles are
+outside this stage. Literal input recordings from the original guide agree at
+entry but diverge later in this native route; their observation labels are not
+semantic assertions and the divergent recording is not used as native proof.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
