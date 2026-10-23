@@ -15,7 +15,9 @@ elder's Tuggie lesson and lighthouse confrontation now reach the fifth
 reconciliation and original saved continuation.
 The next saved stage returns by ferry, follows Clubhouse's Fun Land unlock,
 learns Scrub, collects the trash and earns the green marble with 630 points in
-the musical-note challenge, retaining it through original Save and Continue.
+the musical-note challenge. It then rescues the operator, repairs Ham-Bot,
+reaches the sixth reconciliation and returns to Clubhouse, retaining the new
+destination unlock through original Save and Continue.
 This development build still stops at unfinished functions; complete story, optional activities,
 remaining minigames and desktop playthrough coverage remain unverified.
 See docs/architecture.md for the current evidence.

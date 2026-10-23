@@ -186,13 +186,22 @@ to Clubhouse for the original destination unlock and Boss lesson, then enters
 Fun Land. Scrub and its book return, trash acquisition and the musical-note
 challenge run through ordinary input. A read-only class checkpoint asserts 630
 points, within the original green-marble reward tier. Flags 0xAB/0x127 verify the
-award, and original Save/Continue retains map 3:4 at x=232.5, z=216.5 with 36
-words, 19 seeds, five loves and Bijou. The 35,899-update scenario contains no
-adaptive controller, game data or state writes: its literal buttons and scalar
-checks replay the full stage, including the three-seed entry fee and No-P at the
-replay prompt. Operator rescue, Ham-Bot repair and the sixth love remain pending.
-The complete SDK replay passes in 56.59 seconds; 39,574 host-session checks pass
-in 59.11 seconds, including exact 32 KiB persistence and fresh-session continuation.
+award, and the first original Save/Continue retains map 3:4 at x=232.5, z=216.5
+with 36 words, 19 seeds, five loves and Bijou. Without another process restart,
+the route learns Blash-T, follows the power failure, rescues the operator with
+Pakapaka, requests help and sends Ham-Bot with Heyhoo. Chukchuk consumes the
+trash against Spat; Scrub-E repairs the robot and teaches Tiptop. The sixth
+reconciliation and Clubhouse arrival unlock the next destination. A second
+original Save/Continue retains map 1:1 at x=144.5, z=192.5 with 39 words, 19 seeds,
+six loves and Bijou, flags 0x44/0x69/0x62/0xAB/0x127 set, 0x184/0xBB cleared and
+controls 0x8F=2/0x90=6. The 85,539-update scenario has 36 semantic checkpoints,
+retains every earlier green-marble check and contains only literal buttons and
+scalar assertions. There is no adaptive controller, game data or state injection.
+The complete SDK replay passes in 138.71 seconds; 90,912 host-session checks pass
+in 140.82 seconds. Their entire 32 KiB SRAM images match byte for byte. A separate
+2,103-update SDK reload and Status inspection passes in 2.589 seconds with the
+same saved flags, controls and counters. Later Sunny Peak visits, Haunted House,
+remaining activities and complete desktop progression remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -606,8 +615,8 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from the saved Fun Land green marble through operator rescue and
-   Ham-Bot repair toward the sixth love. The original
+1. Continue from the saved sixth reconciliation through Haunted House and the
+   jungle prerequisites for Sunny Peak's later hat story. The original
    route reaches Sunny Peak's temple/workshop after obtaining all three marbles,
    including the jungle wedding's red marble; keep these dependencies explicit.
    Sunny Peak's later hat story, temple, workshop and optional activities still

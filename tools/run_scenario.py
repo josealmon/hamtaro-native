@@ -74,6 +74,10 @@ class NativeGame:
         out=C.create_string_buffer(size)
         if not self.read(self.memory,address,out,size):raise RuntimeError("Native checkpoint read failed.")
         return int.from_bytes(out.raw,"little",signed=signed)
+    def sram(self):
+        self.check();out=C.create_string_buffer(32768)
+        if not self.read(self.memory,0x0E000000,out,len(out)):raise RuntimeError("Native SRAM read failed.")
+        return out.raw
     def checkpoint(self,flags=None,controls=None,classes=None):
         report=self.check();slot=self.value(0x03002D98)+self.value(0x03002C0C,1)*104
         result=dict(frame=report[4],map_bank=self.value(0x03002C58,1),map_index=self.value(0x03001F68,1),
@@ -144,6 +148,12 @@ def run_steps(game,steps):
             for name in step.get("buttons",[]):buttons|=BUTTONS[name]
             for _ in range(step["frames"]):game.frame(buttons)
 
+def verify_profile_sram(profile,expected):
+    if len(expected)!=32768:raise ValueError("Expected a complete 32 KiB SDK SRAM image.")
+    if (profile/"game.sav").read_bytes()!=expected:
+        raise RuntimeError("Host SRAM differs from the SDK replay, despite any matching counters.")
+    return hashlib.sha256(expected).hexdigest()
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--rom",type=Path,required=True)
@@ -183,9 +193,11 @@ def main():
         scenario=dict(name=f"{scenario['name']} (through {args.until})",steps=scenario["steps"][:matches[0]+1])
         count=validate_steps(scenario["steps"])
     start=time.perf_counter();game=NativeGame(args.library,rom,saved)
-    try:run_steps(game,scenario["steps"])
+    try:
+        run_steps(game,scenario["steps"])
+        expected_sram=game.sram() if args.desktop_profile else None
     finally:game.close()
-    print(f"{scenario['name']}: {count} native updates passed in {time.perf_counter()-start:.2f}s. Scenario coverage only; full gameplay remains unverified.")
+    print(f"{scenario['name']}: {count} native updates passed in {time.perf_counter()-start:.2f}s. Scenario coverage only; full gameplay remains unverified.",flush=True)
     if args.session_test:
         def inputs(steps):
             for step in steps:
@@ -209,6 +221,9 @@ def main():
             host_start=time.perf_counter()
             subprocess.run(arguments,check=True)
             print(f"Host replay and SRAM continuation: {time.perf_counter()-host_start:.2f}s.",flush=True)
+        if args.desktop_profile:
+            digest=verify_profile_sram(args.desktop_profile,expected_sram)
+            print(f"SDK and host SRAM match byte for byte (SHA256 {digest}).",flush=True)
     if args.save and args.save.read_bytes()!=saved:raise RuntimeError("Source SRAM changed during replay.")
 
 if __name__=="__main__":main()

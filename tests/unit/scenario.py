@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 import runpy
+import tempfile
 from types import SimpleNamespace
 import unittest
 
@@ -72,6 +73,20 @@ class ScenarioTests(unittest.TestCase):
         game.checkpoint=lambda flags,controls,classes: {"classes":{"0xE1":599}}
         with contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,"expected.*600.*got.*599"):
             run(game,[dict(label="score",expect={"classes":{"0xE1":600}})])
+
+
+    def test_saved_profile_requires_every_sdk_byte(self):
+        expected=bytes(32768);verify=MODULE["verify_profile_sram"]
+        with tempfile.TemporaryDirectory() as directory:
+            profile=Path(directory);save=profile/"game.sav"
+            with self.assertRaises(FileNotFoundError):verify(profile,expected)
+            for actual in (expected[:-1],expected+b'\0',expected[:17000]+b'\1'+expected[17001:]):
+                save.write_bytes(actual)
+                with self.subTest(size=len(actual)),self.assertRaises(RuntimeError):verify(profile,expected)
+            save.write_bytes(expected)
+            self.assertEqual(verify(profile,expected),MODULE['hashlib'].sha256(expected).hexdigest())
+            self.assertEqual(save.read_bytes(),expected)
+            with self.assertRaises(ValueError):verify(profile,b'')
 
 
 if __name__=="__main__":unittest.main()

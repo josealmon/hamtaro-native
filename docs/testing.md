@@ -207,20 +207,29 @@ The prerequisite is reproducible from erased SRAM without duplicating the openin
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_peak.json --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay.json --save PATH_TO_NEW_PRIVATE_SUNNY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_ISLAND_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/treasure_island.json --save PATH_TO_NEW_PRIVATE_ISLAND_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_FIFTH_PROFILE
-    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land.json --save PATH_TO_NEW_PRIVATE_FIFTH_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_GREEN_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land.json --save PATH_TO_NEW_PRIVATE_FIFTH_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SIXTH_PROFILE
 
 Each output profile must be new and outside the checkout. Every continuation
 reads its prerequisite SRAM without changing it and tests a fresh host session.
 
-The Fun Land continuation has 35,899 updates and 17 semantic checkpoints. It
+The Fun Land continuation has 85,539 updates and 36 semantic checkpoints. It
 checks the return ferry's confirmation, preserved fifth love, Digdig destination
 exit, Clubhouse unlock and Boss lesson, Scrub and book return, trash acquisition,
 musical challenge entry fee, 630-point score, green-marble award and the original
-No-P replay choice. Original Save/Continue retains map 3:4 at x=232.5, z=216.5
-with 36 words, 19 seeds, five loves and Bijou, including flags 0xAB/0x127.
-The later operator/Ham-Bot story and sixth reconciliation remain unverified.
-The full SDK stage passes in 56.59 seconds and the host replay passes 39,574
-checks in 59.11 seconds, including original disk persistence and a fresh session.
+No-P replay choice. The original 35,899-update green-marble prefix and its 17
+checkpoints are retained unchanged, including Save/Continue at map 3:4. The same
+process then learns Blash-T, follows the power failure, frees the operator with
+Pakapaka, requests help and sends Ham-Bot using Heyhoo. It learns Chukchuk,
+consumes the trash against Spat, repairs the robot with Scrub-E and learns Tiptop.
+The sixth love and Clubhouse destination unlock survive original Save/Continue:
+map 1:1 at x=144.5, z=192.5, 39 words, 19 seeds, six loves and Bijou. Flags
+0x44/0x69/0x62/0xAB/0x127 are set, 0x184/0xBB cleared and controls 0x8F=2/0x90=6
+retained. The full SDK stage passes in 138.71 seconds and the host replay passes
+90,912 checks in 140.82 seconds, including original disk persistence and a fresh
+session. SDK and host SRAM match across all 32 KiB. Another independent SDK
+reload/Status inspection passes 2,103 updates in 2.589 seconds and rechecks the
+saved flags, controls, position and counters. Later Sunny Peak, Haunted House,
+remaining activities and full desktop progression remain unverified.
 No earlier scenario, exhaustive reference domain or independent oracle was removed.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
@@ -325,7 +334,12 @@ in that new directory. The directory must
 be outside the checkout and must not already exist. Start the actual application
 with --data-dir PATH_TO_NEW_PRIVATE_PROFILE to inspect the same saved scene.
 This explicit private export differs from the default disposable test profile.
-It adds two profile-export checks to the default replay's count.
+It adds two profile-export checks to the default replay's count. The Python runner
+also compares the exported 32 KiB file with the SDK replay's SRAM byte for byte,
+printing its SHA-256 only after equality succeeds. Matching counters alone are
+insufficient. This reuses the two required replays and needs no third full replay.
+The asset-free parser suite checks missing files, wrong lengths, equal-length
+single-byte corruption, exact equality and read-only verification.
 
 A real-window review launched the Windows executable with the exported twenty-one-word
 profile, selected Continue and restored the Clubhouse scene. Select, assigned to V
