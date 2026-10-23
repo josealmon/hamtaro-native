@@ -344,8 +344,24 @@ and scalar expectations, with no captured CPU/RAM state or resource bytes.
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/spat_battle.json --save PATH_TO_PRIVATE_TOWER_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_POSTGAME_PROFILE
 
 These results establish the saved main-story ending in the SDK and host session.
-The remaining 27 words, optional activities and complete desktop playthrough
-remain unverified.
+They leave 27 words and optional content outside the ending scenario's coverage.
+
+`sunny_optional.json` starts from that saved ending. Blushie's Stickie interaction,
+Bestest's eastern conversation and Bloat-T's post-reunion conversation increase
+the dictionary to 62 words. Eight checkpoints cover acquisition, retained ending
+state and original Save/Continue. The saved result is map 2:8 at x=152.5, z=120.5,
+62 words, 12 seeds, ten loves and Bijou, with flags 0x82/0x88/0x8A/0x190 set.
+Hamtast's flag 0x89 remains clear and request control 0x7D remains 2.
+All 36,347 SDK input updates pass in 58.75 seconds; the same stream passes
+39,428 host-session checks in 64.15 seconds. All 32 KiB match SDK, host and scout.
+A separate 2,103-update SDK reload/Status inspection passes in 2.669 seconds.
+The ending source SRAM is unchanged. This scenario adds inputs and scalar
+expectations; the core is unchanged since the complete 4,446,989-check comparison.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --save PATH_TO_PRIVATE_POSTGAME_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_OPTIONAL_PROFILE
+
+Hamtast, the other 23 missing words, remaining activities and the complete
+desktop playthrough remain unverified.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert

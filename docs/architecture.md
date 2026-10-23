@@ -305,8 +305,21 @@ All 38,099 input updates and 11 checkpoints pass in 58.15 seconds; the same
 full stream passes 40,937 host-session checks in 60.53 seconds. SDK, host and
 scout match all 32 KiB. A separate 2,103-update SDK reload/Status inspection
 passes in 2.758 seconds. The prior save is unchanged. This establishes a saved
-native main-story ending along the tested stage chain; the remaining 27 words,
-optional activities and full desktop route remain outside this evidence.
+native main-story ending along the tested stage chain. At this boundary, 27 words,
+optional activities and the full desktop route remain outside this evidence.
+
+`sunny_optional.json` continues from that saved ending and learns Blushie through
+the original Stickie interaction, Bestest from the reunited eastern pair and
+Bloat-T after the completed sunflower reunion. Original Save/Continue retains
+map 2:8 at x=152.5, z=120.5, 62 words, 12 seeds, ten loves and Bijou, with
+0x82/0x88/0x8A and the ending flag 0x190 set. Hamtast remains unlearned
+(0x89 clear, request control 0x7D=2); this does not establish optional completion.
+All 36,347 input updates and eight checkpoints pass in 58.75 seconds; the same
+full stream passes 39,428 host-session checks in 64.15 seconds. SDK, host and
+scout match all 32 KiB. A separate 2,103-update SDK reload/Status inspection
+passes in 2.669 seconds, and the source ending save is unchanged. No core changes
+were needed for these three events. The 24 remaining words, other activities
+and full desktop progression remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

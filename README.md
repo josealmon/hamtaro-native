@@ -43,6 +43,8 @@ Harmony's Hamscope upgrade survives original Save/Continue and fresh SDK/host se
 The continuation defeats Spat with normal Hamscope shots, runs the complete credits
 and returns to postgame control. Original Save/Continue retains the ending with
 59 words and all ten loves rescued.
+An additional saved Sunny Peak continuation learns Blushie, Bestest and Bloat-T,
+bringing the dictionary to 62 words. Hamtast's optional request remains pending.
 This development build still has unfinished functions. Optional activities,
 remaining minigames and full desktop playthrough coverage remain unverified.
 See docs/architecture.md for the current evidence.
