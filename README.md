@@ -4,50 +4,18 @@ Windows x64 native-port work for Hamtaro: Ham-Ham Heartbreak (European AH3P revi
 You must provide your own compatible .gba file. No game assets or ROM are included.
 
 The application imports and validates a ROM, runs adapted native game logic,
-configures keyboard/gamepad input and manages compatible saves. Native input
-replays cover the first Sunny Peak story, three reconciliations and a saved return
-to Clubhouse, followed by Sandy Bay's normal unlock, swimming lesson, Tinglie,
-ball delivery, perfect six/twelve-rally games, Spat's trap, Seamore and Barrette's
-reconciliation, the bottle message, wooden board and Items panel. The continuation
-plays the ten-note melody, opens the Captain's passage, takes the ferry to Treasure
-Island and recovers the scarf. The music demonstration, dressing-room impostor,
-elder's Tuggie lesson and lighthouse confrontation now reach the fifth
-reconciliation and original saved continuation.
-The next saved stage returns by ferry, follows Clubhouse's Fun Land unlock,
-learns Scrub, collects the trash and earns the green marble with 630 points in
-the musical-note challenge. It then rescues the operator, repairs Ham-Bot,
-reaches the sixth reconciliation and returns to Clubhouse, retaining the new
-destination unlock through original Save and Continue.
-Haunted House now covers the ID and bronze cards, Go-P and the mirror passage,
-the ghost challenge and silver card, upper-floor lessons and Bijou's prison
-rescue. The seventh reconciliation and Flipflop survive original Save and Continue,
-including a separate saved continuation while Bijou is alone.
-The upper-floor continuation covers a failed tile challenge and successful retry,
-the gold card, Perksie, the quiz and Spat's escape. Clubhouse then unlocks the
-jungle, and another original Save and Continue retains the completed stage.
-The next saved stage learns Wait-Q and Hampact, follows Sunny Peak's hat request,
-gets the required Hamteam from Stan in Fun Land, and completes Bog's trap and
-Cappy's chase. Returning the hat teaches Hamboree and restores the eighth love,
-retained through original Save and Continue and fresh SDK/host sessions.
-The following saved stage recovers the thermal egg, learns Clingie, Thank-Q,
-Hulahula and Hamscope, crafts the slingshot, shoots the beehive and recovers the
-red marble. The second jungle wedding teaches Vast-T and restores the ninth love,
-retained through original Save and Continue and fresh SDK/host sessions.
-The temple continuation retrieves the returned red marble and Sandy Bay's blue
-marble, uses the mine cart and places all three marbles in Sunny Peak's altar.
-The spoon and inventor-couple story reach the tenth reconciliation, retained
-through original Save and Continue, exact SDK/host SRAM equality and a fresh reload.
-The next saved stage launches the inventor's catapult, solves the tower's sliding
-puzzle, opens its doorway and reaches Spat's first encounter and scripted retreat.
-Harmony's Hamscope upgrade survives original Save/Continue and fresh SDK/host sessions.
-The continuation defeats Spat with normal Hamscope shots, runs the complete credits
-and returns to postgame control. Original Save/Continue retains the ending with
-59 words and all ten loves rescued.
-An additional saved Sunny Peak continuation learns Blushie, Bestest and Bloat-T,
-bringing the dictionary to 62 words. Hamtast's optional request remains pending.
-This development build still has unfinished functions. Optional activities,
-remaining minigames and full desktop playthrough coverage remain unverified.
-See docs/architecture.md for the current evidence.
+configures keyboard/gamepad input and manages compatible saves.
+
+Recorded native input covers the main story through ten reconciliations, Spat's
+defeat, the complete credits and saved postgame control. An additional Sunny Peak
+route learns Blushie, Bestest, Bloat-T and Hamtast, completes Panda's bridge and
+collects the Rainbow Key. With Tran-Q from Clubhouse, the dictionary reaches
+64 words. The scenarios check original Save/Continue and compare complete
+32 KiB saves between independent native runtimes.
+
+This development build still has unfinished functions. Remaining words, optional
+activities, minigames and a full desktop playthrough remain unverified.
+See [docs/architecture.md](docs/architecture.md) for the tested routes and their limits.
 
 ## Build
 

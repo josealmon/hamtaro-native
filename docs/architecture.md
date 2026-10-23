@@ -88,7 +88,7 @@ statically. A separate clean-machine validation remains pending.
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Full optional activities and complete desktop story coverage remain pending |
-| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding, Sunny Peak's tenth reconciliation, tower puzzle, Spat's defeat, complete credits and postgame control; original Save/Continue, exact SRAM equality and fresh reload checked at stage boundaries; full desktop progression and optional completion remain pending |
+| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding, Sunny Peak's tenth reconciliation, tower puzzle, Spat's defeat, complete credits and postgame control, followed by Panda's bridge and Rainbow Key; original Save/Continue, exact SRAM equality and fresh reload checked at stage boundaries; full desktop progression and optional completion remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -309,17 +309,28 @@ native main-story ending along the tested stage chain. At this boundary, 27 word
 optional activities and the full desktop route remain outside this evidence.
 
 `sunny_optional.json` continues from that saved ending and learns Blushie through
-the original Stickie interaction, Bestest from the reunited eastern pair and
-Bloat-T after the completed sunflower reunion. Original Save/Continue retains
-map 2:8 at x=152.5, z=120.5, 62 words, 12 seeds, ten loves and Bijou, with
-0x82/0x88/0x8A and the ending flag 0x190 set. Hamtast remains unlearned
-(0x89 clear, request control 0x7D=2); this does not establish optional completion.
-All 36,347 input updates and eight checkpoints pass in 58.75 seconds; the same
-full stream passes 39,428 host-session checks in 64.15 seconds. SDK, host and
+Stickie, Bestest from the reunited eastern pair and Bloat-T after the sunflower
+reunion. Its first eight checkpoints and intermediate Save/Continue are retained.
+The extension learns Tran-Q from Boss before accepting the Clubhouse board.
+It repeats Boo Manor's ghost challenge, collects its board, crosses with Putput
+and recovers the board with Offdoff. Panda receives all three boards and the
+strap; returning to the cave announces completion, and Panda then teaches Hamtast.
+The completed bridge leads to the Rainbow Key, knocked down with Tack-Q and
+collected with Hif-hif. The cave junction changes its control 0x1A0 from 1 to 2
+on the left route while staying in map 2:9; a separate map transition is not
+required for this traversal.
+
+Original Save/Continue retains map 2:15 at x=152.5, z=120.5, 64 words, 12 seeds,
+ten loves and Bijou. Flags 0x82/0x88/0x89/0x8A/0x99/0xBD/0x190/0x1D8 are set,
+the four delivered-material flags 0xA5..0xA8 are clear, and controls 0x7D=8 and
+0x1AF=2 retain the completed bridge and key pickup.
+All 125,864 input updates and 24 checkpoints pass in 192.02 seconds; the same
+full stream passes 132,137 host-session checks in 197.58 seconds. SDK, host and
 scout match all 32 KiB. A separate 2,103-update SDK reload/Status inspection
-passes in 2.669 seconds, and the source ending save is unchanged. No core changes
-were needed for these three events. The 24 remaining words, other activities
-and full desktop progression remain pending.
+passes in 2.654 seconds, and the source ending save is unchanged. No core changes
+were needed. The 22 remaining words, other activities and full desktop progression
+remain pending; this does not establish complete optional-game coverage or a full
+love meter.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -742,7 +753,7 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Preserve the input-only story chain through all ten reconciliations, Spat's
+1. Preserve the input-only story chain through the ten tested story reconciliations, Spat's
    defeat, complete credits and saved postgame. Keep its actual temple/three-marble
    prerequisites and semantic battle checkpoints rather than relying on capture labels.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
@@ -787,7 +798,7 @@ update these existing documents and retain no per-function reports in the reposi
 
 The read-only reference also provides `tests/cold-load/spanish-montak-reload.txt`
 and `tests/fixtures/montak.json`: 1,224,925 original frames and 443 checkpoints per
-primary/backup branch through all ten reconciliations, credits and selected postgame
+primary/backup branch through ten story reconciliations, credits and selected postgame
 activities. Use this route to plan the remaining areas and compare original outcomes.
 It begins from a Spanish MonTak SRAM checkpoint; its prerequisite, language, timing
 and VCOUNT-dependent randomness must be checked when adapting native inputs. These
