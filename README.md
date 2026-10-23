@@ -37,6 +37,9 @@ The temple continuation retrieves the returned red marble and Sandy Bay's blue
 marble, uses the mine cart and places all three marbles in Sunny Peak's altar.
 The spoon and inventor-couple story reach the tenth reconciliation, retained
 through original Save and Continue, exact SDK/host SRAM equality and a fresh reload.
+The next saved stage launches the inventor's catapult, solves the tower's sliding
+puzzle, opens its doorway and reaches Spat's first encounter and scripted retreat.
+Harmony's Hamscope upgrade survives original Save/Continue and fresh SDK/host sessions.
 This development build still stops at unfinished functions; complete story, optional activities,
 remaining minigames and desktop playthrough coverage remain unverified.
 See docs/architecture.md for the current evidence.

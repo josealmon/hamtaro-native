@@ -7,6 +7,7 @@
 #include "game/bank5.h"
 #include "game/bank6.h"
 #include "game/bank7.h"
+#include "game/scene_selection.h"
 #include "game/record_selection.h"
 #include "game/presentation.h"
 #include "game/save_group3.h"
@@ -208,6 +209,7 @@ static bool task_callback(HNMemory *m,GameAddr callback)
         result=hn_bank5_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_bank6_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_bank7_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
+        result=hn_scene_selection_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_record_selection_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_presentation_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_group3_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;

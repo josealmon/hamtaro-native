@@ -61,7 +61,8 @@ statically. A separate clean-machine validation remains pending.
 | Bank-6 main/final scene families | Adapted | All 243 functions in map_bank6_callbacks.c and map_bank6_final_callbacks.c plus the complete neighbor-pair dependency compared; oscillators/orbits, projected motion, cursor/rectangles, target selection/restore, task patterns and typed helpers; full area integration remains pending |
 | Bank-6 chain family | Adapted | All 12 map_bank6_chain_callbacks.c functions compared: three chain transforms, shared position, paired landing, containment/overlap, sine flight, fixed approach, wrapping and a live indicator; five Main, two argument-free task and seven animation contracts; full area/story and timed scene integration remain pending |
 | Shared presentation families | Adapted | All 56 functions across nine bank-7 height/preset, region-motion, background/reset/scroll, window and tilemap-transfer families compared, including two existing modal roots; 28 Main, 40 task, six animation and six helper contracts, with overlaps; complete scene/activity and timed rendering integration remain pending |
-| Bank-7 tile board and scene presets | Adapted | All 32 functions in tile_board_callbacks.c and scene_render_presets.c compared: five Main, 30 argument-free task contracts and one typed helper, with overlaps; byte cursors/cells, special connections, tile motion, arrows and live scene selectors; complete puzzle/area progression remains pending |
+| Bank-7 tile board and scene presets | Adapted | All 32 functions in tile_board_callbacks.c and scene_render_presets.c compared: five Main, 30 argument-free task contracts and one typed helper, with overlaps; complete sliding puzzle solved with normal directional input and retained by original Save/Continue; complete final area remains pending |
+| Six/eight-choice rooms | Adapted | All 13 choice-family entries in scene_selection_callbacks.c compared: ten Main callbacks and three void task presets; shuffled banks, live actor states, weighted outcomes, four-byte record slots and counter availability; complete room/activity progression remains pending |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
@@ -87,7 +88,7 @@ statically. A separate clean-machine validation remains pending.
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Full optional activities and complete desktop story coverage remain pending |
-| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding and Sunny Peak's temple/workshop tenth reconciliation; original Save/Continue and exact SRAM equality checked at stage boundaries; final tower, credits and full desktop progression remain pending |
+| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding, Sunny Peak's tenth reconciliation, tower puzzle and Hamscope upgrade; original Save/Continue and exact SRAM equality checked at stage boundaries; Spat's defeat, credits and full desktop progression remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -278,8 +279,21 @@ control 0x8C=4. All 89,944 input updates and 21 checkpoints pass in 215.79 secon
 the same full stream passes 95,059 host-session checks in 176.98 seconds.
 All 32 KiB match SDK, host and scout. A separate 2,103-update SDK reload/Status
 inspection passes in 2.701 seconds. The input SRAM remains unchanged; no state
-injection is used. The final tower, credits, optional activities and full desktop
-playthrough remain pending.
+injection is used. The following tower stage is described below.
+
+`spat_tower.json` continues from that tenth save. It launches the inventor's
+catapult with Gogo/Stickie, solves the sliding puzzle with normal directional
+input, advances the guard/doorway conversations through Perksie, Passchat,
+Libert-T and Yep-P, and enters Spat's first battle phase. A normal Hamscope shot
+triggers the original retreat. The return to Clubhouse uses Chukchuk and Hamteam
+with Harmony to upgrade Hamscope. Original Save/Continue retains map 1:2 at
+x=184.5, z=64.5, 58 words, 12 seeds, ten loves and Bijou, with flags
+0xCA/0x18C/0x1B9/0x1AD/0x1B7 set and controls 0xCF=4/0xD1=1.
+All 58,579 input updates and 12 checkpoints pass in 105.19 seconds; the same
+full stream passes 62,902 host-session checks in 97.81 seconds. SDK, host and
+scout match all 32 KiB. A separate 2,103-update SDK reload/Status inspection
+passes in 2.684 seconds. The prior save is unchanged. Spat's defeat, credits,
+remaining activities and full desktop playthrough remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -702,8 +716,7 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from the saved tenth reconciliation through the inventor's catapult,
-   final tower, sliding puzzle, shot upgrade, Spat's battle and credits.
+1. Continue from the saved Hamscope upgrade through Spat's battle and credits.
    Preserve the actual input-only temple/three-marble prerequisites and verify
    battle outcomes rather than relying on fixed input timings or capture labels.
    Keep the remaining story ahead of unrelated optional detours.
@@ -1099,8 +1112,20 @@ The 26 scene presets retain raw class selectors, neighbor wrapping, constructor
 and graphics order, half-cell positions, background resets and the indicator.
 Their void returns acquire only a task contract; Main never invents a consumed
 count. The recovered bank-7 script source now has explicit dispatch for all 141
-declared functions. This is a structural dependency census, not evidence that the
-complete puzzle, final area or story has run natively.
+declared functions. This structural dependency census does not establish the
+complete final area or story. The separate input-only tower scenario above now
+solves the puzzle and checks that its flag survives original Save/Continue.
+
+The six/eight-choice room family uses scene_selection.c. Its 13 original entries
+retain ten Main consumed-count contracts and three void task-only presets.
+The shufflers read bank pointers from guest RAM, preserve rejection sampling and
+the two index groups, and obtain their data from the player's ROM. The eight-choice
+room preserves its fixed first result without advancing the PRNG. Constructors
+read later state/value bytes live, preserve inactive slots and the flag-1EB position
+adjustment. Outcome thresholds, special choices, five-bit counts in four-byte
+record slots, duplicate empty records and counter values 0/255 are compared.
+Malformed PRNG state stops after a bounded rejection loop. These function-level
+checks do not establish a complete room, activity or tower playthrough.
 
 A separate private input-only scout completes the initial Ham-Jam conversation,
 No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement

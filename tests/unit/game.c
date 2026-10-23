@@ -22,6 +22,7 @@
 #include "game/save_group4.h"
 #include "game/record_menu.h"
 #include "game/record_selection.h"
+#include "game/scene_selection.h"
 #include "game/audio.h"
 #include "game/wander.h"
 #include "game/scene_actor.h"
@@ -2856,6 +2857,43 @@ static void group4_contract(void)
     CHECK(hn_group4_callback(&memory,0x080C8744,0,&consumed)==HN_SCENE_UNKNOWN&&consumed==0);
     CHECK(!memory.fault);free(rom);reset();
 }
+static void scene_selection_contract(void)
+{
+    reset();const GameAddr controls=HN_SCENE_CONTROLS,args=0x02030000;uint32_t consumed=99;
+    for(unsigned value=0;value<256;value++){
+        hn_write8(&memory,args,0);hn_write8(&memory,controls+0x2E,(uint8_t)value);
+        CHECK(hn_scene_callback(&memory,0x080BF99D,args,&consumed)==HN_SCENE_OK&&consumed==1);
+        CHECK(hn_read8(&memory,controls+0x60)==(value==20||value==25||value==27||value==22));
+        hn_write8(&memory,args,255);hn_write8(&memory,0x0201CC20+255,(uint8_t)value);
+        CHECK(hn_scene_callback(&memory,0x080BFCE5,args,&consumed)==HN_SCENE_OK&&consumed==1);
+        CHECK(hn_read8(&memory,controls+0x60)==(value!=0&&value!=255));
+    }
+    hn_write8(&memory,args,37);hn_write16(&memory,0x0201CB20,37);
+    for(unsigned count=0;count<32;count++){
+        hn_write16(&memory,0x0201CB20+63*4,(uint16_t)(37|(count<<7)));
+        CHECK(hn_scene_callback(&memory,0x080BFC8D,args,&consumed)==HN_SCENE_OK&&consumed==1);
+        CHECK(hn_read8(&memory,controls+0x60)==(count!=0));
+    }
+    hn_write8(&memory,args,165);
+    CHECK(hn_scene_callback(&memory,0x080BFC8D,args,&consumed)==HN_SCENE_OK&&!hn_read8(&memory,controls+0x60));
+    /* The first eight-choice result is fixed and must not advance the PRNG. */
+    hn_write16(&memory,args,0x44);hn_write8(&memory,controls+0x44,0);hn_write8(&memory,controls+0x4D,173);
+    hn_write32(&memory,0x03000000,123);hn_write32(&memory,0x03000004,456);hn_write32(&memory,0x03000008,789);
+    CHECK(hn_scene_callback(&memory,0x080BFC25,args,&consumed)==HN_SCENE_OK&&consumed==2);
+    CHECK(hn_read16(&memory,0x0201DC84)==173&&hn_read32(&memory,0x03000000)==123&&hn_read32(&memory,0x03000004)==456&&hn_read32(&memory,0x03000008)==789);
+    CHECK(hn_scene_callback(&memory,0x080BFA5D,0,&consumed)==HN_SCENE_OK&&consumed==0);
+    const GameAddr voids[]={0x080BFA59,0x080BFD15,0x080BFD19};
+    for(unsigned i=0;i<3;i++)CHECK(hn_scene_callback(&memory,voids[i],args,&consumed)==HN_SCENE_UNKNOWN);
+    CHECK(hn_scene_selection_task(&memory,0x080BFA59)==HN_SCENE_OK);
+    CHECK(hn_scene_selection_task(&memory,0x080BFD15)==HN_SCENE_OK);
+    CHECK(hn_scene_selection_task(&memory,0x080BF771)==HN_SCENE_UNKNOWN);
+    CHECK(hn_scene_selection_callback(&memory,0x080BFD34,0,&consumed)==HN_SCENE_UNKNOWN&&consumed==0);
+    /* A degenerate PRNG must fail explicitly instead of hanging the host. */
+    hn_write8(&memory,controls+0x7F,0);hn_write32(&memory,0x020018F0,0x02017000);
+    hn_write32(&memory,0x03000000,0);hn_write32(&memory,0x03000004,0);hn_write32(&memory,0x03000008,0);
+    CHECK(hn_scene_callback(&memory,0x080BF771,0,&consumed)==HN_SCENE_RESOURCE&&!memory.fault);
+    CHECK(!memory.fault);reset();
+}
 static void actor_mirror_contract(void)
 {
     reset();hn_write32(&memory,HN_RENDER_SLOTS,0x02010000);
@@ -2893,5 +2931,5 @@ int main(void)
 {
     dma_contract();transfer_contract();video_contract();map_contract();expression_contract();save_contract();scene_contract();
     text_contract();panel_contract();actor_contract();counter_contract();motion_contract();task_contract();choice_contract();following_contract();collision_contract();indicator_contract();book_contract();actor_snapshot_contract();preset_contract();map_choice_contract();particles_contract();scene_motion_contract();bank2_contract();wander_contract();scene_actor_contract();actor_presets_contract();records_contract();wave_contract();counter_scene_contract();shared_motion_contract();runtime_contract();
-    scene_effects_contract();bank3_contract();bank4_contract();bank5_contract();bank6_contract();bank6_chain_contract();bank7_contract();presentation_contract();group3_contract();group4_contract();actor_mirror_contract();record_menu_contract();item_selection_contract();record_selection_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
+    scene_effects_contract();bank3_contract();bank4_contract();bank5_contract();bank6_contract();bank6_chain_contract();bank7_contract();presentation_contract();group3_contract();group4_contract();actor_mirror_contract();record_menu_contract();item_selection_contract();record_selection_contract();scene_selection_contract();printf("%u native game subsystem checks passed.\n",checks);return 0;
 }

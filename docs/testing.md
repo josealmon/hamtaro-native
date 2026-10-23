@@ -72,12 +72,13 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 4,318,831 checks in 713.902 seconds. It retains
-all 4,247,109 preceding cases and adds 71,722 checks for unassigned-I/O collision
-indices, including even/odd register boundaries and every render count.
+The latest complete suite passes 4,380,026 checks in 651.863 seconds. It retains
+all 4,318,831 preceding cases and adds 61,195 six/eight-choice room comparisons.
+The preceding 71,722 unassigned-I/O collision checks, including even/odd register
+boundaries and every render count, remain enabled.
 Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
 enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
-11 CTest suites pass in 1.97 seconds, including 15,650 game checks. Story replays ran concurrently,
+11 CTest suites pass, including 16,751 game checks. Story replays ran concurrently,
 so these are local observations, not portable performance guarantees.
 Earlier optimization reduced the same 4,200,342-check suite from approximately
 1,238 seconds (log timestamps) to 678.102 seconds without reducing coverage.
@@ -314,7 +315,20 @@ state or proprietary resources.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_temple.json --save PATH_TO_PRIVATE_WEDDING_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_TEMPLE_PROFILE
 
-These results cover the SDK and host session. The final tower, credits and
+`spat_tower.json` starts from the saved temple/workshop stage. Its 58,579 updates
+and 12 checkpoints cover the inventor's catapult, Gogo/Stickie launch, complete
+sliding puzzle, guard/doorway conversations and Spat's introduction. A normal
+Hamscope shot triggers the original retreat; Chukchuk and Hamteam with Harmony
+upgrade Hamscope. Original Save/Continue retains the solved puzzle and upgrade
+in map 1:2 at x=184.5, z=64.5, 58 words, 12 seeds, ten loves and Bijou.
+The SDK replay passes in 105.19 seconds and the full host stream passes 62,902
+checks in 97.81 seconds. All 32 KiB match SDK, host and scout; a separate
+2,103-update SDK reload/Status inspection passes in 2.684 seconds. The source
+save is unchanged. No captured CPU/RAM state is injected into this playthrough.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/spat_tower.json --save PATH_TO_PRIVATE_TEMPLE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_TOWER_PROFILE
+
+These results cover the SDK and host session. Spat's defeat, credits and the
 complete desktop playthrough remain unverified.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
@@ -1085,8 +1099,22 @@ overlap, cursor changes during motion, offset-table writes during the setter,
 captured arrow coordinates and class changes during graphics or neighbor setup.
 Public synthetic tests additionally check solved/unsolved results, the four
 special cursor links, blocked movement, preserved unused arrows, boot-gate
-behavior and background setup. These families run in the full comparison;
-complete puzzle and area/story integration remain pending.
+behavior and background setup. These families run in the full comparison.
+The separate tower scenario above now completes the sliding puzzle; full final
+area/story integration remains pending.
+
+The complete six/eight-choice room family has a focused command:
+
+    python -B tools/compare_reference.py --scene-selection-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+Its 61,195 comparisons cover all 13 source entries, ten Main and three void task
+contracts, actual Main/F4 command calls and rejected interfaces. Cases include all
+byte bank/selection inputs, both probability groups, random substitutions, the
+fixed result's unchanged PRNG, all special values and slot states, live constructor
+aliases, four-byte record strides, a matching empty record before an occupied
+duplicate in slot 63, and all counter values. The focused run takes 1.939 seconds.
+These checks also run in the full comparison. Complete room/activity progression
+remains a separate integration requirement.
 
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:
