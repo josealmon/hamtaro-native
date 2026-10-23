@@ -121,12 +121,16 @@ optional activities and later visits remain unverified.
 `sandy_bay.json` continues from the exact saved Clubhouse endpoint above. Boss's
 Hamha conversation sets pending destination flag 0x183; the original map unlock
 consumes it and enables flag 0x43. Selection 4 enters Sandy Bay (map bank 4; bank 3
-is a separate area). The 18,948-update route checks the destination selection,
-arrival dialogue, control in map 4:1, transition to the beach in map 4:2, a beach
-conversation, and original End Game/Continue at x=112, z=64.5 with the same 25
-words, two seeds, three loves and Bijou. The SDK replay and 21,399 host-session
-checks pass, including SRAM-file persistence and fresh continuation. Full Sandy Bay story and activities remain
-unverified. The input SRAM is a private output of the erased-SRAM Sunny Peak route;
+is a separate area). The 71,670-update route retains the first arrival and map 4:2
+beach conversation/save. It continues west to the swimming lesson and word 26,
+then the Lookie conversation in map 4:4 and changed entrance scene. Tinglie raises
+the word count to 27; using it at the cart obtains the ball. Original End Game/Continue
+restores map 4:7 at x=48.5, z=184.5, 27 words, two seeds, three loves and Bijou.
+The full route passes 71,670 SDK updates and 75,627 host-session checks, including
+SRAM-file persistence and fresh continuation.
+Flag assertions establish the destination unlock, both learned words and ball
+acquisition, including their presence after Continue. Full Sandy Bay story and
+activities remain unverified. The input SRAM is a private output of the erased-SRAM Sunny Peak route;
 the versioned continuation contains only buttons and scalar checkpoints.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
@@ -541,10 +545,11 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue Sandy Bay's story from the saved beach state. Its bank-4 source
+1. Continue Sandy Bay's team/ball story from the saved ball acquisition. Its bank-4 source
    families are adapted; review literal task/animation dependencies alongside the
    reachable story route and adapt any missing complete families. Its normal Boss
-   unlock, arrival and beach save/Continue now have focused native input coverage.
+   unlock, swimming lesson, Tinglie and ball acquisition now have native input
+   coverage with original saves and story-flag assertions.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.

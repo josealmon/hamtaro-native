@@ -47,13 +47,16 @@ class NativeGame:
         out=C.create_string_buffer(size)
         if not self.read(self.memory,address,out,size):raise RuntimeError("Native checkpoint read failed.")
         return int.from_bytes(out.raw,"little",signed=signed)
-    def checkpoint(self):
+    def checkpoint(self,flags=None):
         report=self.check();slot=self.value(0x03002D98)+self.value(0x03002C0C,1)*104
-        return dict(frame=report[4],map_bank=self.value(0x03002C58,1),map_index=self.value(0x03001F68,1),
+        result=dict(frame=report[4],map_bank=self.value(0x03002C58,1),map_index=self.value(0x03001F68,1),
                     opcode=self.value(0x03000010,1),main_cursor=f"0x{self.value(0x03002C60):08X}",leader_x=self.value(slot+0x18,signed=True)/65536,
                     leader_z=self.value(slot+0x20,signed=True)/65536,learned_words=self.value(0x03003E30,1),seeds=self.value(0x0201DC52,2),
                     scene_selection=self.value(0x0200458C,1),follower_slot=self.value(0x03001F50,1),
                     partner_joined=bool(self.value(0x03002182,1)&1),loves_rescued=self.value(0x0201DC5C,2))
+        if flags is not None:
+            result["flags"]={key:bool(self.value(0x03002180+int(key,0)//8,1)&(1<<(int(key,0)%8))) for key in flags}
+        return result
     def frame(self,buttons):
         if not self.advance(self.game,buttons):self.check();raise RuntimeError("Native update failed without a diagnostic.")
 
@@ -68,8 +71,17 @@ def validate_steps(steps,depth=0):
             total+=step["repeat"]*validate_steps(step["steps"],depth+1)
         elif "expect" in step:
             if set(step)-{"expect","label"} or not isinstance(step["expect"],dict):raise ValueError("Invalid checkpoint.")
-            fields={"frame","map_bank","map_index","opcode","main_cursor","leader_x","leader_z","learned_words","seeds","scene_selection","follower_slot","partner_joined","loves_rescued"}
+            fields={"frame","map_bank","map_index","opcode","main_cursor","leader_x","leader_z","learned_words","seeds","scene_selection","follower_slot","partner_joined","loves_rescued","flags"}
             if not step["expect"] or set(step["expect"])-fields:raise ValueError("Unknown or empty checkpoint fields.")
+            if "flags" in step["expect"]:
+                flags=step["expect"]["flags"]
+                if not isinstance(flags,dict) or not flags:raise ValueError("Checkpoint flags must be a nonempty object.")
+                ids=[]
+                for key,value in flags.items():
+                    if not isinstance(key,str) or type(value) is not bool:raise ValueError("Checkpoint flags require string IDs and boolean values.")
+                    index=int(key,0)
+                    if not 0<=index<768 or index in ids:raise ValueError("Checkpoint flag IDs must be unique and within the 96-byte game flag block.")
+                    ids.append(index)
         else:
             if set(step)-{"frames","buttons"} or type(step.get("frames")) is not int or not 1<=step["frames"]<=1000000:
                 raise ValueError("Invalid input duration.")
@@ -85,7 +97,7 @@ def run_steps(game,steps):
         if "repeat" in step:
             for _ in range(step["repeat"]):run_steps(game,step["steps"])
         elif "expect" in step:
-            actual=game.checkpoint()
+            actual=game.checkpoint(step["expect"].get("flags"))
             for key,expected in step["expect"].items():
                 if actual[key]!=expected:raise RuntimeError(f"Checkpoint {step.get('label','')} {key}: expected {expected}, got {actual[key]}.")
             print(f"Checkpoint {step.get('label','')}: {actual}",flush=True)
