@@ -77,6 +77,7 @@ statically. A separate clean-machine validation remains pending.
 | Local music and SaveGroup4 support | Adapted | All 29 functions in communication_record_callbacks.c and communication_record_selection.c compared: 28 Main callbacks and one void layout task, plus the prior payload classifier; resource songs/readers, render layout/aliases, affine selection, record numbering/depth, both SRAM copies and local/ROM selection; complete music activity and Cable Link transport remain outside this evidence |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; complete Items/Gems and timed raster integration remain pending |
+| Record messages and eligible-item count | Adapted | All 12 game_record_messages.c functions and the save_counter_prefix.s Main51 leaf compared; five-language text, byte-index wrap, live aliases, eleven void animation presets and the excluded final counter byte; the Clubhouse desk's empty-inventory greeting completes in the SDK; populated activity branches remain pending |
 | Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; complete crafting activity coverage remains pending |
 | Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; empty entry/return and a one-item training-seat SDK view/save/reload run; multi-item inventories and complete activity integration remain pending |
 | Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
@@ -324,13 +325,27 @@ Original Save/Continue retains map 2:15 at x=152.5, z=120.5, 64 words, 12 seeds,
 ten loves and Bijou. Flags 0x82/0x88/0x89/0x8A/0x99/0xBD/0x190/0x1D8 are set,
 the four delivered-material flags 0xA5..0xA8 are clear, and controls 0x7D=8 and
 0x1AF=2 retain the completed bridge and key pickup.
-All 125,864 input updates and 24 checkpoints pass in 192.02 seconds; the same
-full stream passes 132,137 host-session checks in 197.58 seconds. SDK, host and
+That bridge stage's 125,864 input updates and 24 checkpoints pass in 192.02
+seconds; the same full stream passes 132,137 host-session checks in 197.58 seconds. SDK, host and
 scout match all 32 KiB. A separate 2,103-update SDK reload/Status inspection
 passes in 2.654 seconds, and the source ending save is unchanged. No core changes
 were needed. The 22 remaining words, other activities and full desktop progression
 remain pending; this does not establish complete optional-game coverage or a full
 love meter.
+
+The next extension obtains Condor's Wings by greeting the feather and collecting
+the dropped resource with Hif-hif. Seedric's sand bath, map 2:5, supplies Great
+Springs and two additional rocks through Digdig. The top hole in map 2:4 leads
+to this bath. The route then completes the Clubhouse record desk's greeting with
+no eligible records and saves normally. Original Save/Continue retains map 1:6
+at x=96.5, z=64.5, 64 words, 12 seeds, eight rocks, ten loves and Bijou, with
+song flags 0x141/0x142 and greeting flag 0x101 set. All prior bridge inputs and
+checkpoints remain unchanged. The expanded 153,436-update, 32-checkpoint SDK
+replay passes in 291.86 seconds. The full host stream passes 160,567 checks in
+279.29 seconds. SDK, host and scout match all 32 KiB; a separate 2,103-update
+SDK reload/Status inspection passes in 2.679 seconds. Both earlier source saves
+remain unchanged. The newly collected rocks are not yet identified or polished;
+populated record-desk branches and other optional content remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -1247,6 +1262,16 @@ and marker construction, decimal counts and window/DMA register writes. The
 their Main-only contracts. The forward/backward row helpers have a defined zero
 return and ignore their word argument. Their native adapters preserve that contract
 without treating a void preset as a Main callback.
+
+The complete game_record_messages.c family shares record_menu.c. Message types
+select their original ROM-backed text bundles and retain the special-initial key
+list, language-specific casing, live argument reads and independently wrapped
+eight-bit output index. The eleven animation presets retain void/F4 contracts
+and clear the follower boot gate at the original point. Undefined message types
+and strings that do not terminate within 65,536 reads stop explicitly.
+The assembly counter-prefix leaf has a separate Main51 binding: it reads 32
+counter bytes, excludes index 31 and values zero/255, and writes control 0x60.
+Its original R0 result is unused by Main51; it is not an ordinary Main callback.
 
 The shared strided-transfer family uses the original halfword-normalized width,
 row count and stride, forward BIOS halfword copies, cleared heap allocation and

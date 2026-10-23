@@ -10,7 +10,8 @@ Recorded native input covers the main story through ten reconciliations, Spat's
 defeat, the complete credits and saved postgame control. An additional Sunny Peak
 route learns Blushie, Bestest, Bloat-T and Hamtast, completes Panda's bridge and
 collects the Rainbow Key. With Tran-Q from Clubhouse, the dictionary reaches
-64 words. The scenarios check original Save/Continue and compare complete
+64 words. The extension also collects Condor's Wings, Great Springs and two
+additional rocks. The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 
 This development build still has unfinished functions. Remaining words, optional

@@ -16,7 +16,10 @@ enum { DESCRIPTORS=0x0858D0D8,COUNTERS=0x0201CC20,LIST=0x0201EE40,
        ITEM_ANIMATIONS=0x086E75B4,ITEM_PAGE_COUNTS=0x086E77D0,
        ITEM_TEXT_OFFSETS=0x086E78B2,ITEM_TEXT_BUNDLES=0x086E7910,
        ITEM_DETAILS=0x086E7C5C,ITEM_PAGE_ANIMATIONS=0x086E7DC4,
-       ITEM_LAST_ROW=0x02001C00 };
+       ITEM_LAST_ROW=0x02001C00,
+       MESSAGE_TEXT=0x03003B00,MESSAGE_INITIAL_KEYS=0x085CBFC8,
+       MESSAGE_TYPE0=0x02001248,MESSAGE_TYPE1=0x02001104,
+       CAPTION_TEXT_BUNDLES=0x02000FC0,MESSAGE_TEXT_SCRIPT=0x02000AF4 };
 static uint8_t control(HNMemory *m,unsigned index){return hn_read8(m,HN_SCENE_CONTROLS+index);}
 static void store(HNMemory *m,unsigned index,uint32_t value){hn_write8(m,HN_SCENE_CONTROLS+index,(uint8_t)value);}
 static GameAddr resource(HNMemory *m,GameAddr table,uint32_t index){return hn_read32(m,table+index*4);}
@@ -25,6 +28,44 @@ static void animation(HNMemory *m,uint8_t index,GameAddr value)
 {
     if(index==hn_read8(m,HN_RENDER_CLASS_FOLLOWER))hn_write8(m,0x03002170,0);
     hn_render_set_animation(m,index,value);
+}
+static bool record_message(HNMemory *m,GameAddr arguments)
+{
+    uint8_t record=control(m,9);store(m,0x69,0);
+    unsigned type=hn_read8(m,arguments),keep_initial=0;
+    /* The original has no source pointer for other selectors. */
+    if(type>2)return false;
+    GameAddr table=type==0?MESSAGE_TYPE0:type==1?MESSAGE_TYPE1:CAPTION_TEXT_BUNDLES;
+    GameAddr text=resource(m,table,record);
+    if(text!=HN_TASK_DEFAULT_SCRIPT)text=resource(m,text,control(m,0xEB));
+    if(type==1){
+        keep_initial=1;
+        for(unsigned i=0;i<15;i++)if(hn_read8(m,MESSAGE_INITIAL_KEYS+i)==record){
+            keep_initial=0;store(m,0x69,1);break;
+        }
+        unsigned language=control(m,0xEB);
+        if(language==1||language==3||language==4)keep_initial=0;
+    }
+    uint8_t index=0,changed_word=0;
+    /* The guest output index wraps independently of the advancing input pointer. */
+    for(unsigned read=0;read<65536&&!m->fault;read++){
+        uint8_t code=hn_read8(m,text++);GameAddr cell=MESSAGE_TEXT+index;
+        hn_write8(m,cell,code);
+        bool change=false;
+        if(!index)change=!keep_initial;
+        else if(hn_read8(m,MESSAGE_TEXT+(unsigned)index-1)==1){
+            if(control(m,0xEB)!=3)change=true;
+            else if(!changed_word&&hn_read8(m,arguments)<=1){change=true;changed_word=1;}
+        }
+        if(change&&(uint8_t)(code-0x61)<=0x31)hn_write8(m,cell,(uint8_t)(code-0x55));
+        uint8_t next=hn_read8(m,text);
+        if(!next){
+            index=(uint8_t)(index+1);hn_write8(m,MESSAGE_TEXT+index,next);
+            hn_write32(m,0x03002BB0,MESSAGE_TEXT_SCRIPT);return !m->fault;
+        }
+        index=(uint8_t)(index+1);
+    }
+    return false;
 }
 static void hide(HNMemory *m,uint8_t index){hn_write8(m,hn_render_slot(m,index)+0x60,0);}
 static void clear_marker(HNMemory *m,uint8_t index)
@@ -163,6 +204,7 @@ HNSceneResult hn_record_menu_callback(HNMemory *m,GameAddr callback,GameAddr arg
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x080247A4:REQUIRE(record_message(m,arguments));*consumed=1;break;
     case 0x080C1B84:{
         uint8_t selector=control(m,0xE5);store(m,0xE5,0);
         if(selector>1){
@@ -350,6 +392,17 @@ HNSceneResult hn_record_menu_callback(HNMemory *m,GameAddr callback,GameAddr arg
 HNSceneResult hn_record_menu_task(HNMemory *m,GameAddr callback)
 {
     switch(callback&~1u){
+    case 0x08024988:animation(m,19,0x088D1272);break;
+    case 0x0802499C:animation(m,19,0x088D12CF);break;
+    case 0x080249B0:hn_write16(m,0x0201DC40+45*2,40);animation(m,19,0x088D1236);break;
+    case 0x080249D0:animation(m,19,0x088D12C3);break;
+    case 0x080249E4:animation(m,19,0x088D12AE);break;
+    case 0x080249F8:animation(m,16,0x088DE8D1);break;
+    case 0x08024A0C:animation(m,16,0x088DE6FA);break;
+    case 0x08024A20:animation(m,16,0x088DE90A);break;
+    case 0x08024A34:animation(m,16,0x088DE916);break;
+    case 0x08024A48:animation(m,16,0x088DE963);break;
+    case 0x08024A5C:hn_write16(m,0x0201DC40+44*2,40);animation(m,16,0x088DE8BD);break;
     case 0x080C1B84:case 0x080C56B8:
     case 0x080C3CBC:case 0x080C3D10:case 0x080C3DD0:case 0x080C3E44:case 0x080C3F00:case 0x080C3F50:
     case 0x080C4054:case 0x080C4380:case 0x080C4454:case 0x080C44C0:case 0x080C4570:case 0x080C45F0:
@@ -360,4 +413,5 @@ HNSceneResult hn_record_menu_task(HNMemory *m,GameAddr callback)
     }
     default:return HN_SCENE_UNKNOWN;
     }
+    return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
 }

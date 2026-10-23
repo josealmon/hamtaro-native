@@ -5,6 +5,112 @@ import random
 import struct
 
 
+def check_record_messages(*,entries,rom,memory,bind,call,both,fresh,equal,compare,command):
+    """Complete message family: live text aliases, casing and void presets."""
+    from pathlib import Path
+    import re
+    from inventory_reference import body
+    rows=[r for r in entries if r['source']=='src/text/game_record_messages.c']
+    equal(len(rows),12,'complete game-record message source family')
+    main_address=0x080247A4;tasks={r['address'] for r in rows if r['address']!=main_address}
+    source=(Path(__file__).resolve().parents[1]/'src/game/record_menu.c').read_text()
+    main_cases={int(v,16) for v in re.findall(r'case (0x[0-9A-Fa-f]+):',body(source,'hn_record_menu_callback'))}
+    task_cases={int(v,16) for v in re.findall(r'case (0x[0-9A-Fa-f]+):',body(source,'hn_record_menu_task'))}
+    equal({main_address}|tasks,{r['address'] for r in rows},'all twelve source contracts accounted for')
+    equal({main_address}<=main_cases and tasks<=task_cases,True,'Main and void message bindings')
+    u=C.c_uint32;main=bind('hn_scene_callback',C.c_int,C.c_void_p,u,u,C.POINTER(u))
+    task=bind('hn_record_menu_task',C.c_int,C.c_void_p,u)
+    task_command=bind('hn_probe_task_command',C.c_int,C.c_void_p,u,C.c_uint,C.POINTER(u))
+    rng=random.Random(0x5245434D5347);controls=0x02004520;args=0x0203F001
+    buffer=0x03003B00;catalog=0x02018000;text=0x02019000;base=0x02008000
+    ranges=((0x02000000,0x40000),(0x03000000,0x7000))
+    sentence=b'\x61\x01\x62\x01\x92\x01\x93\x0C\x01\xFF\x61'
+    def byte(a,v):both(a,bytes([v&255]))
+    def word(a,v):both(a,struct.pack('<I',v&0xFFFFFFFF))
+    def fixture(record=0,language=0,kind=0,payload=sentence,input_address=args,source_address=text):
+        fresh();both(0x02000000,rom[0x8FE018:0x900EC8]);both(controls,rng.randbytes(512))
+        both(base,rng.randbytes(256*104));word(0x03002D98,base);byte(0x03002DC0,255)
+        both(buffer-64,rng.randbytes(640));both(0x0201DC40,rng.randbytes(512))
+        byte(0x03001F50,record);byte(0x03002170,record^0xA5)
+        for table in (0x02000FC0,0x02001104,0x02001248):both(table,struct.pack('<I',catalog)*256)
+        both(catalog,struct.pack('<I',source_address)*256)
+        both(source_address,payload+b'\0');byte(controls+9,record);byte(controls+0xEB,language)
+        byte(input_address,kind)
+    def exercise(label,input_address=args,vm=False):
+        if vm:
+            byte(0x03000010,0x1C);equal(command(memory,0x1C,input_address),1,'record-message Main command')
+            call('MainScriptInvokeCallback',input_address,limit=1000000)
+        else:
+            consumed=u(99);equal(main(memory,main_address|1,input_address,C.byref(consumed)),1,'message native Main '+str(label))
+            equal(consumed.value,call('ScriptCallbackPrepareGameRecordMessageText',input_address,limit=1000000),'message argument consumption')
+        compare('message '+str(label),ranges)
+    for kind in range(3):
+        for language in range(5):
+            for record in range(256):
+                fixture(record,language,kind);exercise(('record/language/type',record,language,kind))
+    # Read real bundles from the player's initialized tables, including defaults.
+    # Original table extents: 31 type-0 bundles, then 81 for each other type.
+    for kind,(table,count) in enumerate(((0x02001248,31),(0x02001104,81),(0x02000FC0,81))):
+        initial=rom[0x8FE018:0x900EC8]
+        for record in range(count):
+            original=struct.unpack_from('<I',initial,table-0x02000000+record*4)[0]
+            equal(0x08000000<=original<0x09000000,True,'original message bundle address')
+            for language in range(5):
+                fixture(record,language,kind);word(table+record*4,original);exercise(('ROM bundle',record,language,kind))
+    for kind,table in enumerate((0x02001248,0x02001104,0x02000FC0)):
+        for language in range(5):
+            fixture(7,language,kind);word(table+7*4,0x0858C6B0);exercise(('default text script',kind,language))
+    for kind in range(3):
+        for language in range(5):
+            for length in (0,1,2,31,32,254,255,256,257,511,512):
+                fixture(7,language,kind,(b'\x61\x01\x92'*171)[:length]);exercise(('byte index wrap',kind,language,length))
+    for offset in (-40,-1,0,1,32,255,300):
+        for kind in range(3):
+            for language in (0,3):
+                fixture(7,language,kind,sentence*4,source_address=buffer+offset);exercise(('text/output alias',offset,kind,language))
+    for input_address in (buffer-1,buffer,buffer+1,controls+9,controls+0x69,controls+0xEB):
+        for kind in range(3):
+            fixture(7,3,kind,input_address=input_address);exercise(('live selector alias',input_address,kind),input_address)
+    fixture(7,3);both(args,struct.pack('<I',main_address|1)+b'\0');exercise('Main VM',vm=True)
+    for row in rows:
+        if row['address']==main_address:continue
+        for selected in range(256):
+            fixture(selected);equal(task(memory,row['address']|1),1,row['name']+' native void')
+            call(row['name']);compare(row['name']+' follower alias/timer',ranges)
+        fixture(19);consumed=u(99)
+        equal(main(memory,row['address']|1,args,C.byref(consumed)),0,'void message preset rejected by Main')
+        compare('void message ABI rejection',ranges)
+        both(0x0201F000,rng.randbytes(52));word(0x0201F010,args);both(args,b'\x01\xE1')
+        word(0x03001FC4,row['address']|1);report=(u*4)()
+        equal(task_command(memory,0x0201F000,0xF4,report),1,'message actual F4 command')
+        equal(report[3],call('TaskCommandF4',0x0201F000),'message F4 continuation');compare('message F4',ranges)
+    fixture(7);equal(task(memory,main_address|1),0,'argument-dependent message rejected as void');compare('message void ABI rejection',ranges)
+    for kind in (3,127,255):
+        fixture(7,0,kind);consumed=u(99)
+        equal(main(memory,main_address|1,args,C.byref(consumed)),2,'undefined message selector fails explicitly')
+    print('All 12 game-record message functions matched: five languages, special initials, live aliases, wrapped text indices and void/F4 presets.')
+
+
+def check_record_counter_prefix(*,entries,memory,bind,call,both,fresh,equal,compare,command):
+    """Reviewed Main51 assembly leaf; index 31 is read but never counted."""
+    rows=[r for r in entries if r['source']=='asm/save_counter_prefix.s']
+    equal([(r['name'],r['address']) for r in rows],[('StoreNonemptySaveGroup01CountAsm',0x0802C874)],'complete counter-prefix assembly family')
+    rng=random.Random(0x434E5450524546);args=0x0203F001;counter=0x0201CC20
+    ranges=((0x02000000,0x40000),(0x03000000,0x7000))
+    u=C.c_uint32;main=bind('hn_scene_callback',C.c_int,C.c_void_p,u,u,C.POINTER(u))
+    for position in range(32):
+        for value in range(256):
+            fresh();values=bytearray(rng.choices((0,0,1,2,127,254,255,255),k=32));values[position]=value
+            both(counter,bytes(values));both(0x02004520,rng.randbytes(512));both(0x03000010,b'\x51'+bytes(15))
+            both(args,struct.pack('<I',0x0802C875));count=sum(v not in (0,255) for v in values[:31])
+            equal(call('StoreNonemptySaveGroup01CountAsm'),count,'counter-prefix original R0')
+            equal(command(memory,0x51,args),1,'counter-prefix typed Main51 dispatch')
+            call('MainScriptDispatchArgumentWord',args);compare('counter-prefix full byte/index domains',ranges)
+    consumed=u(99);equal(main(memory,0x0802C875,args,C.byref(consumed)),0,'counter-prefix rejects ordinary Main ABI')
+    compare('counter-prefix Main rejection preserves memory',ranges)
+    print('Counter-prefix Main51 leaf matched all 32 positions and all 256 byte values; index 31 remains excluded.')
+
+
 def check_group4(*,entries,rom,memory,bind,call,both,fresh,equal,compare):
     """Shared offline save-group-4 operations used by the music hall.
 

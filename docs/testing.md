@@ -72,14 +72,14 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 4,446,989 checks in 610.014 seconds. It retains
-all 4,380,026 preceding cases and adds 66,963 local music/record comparisons.
-The preceding 61,195 six/eight-choice room checks and 71,722 unassigned-I/O
+The latest complete suite passes 4,508,671 checks in 723.333 seconds. It retains
+all 4,446,989 preceding cases and adds 61,682 record-message/counter-prefix comparisons.
+The preceding 66,963 local music/record comparisons, 61,195 six/eight-choice room checks and 71,722 unassigned-I/O
 collision checks, including even/odd register boundaries and every render count,
 remain enabled.
 Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
 enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
-11 CTest suites pass, including 17,295 game checks. Story replays ran concurrently,
+11 CTest suites pass, including 17,319 game checks. Story replays ran concurrently,
 so these are local observations, not portable performance guarantees.
 Earlier optimization reduced the same 4,200,342-check suite from approximately
 1,238 seconds (log timestamps) to 678.102 seconds without reducing coverage.
@@ -346,22 +346,25 @@ and scalar expectations, with no captured CPU/RAM state or resource bytes.
 These results establish the saved main-story ending in the SDK and host session.
 They leave 27 words and optional content outside the ending scenario's coverage.
 
-`sunny_optional.json` starts from that saved ending. Blushie's Stickie interaction,
-Bestest's eastern conversation and Bloat-T's post-reunion conversation increase
-the dictionary to 62 words. Eight checkpoints cover acquisition, retained ending
-state and original Save/Continue. The saved result is map 2:8 at x=152.5, z=120.5,
-62 words, 12 seeds, ten loves and Bijou, with flags 0x82/0x88/0x8A/0x190 set.
-Hamtast's flag 0x89 remains clear and request control 0x7D remains 2.
-All 36,347 SDK input updates pass in 58.75 seconds; the same stream passes
-39,428 host-session checks in 64.15 seconds. All 32 KiB match SDK, host and scout.
-A separate 2,103-update SDK reload/Status inspection passes in 2.669 seconds.
-The ending source SRAM is unchanged. This scenario adds inputs and scalar
-expectations; the core is unchanged since the complete 4,446,989-check comparison.
+`sunny_optional.json` starts from that saved ending. Blushie, Bestest, Bloat-T,
+Tran-Q and Hamtast increase the dictionary to 64 words. The route obtains all
+Panda's materials, completes his bridge and collects the Rainbow Key. It then
+obtains Condor's Wings and Great Springs, digs two additional rocks in Seedric's
+sand bath and completes the Clubhouse record desk's empty-inventory greeting.
+All 125,864 prior updates and 24 checkpoints remain unchanged; the expanded
+153,436-update route has 32 checkpoints and passes the SDK in 291.86 seconds.
+Original Save/Continue retains map 1:6 at x=96.5, z=64.5, 64 words, 12 seeds,
+eight rocks, ten loves and Bijou. The final checkpoint includes both song flags,
+the desk greeting, bridge completion, Rainbow Key and original ending flag.
+The same full input stream passes 160,567 host-session checks in 279.29 seconds.
+SDK, host and scout match all 32 KiB; a fresh 2,103-update SDK reload and Status
+inspection passes in 2.679 seconds. The earlier ending and bridge saves remain
+unchanged. Only normal inputs and scalar expectations are stored in the scenario.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --save PATH_TO_PRIVATE_POSTGAME_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_OPTIONAL_PROFILE
 
-Hamtast, the other 23 missing words, remaining activities and the complete
-desktop playthrough remain unverified.
+The other 22 words, rock identification/polishing, populated record-desk branches,
+remaining activities and the complete desktop playthrough remain unverified.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
@@ -860,7 +863,7 @@ Additional focused area-dependency checks use:
     python -B tools/compare_reference.py --counter-scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
 These pass 51,514 scene actor comparisons, 95,870 actor preset comparisons,
-58,709 record/local-SaveGroup4 comparisons and 16,497 scanline-wave comparisons. The scene group
+120,391 record/local-SaveGroup4 comparisons and 16,497 scanline-wave comparisons. The scene group
 covers 45 functions across 16 families and one shared bank-3 condition, including
 approach completion, signed limits, all ARM shift counts, direction constructors,
 snapshots, copy aliases and the three-byte render-selection Main callback. Its
@@ -891,7 +894,19 @@ available-word flags, every classification mode and category-rank thresholds.
 Payloads and category tables come from the player's ROM. The compared RAM covers
 all EWRAM and 0x7000 bytes of game IWRAM; the original ARM call stack is outside
 this serialized callback contract. This supports music hall entry without
-implementing link transport. Wave checks cover
+implementing link transport.
+
+The same record group adds 61,682 comparisons for all twelve
+game_record_messages.c functions and the Main51 counter-prefix assembly leaf.
+Message checks cover all 256 record selectors in five languages, all 193 original
+bundles, special initials, default scripts, wrapped output indices, source/output
+and live-argument aliases, eleven void presets, follower gates, timers and actual
+Main/F4 dispatch. The assembly leaf covers every byte value at all 32 positions,
+including the read-but-excluded final byte; ordinary Main dispatch rejects it.
+Undefined message selectors fail explicitly. The combined 120,391 checks pass in
+8.333 seconds; all prior record comparisons remain enabled.
+
+Wave checks cover
 all 228 scanlines, blend thresholds, signed wrapping, frame-end phase updates and
 typed Main/F4/HBlank calls. Public synthetic game tests cover these boundaries
 without original assets. These comparisons do not establish full-area progression,

@@ -489,6 +489,15 @@ bool hn_main_command(HNScript *s,unsigned op,GameAddr args)
            are accepted here; their void contract does not consume a return. */
         switch(target&~1u){
         case 0x08043118:case 0x0804311C:case 0x08043120:break;
+        case 0x0802C874:{
+            unsigned count=0;
+            /* The source reads index 31 before excluding it from the count. */
+            for(unsigned i=0;i<32;i++){
+                unsigned value=hn_read8(m,HN_RECORD_COUNTERS+i);
+                if(i<31&&value&&value!=255)count++;
+            }
+            hn_write8(m,CONTROLS+0x60,(uint8_t)count);break;
+        }
         default:return fail(s,HN_SCRIPT_CALLBACK,op,target);
         }
         advance(m,4);break;
