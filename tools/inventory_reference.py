@@ -119,6 +119,8 @@ def dispatches() -> dict[int, list[str]]:
         ("main", "records.c", "hn_records_callback"),
         ("main", "save_group3.c", "hn_group3_callback"),
         ("text-task", "save_group3.c", "hn_group3_task"),
+        ("main", "pair_list.c", "hn_pair_list_callback"),
+        ("text-task", "pair_list.c", "hn_pair_list_task"),
         ("main", "record_menu.c", "hn_record_menu_callback"),
         ("text-task", "record_menu.c", "hn_record_menu_task"),
         ("main", "raster.c", "hn_raster_callback"),

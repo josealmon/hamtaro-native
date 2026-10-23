@@ -84,6 +84,7 @@ def main() -> None:
     parser.add_argument("--actor-sequences-only", action="store_true", help="Run complete actor render-sequence family and typed task contracts")
     parser.add_argument("--records-only", action="store_true", help="Run game record allocation/query/consume/counter families")
     parser.add_argument("--group3-only", action="store_true", help="Run SaveGroup3, record/item selection and strided transfer families")
+    parser.add_argument("--pair-lists-only", action="store_true", help="Run the complete bank-9 pair-list modal family and typed calling contracts")
     parser.add_argument("--group3-scenes-only", action="store_true", help="Run SaveGroup3 Main/task contracts")
     parser.add_argument("--record-menus-only", action="store_true", help="Run complete record selection/menu family")
     parser.add_argument("--selection-scenes-only", action="store_true", help="Run complete shared map-10/5 item selection family")
@@ -99,7 +100,7 @@ def main() -> None:
         if args.timings_json==ROOT or ROOT in args.timings_json.parents:
             parser.error("Timing reports must be outside the checkout.")
     started=time.perf_counter();phases=[]
-    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or args.bank3_late_only or args.bank3_presets_only or args.bank3_games_only or args.bank3_chain_only or args.bank4_only or args.bank4_presets_only or args.bank4_dynamics_only or args.bank5_only or args.bank5_presets_only or args.bank5_dynamics_only or args.bank6_only or args.bank6_presets_only or args.bank6_dynamics_only or args.wander_only or args.actor_presets_only or args.actor_animations_only or args.shared_motion_only or args.scene_effects_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only,args.scene_actors_only,args.records_only,args.wave_only,args.counter_scenes_only,args.group3_only,args.group3_scenes_only,args.actor_sequences_only,args.record_menus_only,args.selection_scenes_only,args.scene_selection_only,args.group4_only))):
+    if not args.bios_oracle and (args.collisions_only or args.map_choice_only or args.bank2_only or args.bank3_late_only or args.bank3_presets_only or args.bank3_games_only or args.bank3_chain_only or args.bank4_only or args.bank4_presets_only or args.bank4_dynamics_only or args.bank5_only or args.bank5_presets_only or args.bank5_dynamics_only or args.bank6_only or args.bank6_presets_only or args.bank6_dynamics_only or args.wander_only or args.actor_presets_only or args.actor_animations_only or args.shared_motion_only or args.scene_effects_only or not any((args.audio_only,args.scenes_only,args.actors_only,args.tasks_only,args.choices_only,args.motion_only,args.collisions_only,args.scripts_only,args.book_only,args.indicators_only,args.presets_only,args.scene_actors_only,args.records_only,args.wave_only,args.counter_scenes_only,args.group3_only,args.pair_lists_only,args.group3_scenes_only,args.actor_sequences_only,args.record_menus_only,args.selection_scenes_only,args.scene_selection_only,args.group4_only))):
         parser.error("Full/collision comparisons require --bios-oracle PATH_TO_HN_BIOS_ORACLE.")
     bios_oracle=None
     spec = json.loads((ROOT / "config/rom.json").read_text())
@@ -2540,10 +2541,20 @@ def main() -> None:
         check_group3_scenes(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,
                             fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command,selection_scene=True)
 
+    @timed
+    def pair_list_checks():
+        from reference_pair_list import check_pair_list
+        check_pair_list(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
+                        fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
+
     if args.bios_oracle:
         from compare_bios import BiosOracle
         bios_oracle=BiosOracle(args.bios_oracle,args.oracle_runtime_dir)
     try:
+        if args.pair_lists_only:
+            pair_list_checks()
+            print(f"{checks} private pair-list comparisons passed; complete activity progression remains unverified.")
+            return
         if args.group4_only:
             group4_checks()
             print(f"{checks} private local group4 comparisons passed; complete music activity remains unverified.")
@@ -2715,7 +2726,7 @@ def main() -> None:
             raster_checks()
             print(f"{checks} private scene-menu/input comparisons passed; full gameplay remains unverified.")
             return
-        indicator_checks();book_checks();bank2_checks();bank3_late_checks();bank3_preset_checks();bank3_game_checks();bank3_chain_checks();bank4_checks();bank5_checks();bank6_checks();bank6_chain_checks();presentation_checks();bank7_checks();record_selection_checks();scene_selection_checks();group4_checks();group3_checks();wander_checks();scene_actor_checks();shared_motion_checks();scene_effects_checks();actor_preset_checks();actor_animation_checks();actor_sequence_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
+        indicator_checks();book_checks();bank2_checks();bank3_late_checks();bank3_preset_checks();bank3_game_checks();bank3_chain_checks();bank4_checks();bank5_checks();bank6_checks();bank6_chain_checks();presentation_checks();bank7_checks();record_selection_checks();scene_selection_checks();group4_checks();group3_checks();pair_list_checks();wander_checks();scene_actor_checks();shared_motion_checks();scene_effects_checks();actor_preset_checks();actor_animation_checks();actor_sequence_checks();record_checks();wave_checks();counter_scene_checks();map_choice_checks();preset_checks();scene_motion_checks();script_memory_checks()
         for line in (0,159,227):
             fresh();both(0x04000006,struct.pack("<H",line))
             equal(native("hn_game_hardware_initialize",result=C.c_bool)(memory),True,f"hardware initialization {line}")

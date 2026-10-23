@@ -26,6 +26,7 @@
 #include "game/scene_actor.h"
 #include "game/records.h"
 #include "game/save_group3.h"
+#include "game/pair_list.h"
 #include "game/save_group4.h"
 #include "game/record_menu.h"
 #include "game/counter_scene.h"
@@ -527,6 +528,7 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         result=hn_records_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_group4_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_group3_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_pair_list_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_record_menu_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_raster_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_scene_actor_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;

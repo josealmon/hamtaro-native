@@ -140,9 +140,6 @@ HNSceneResult hn_book_callback(HNMemory *m,GameAddr callback,GameAddr arguments,
 {
     *consumed=0;
     switch(callback&~1u){
-    case 0x080CDD7C:
-        if(!hn_render_number(m,hn_read8(m,arguments),control(m,0x60),hn_read8(m,arguments+1),hn_read8(m,arguments+2)))return HN_SCENE_RESOURCE;
-        *consumed=3;break;
     case 0x080C1D78:{
         GameAddr task=hn_task_allocate(m);if(!task)return HN_SCENE_RESOURCE;
         hn_write32(m,HN_BOOK_CONTEXTS,task);

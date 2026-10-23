@@ -78,16 +78,17 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 5,356,967 checks in 814.843 seconds. It retains
-all 4,616,757 preceding cases and adds 740,210 VCOUNT comparisons, including the
-independent timed pixel checks. Every other named phase retains its previous
+The latest complete suite passes 5,561,200 checks in 687.406 seconds. It retains
+all 5,356,967 preceding cases and adds 204,233 clothing-catalog comparisons.
+The 740,210 VCOUNT checks, including independent timed pixels, remain enabled.
+Every preceding named phase retains its previous
 assertion count.
 The preceding 66,963 local music/record comparisons, 61,195 six/eight-choice room checks and 71,722 unassigned-I/O
 collision checks, including even/odd register boundaries and every render count,
 remain enabled.
 Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
 enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
-11 CTest suites pass, including 17,349 game, 503 graphics and 34 keyboard/gamepad checks. Story replays ran concurrently,
+11 CTest suites pass, including 17,383 game, 503 graphics and 34 keyboard/gamepad checks. Story replays ran concurrently,
 so these are local observations, not portable performance guarantees.
 Earlier optimization reduced the same 4,200,342-check suite from approximately
 1,238 seconds (log timestamps) to 678.102 seconds without reducing coverage.
@@ -432,6 +433,23 @@ The other 21 words, the higher love meter needed for the remaining rocks,
 manual crafting/resale branches, other activities and the complete desktop
 playthrough remain unverified.
 
+`wardrobe.json` is a separate chapter starting from the verified final
+`postgame.json` save. It checks Sunny Boutique's insufficient-funds rejection,
+cancel/return, four ordinary five-seed pickups, both Antlers colors at ten seeds
+each, owned-color rejection, Corsage/Antlers row navigation and original
+Save/Continue. Thirteen checkpoints include prices, seeds, ownership bytes and
+the Outfit counter: one count per acquired color. All 37,274 SDK updates pass
+in 67.64 seconds, followed by 40,286 host-session checks in 70.05 seconds. Host,
+SDK and recorded-input scout SRAM match across all 32 KiB. A fresh SDK process
+passes 2,103 updates in 2.701 seconds, including Status and the prior gem/rock
+assertions. Both colors, 65 words, two seeds, five rocks, eleven loves and Bijou
+remain saved; the input profile is unchanged. The twelve scenario-parser tests
+include acquisition mismatch, byte bounds and numeric-alias rejection. Existing
+Sunny optional and postgame scenarios retain every earlier input/checkpoint.
+Other clothing purchases, dressing and photos remain unverified.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/wardrobe.json --save PATH_TO_PRIVATE_MATERIALS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WARDROBE_PROFILE
+
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
 `"classes": {"0xE1": 630}` for the musical challenge's score. IDs are decimal or hexadecimal
@@ -443,7 +461,10 @@ through 511) and require integer bytes (0 through 255). Classes address the firs
 undiscovered and stays distinct from zero. `"rock_counts": {"0": 0, "63": 31}`
 reads the remaining-polish field of the 64 packed rock slots, excluding the key
 and other packed bits. These mappings require unsigned integer bytes and counts
-from 0 through 31 respectively. All mappings are nonempty
+from 0 through 31 respectively. `"catalog_flags": {"0": 255}` reads the first
+ownership byte of each SaveGroup3 category (IDs 0 through 109), and
+`"catalog_count": 2` reads the Outfit acquisition counter. Both require unsigned
+bytes; the counter counts acquired variants, not completed categories. All mappings are nonempty
 read-only assertions. Malformed/out-of-range IDs, numeric aliases and incorrect
 value types fail validation; booleans are rejected as numeric values. Deliberately
 incorrect flag/control expectations are also rejected by ROM-backed tests.
@@ -607,6 +628,20 @@ list overlapping its own selection/count controls. The original source's local
 array capacities and non-returning impossible draws have explicit host guards;
 those malformed states are not treated as matching original stack behavior.
 Complete workshop/activity progression remains a separate integration requirement.
+
+The complete clothing-catalog family can run separately:
+
+    python -B tools/compare_reference.py --pair-lists-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
+
+This passes 204,233 checks in 12.079 seconds. All 40 functions in
+script_callbacks_pair_list.c have reviewed contracts: 18 Main entries, 26 F4
+targets and 13 typed helpers, with overlaps. Checks use all six lists and five
+languages from the private ROM, every flag/mask combination, raw byte selectors,
+counter and sentinel boundaries, palette queues, live aliases and actual Main/F4
+commands. Void animation presets and argument-dependent helpers are rejected by
+the wrong calling interface. The checked render-number guard remains covered
+alongside the explicit raw-slot adapter. Unterminated lists fail explicitly.
+Complete clothing, dressing and photo activity coverage remains separate.
 
 The Main memory and scene-transition group can also run separately:
 

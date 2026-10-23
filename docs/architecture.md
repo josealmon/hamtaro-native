@@ -47,7 +47,7 @@ statically. A separate clean-machine validation remains pending.
 | Objects and animation scripts | Partial | Physics, positions, priority ordering, affine reuse, OAM and animation/sound commands compared; animation callback bindings remain incomplete |
 | Background scripts and transforms | Adapted | All 61 command handlers, repeat/call flow, motion, clamping, affine layers and tilemap copies compared; invalid stacks/resources fail explicitly |
 | Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular and wave HBlank callbacks compared, remaining scanline callbacks and timed DMA/PPU integration pending |
-| VCOUNT blend and counter modes | Adapted | Ten connected functions compared, including complete blend/increment families, byte selectors/scanlines, 16-bit status/counter domains and five Main/F4 contracts; original pending bits, transition phase and live callback table retained; nine clocked frames match independent PPU bands at line 104; complete bank-9 list activity and original CPU timing remain pending |
+| VCOUNT blend and counter modes | Adapted | Ten connected functions compared, including complete blend/increment families, byte selectors/scanlines, 16-bit status/counter domains and five Main/F4 contracts; original pending bits, transition phase and live callback table retained; nine clocked frames match independent PPU bands at line 104; original CPU timing remains pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
 | Scene actor snapshots | Adapted | Four 104-byte render snapshots and six modal map roundtrips compared, including a hidden primary actor during Bijou-only play; byte-wrapped idle animation selectors, optional slots and script cursor retention preserved |
@@ -77,6 +77,7 @@ statically. A separate clean-machine validation remains pending.
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Local music and SaveGroup4 support | Adapted | All 29 functions in communication_record_callbacks.c and communication_record_selection.c compared: 28 Main callbacks and one void layout task, plus the prior payload classifier; resource songs/readers, render layout/aliases, affine selection, record numbering/depth, both SRAM copies and local/ROM selection; complete music activity and Cable Link transport remain outside this evidence |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
+| Clothing catalog and variations | Adapted | All 40 script_callbacks_pair_list.c functions accounted for and compared: 18 Main, 26 F4 and 13 helper contracts, with overlaps; six ROM-backed lists, five languages, ownership masks, prices, cursors and palettes; Sunny Boutique rejection, cancellation, two Antlers colors, sold-out selection, row navigation and original Save/Continue run natively; other purchases, dressing and photos remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; three owned Gems entries and wrap navigation inspected in the SDK; complete Items/Gems and timed raster integration remain pending |
 | Record messages and eligible-item count | Adapted | All 12 game_record_messages.c functions and the save_counter_prefix.s Main51 leaf compared; five-language text, byte-index wrap, live aliases, eleven void animation presets and the excluded final counter byte; the Clubhouse desk's empty-inventory greeting completes in the SDK; populated activity branches remain pending |
 | Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; paid artisan Pooie Earrings and delivery tested; manual crafting, resale and other recipes remain separate |
@@ -403,6 +404,27 @@ unchanged. All 65 learned identifiers are unique and match their learned flags;
 none required by the Sunny Peak destination indicator is missing. Manual crafting,
 the other twenty-one words, the full love meter and full desktop progression
 remain pending.
+
+`wardrobe.json` starts from that verified Star Key save in a fresh process. It
+enters Sunny Boutique, rejects an unaffordable Antlers purchase and cancels back
+to the room. Four normal Digdig seed pickups raise the balance from two to
+twenty-two. Buying brown Antlers spends ten seeds; selecting the owned color
+shows Sold Out without spending again. Buying white spends ten more. Down/Up
+navigation displays Corsage and returns to Antlers without changing ownership
+or the balance. The Outfit counter advances once per purchased color, from
+zero to two; the Antlers ownership byte changes from 63 to 191 to 255, while
+the next category remains unchanged.
+
+The 37,274-update chapter has thirteen semantic checkpoints and passes the SDK
+in 67.64 seconds and 40,286 host-session checks in 70.05 seconds. SDK, host and
+input-only scout agree across the entire 32 KiB SRAM. Original Save/Continue
+and a fresh 2,103-update SDK reload/Status check retain map 2:3 at x=128.5,
+z=80.5, 65 words, two seeds, five rocks, eleven loves, Bijou and both colors.
+The fresh check passes in 2.701 seconds, including the earlier gem and rock
+assertions; the source save stays unchanged. Existing postgame and Sunny
+optional chapters remain unchanged. This covers two color purchases, rejected
+and owned selections, cancellation and row navigation. Other clothing purchases,
+dressing, photos and complete optional activity coverage remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -1355,3 +1377,27 @@ The shared strided-transfer family uses the original halfword-normalized width,
 row count and stride, forward BIOS halfword copies, cleared heap allocation and
 free order. Zero rows preserve memory; failed allocation stops explicitly before
 decompression. Function-level comparisons do not establish timed window rendering.
+
+pair_list.c groups the complete 40-function script_callbacks_pair_list.c family.
+Its source name refers to clothing categories and color variants. Six list pointers,
+localized rows, preview graphics, animation and palette tables are read from the
+player's ROM. The adapters preserve the original ownership-mask classification,
+first-unset search, price and seed counters, row highlights and raw byte render
+selectors. The existing checked number-drawing interface remains checked; the
+source-compatible number callback uses an explicit raw-slot interface.
+
+Eighteen Main contracts include the two IRQ controls in raster.c and the
+three-byte number callback moved from book.c. Seventeen argument-free callbacks
+and nine void animation presets accept F4. Thirteen typed helpers include that
+number renderer and the return-zero leaf; the latter has no invented Main/F4
+binding because its incoming ABI is unknown. Unterminated lists stop explicitly.
+Byte shift counts of 32 or more preserve the original ARM result. Palette slots
+are hidden by clearing only their active byte, while reset operations clear the
+complete slot. Selection movement captures the original cursor pointer before
+highlight writes can change live selectors.
+
+The Boutique list deliberately disables its earlier preview's VCOUNT effect;
+zero blend registers in the list are expected source behavior. All 204,233 focused
+checks retain full flag/mask domains, raw selectors, list and counter boundaries,
+live aliases, palette transfers and actual Main/F4 command calls. Function-level
+coverage does not establish every clothing activity or original CPU timing.

@@ -106,6 +106,30 @@ class ScenarioTests(unittest.TestCase):
                 run(game,[dict(label="gems",expect={"record_counters":{"29":2},"rock_counts":{"6":0}})])
 
 
+    def test_catalog_checkpoints_reject_truncation_and_aliases(self):
+        self.assertEqual(validate([dict(expect={"catalog_flags":{"0":0,"109":255},"catalog_count":255})]),0)
+        for values in ({"0":True},{"0":-1},{"0":256},{"110":0},{"-1":0},{"1":1,"0x1":2},{},[]):
+            with self.subTest(values=values),self.assertRaises(ValueError):validate([dict(expect={"catalog_flags":values})])
+        for value in (True,-1,256,1.0,"30",None):
+            with self.subTest(value=value),self.assertRaises(ValueError):validate([dict(expect={"catalog_count":value})])
+
+    def test_catalog_checkpoints_read_saved_flags_and_enforce_acquisition(self):
+        calls=[]
+        def value(address,size=4,signed=False):
+            calls.append((address,size));return {0x03003C50:191,0x03003E04:255,0x030035CC:1}.get(address,0)
+        game=SimpleNamespace(check=lambda:[0,0,0,0,9],value=value)
+        actual=MODULE["NativeGame"].checkpoint(game,catalog_flags={"0":255,"109":255},catalog_count=30)
+        self.assertEqual(actual["catalog_flags"],{"0":191,"109":255})
+        self.assertEqual(actual["catalog_count"],1)
+        self.assertEqual(calls[-3:],[(0x03003C50,1),(0x03003E04,1),(0x030035CC,1)])
+        def checkpoint(*args,**extra):
+            self.assertEqual(extra,{"catalog_flags":{"0":255},"catalog_count":1});return observed
+        game.checkpoint=checkpoint
+        for flags,count,field in ((191,1,"catalog_flags"),(255,0,"catalog_count")):
+            observed={"catalog_flags":{"0":flags},"catalog_count":count}
+            with self.subTest(field=field),contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,field):
+                run(game,[dict(label="clothes",expect={"catalog_flags":{"0":255},"catalog_count":1})])
+
     def test_saved_profile_requires_every_sdk_byte(self):
         expected=bytes(32768);verify=MODULE["verify_profile_sram"]
         with tempfile.TemporaryDirectory() as directory:

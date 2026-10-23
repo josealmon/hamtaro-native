@@ -41,6 +41,7 @@ bool hn_render_animation(HNRender *,GameAddr slot,unsigned command_budget);
 bool hn_render_draw(HNRender *);
 bool hn_render_update(HNRender *,unsigned command_budget);
 bool hn_render_number(HNMemory *,uint8_t index,uint32_t value,uint32_t x,uint32_t y);
+bool hn_render_number_raw(HNMemory *,uint8_t index,uint32_t value,uint32_t x,uint32_t y);
 #ifdef __cplusplus
 }
 #endif
