@@ -87,7 +87,7 @@ statically. A separate clean-machine validation remains pending.
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Later areas, full optional activities and complete desktop story coverage remain pending |
-| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House and the jungle/hat eighth reconciliation; original Save/Continue and exact SRAM equality checked at stage boundaries; wedding/red marble, later Sunny Peak and full desktop progression remain pending |
+| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House and the jungle wedding's ninth reconciliation; original Save/Continue and exact SRAM equality checked at stage boundaries; later Sunny Peak and full desktop progression remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -244,8 +244,25 @@ The SDK replay passes in 166.08 seconds; the same complete input stream passes
 107,364 host-session checks in 173.37 seconds. All 32 KiB match the SDK and
 input-only scout. A separate 2,103-update SDK reload/Status inspection passes
 in 2.766 seconds. The preceding Haunted House scenario and its SRAM input remain
-unchanged. Wedding/red-marble progression, the temple/workshop and complete
-desktop playthrough coverage remain pending.
+unchanged.
+
+`jungle_wedding.json` continues from the saved eighth reconciliation in a fresh
+process. Its 91,911 input updates and 21 checkpoints cover the thermal egg,
+Clingie's vines, Jingle's Thank-Q lesson, the first ceremony, the rubber-band
+purchase and Hulahula. Putput crafts the slingshot from the actual materials;
+Hamscope's tutorial and the aimed beehive shot precede Hif-hif's red-marble pickup.
+The second ceremony restores the ninth love and teaches Vast-T. Original
+Save/Continue retains map 6:9 at x=120.5, z=192.5, 56 words, 12 seeds and Bijou;
+flags 0xC4/0x186/0x6C remain set and controls 0x8C=2, 0xB0=5, 0xB2=2,
+0xC5=2, 0xC6=1, 0xC7=2, 0x1A0=2. The complete SDK replay passes in 161.24
+seconds and the complete host replay passes 97,365 checks in 170.45 seconds.
+All 32 KiB match the input-only scout; another 2,103-update SDK reload/Status
+inspection passes in 2.766 seconds. The prior SRAM input remains unchanged.
+The wedding temporarily consumes the red marble; a later couple conversation
+returns it. The earlier Sandy Bay hidden-cache check (flag 0x143) was mislabeled
+as a blue marble: the actual blue-marble prerequisite is 0xAA, obtained with
+Digdig in map 4:3. That pickup, the temple/workshop and complete desktop
+playthrough coverage remain outside this ninth-stage proof.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -663,10 +680,10 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from the saved eighth reconciliation through the thermal egg,
-   jungle wedding and red marble (ninth).
-   The original route reaches Sunny Peak's temple/workshop (tenth) after all
-   three marbles; keep these dependencies explicit.
+1. Continue from the saved ninth reconciliation through the couple's returned
+   red marble and Sandy Bay's actual blue-marble pickup (flag 0xAA).
+   Sunny Peak's temple/workshop (tenth) requires all three marbles; keep these
+   dependencies explicit and assert the inventory flags rather than pickup labels.
    The temple, workshop and optional activities still need native integration
    proof. Keep their story prerequisites ahead of unrelated optional detours.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM

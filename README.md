@@ -29,6 +29,10 @@ The next saved stage learns Wait-Q and Hampact, follows Sunny Peak's hat request
 gets the required Hamteam from Stan in Fun Land, and completes Bog's trap and
 Cappy's chase. Returning the hat teaches Hamboree and restores the eighth love,
 retained through original Save and Continue and fresh SDK/host sessions.
+The following saved stage recovers the thermal egg, learns Clingie, Thank-Q,
+Hulahula and Hamscope, crafts the slingshot, shoots the beehive and recovers the
+red marble. The second jungle wedding teaches Vast-T and restores the ninth love,
+retained through original Save and Continue and fresh SDK/host sessions.
 This development build still stops at unfinished functions; complete story, optional activities,
 remaining minigames and desktop playthrough coverage remain unverified.
 See docs/architecture.md for the current evidence.

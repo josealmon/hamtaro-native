@@ -279,8 +279,24 @@ and every preceding scenario remain unchanged. The next chain step is:
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/jungle_hat.json --save PATH_TO_PRIVATE_HAUNTED_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_HAT_PROFILE
 
-These results cover the SDK and host session. The wedding/red marble, later
-Sunny Peak temple/workshop and complete desktop playthrough remain unverified.
+`jungle_wedding.json` then starts from the saved hat stage. Its 91,911 input
+updates and 21 checkpoints cover the thermal egg, Clingie, Thank-Q, first
+ceremony, rubber-band purchase, Hulahula and slingshot crafting. Hamscope's
+tutorial, aimed beehive shot, red-marble pickup and second ceremony restore the
+ninth love and teach Vast-T. Original Save/Continue retains map 6:9 at x=120.5,
+z=192.5, 56 words, 12 seeds and Bijou; flags 0xC4/0x186/0x6C remain set and
+controls 0x8C=2, 0xB0=5, 0xB2=2, 0xC5=2, 0xC6=1, 0xC7=2, 0x1A0=2.
+The complete SDK replay passes in 161.24 seconds and the complete host replay
+passes 97,365 checks in 170.45 seconds, with exact 32 KiB SDK/host/scout SRAM
+equality. An independent 2,103-update SDK reload/Status inspection passes in
+2.766 seconds. All preceding inputs and assertions remain intact; two old Sandy
+Bay labels now accurately describe its hidden cache, whose 0x143 flag does not
+establish possession of the blue marble (0xAA).
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/jungle_wedding.json --save PATH_TO_PRIVATE_HAT_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WEDDING_PROFILE
+
+These results cover the SDK and host session. The later Sunny Peak
+temple/workshop and complete desktop playthrough remain unverified.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert

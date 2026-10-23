@@ -801,7 +801,7 @@
     {"frames": 1, "buttons": ["A"]},
     {"frames": 300},
     {"repeat": 4, "steps": [{"frames": 1, "buttons": ["A"]}, {"frames": 119}]},
-    {"label": "Blue marble obtained with Hif-hif", "expect": {"frame": 4681, "map_bank": 4, "map_index": 7, "opcode": 33, "main_cursor": "0x0807A1F0", "leader_x": 137.0, "leader_z": 160.5, "learned_words": 31, "seeds": 22, "scene_selection": 4, "follower_slot": 13, "partner_joined": true, "loves_rescued": 4, "flags": {"0x121": true, "0x143": true}}},
+    {"label": "Hidden-cache item obtained with Hif-hif", "expect": {"frame": 4681, "map_bank": 4, "map_index": 7, "opcode": 33, "main_cursor": "0x0807A1F0", "leader_x": 137.0, "leader_z": 160.5, "learned_words": 31, "seeds": 22, "scene_selection": 4, "follower_slot": 13, "partner_joined": true, "loves_rescued": 4, "flags": {"0x121": true, "0x143": true}}},
     {"frames": 33, "buttons": ["B", "Right"]},
     {"frames": 1, "buttons": ["Right"]},
     {"frames": 28, "buttons": ["B", "Up"]},
@@ -917,6 +917,6 @@
     {"frames": 240},
     {"frames": 1, "buttons": ["A"]},
     {"frames": 480},
-    {"label": "Island, marble and music hall retained by original Save and Continue", "expect": {"frame": 1761, "map_bank": 4, "map_index": 13, "opcode": 33, "main_cursor": "0x0808085D", "leader_x": 128.5, "leader_z": 196.5, "learned_words": 32, "seeds": 22, "scene_selection": 4, "follower_slot": 13, "partner_joined": true, "loves_rescued": 4, "flags": {"0x11F": true, "0x121": true, "0x143": true, "0x97": true, "0x14F": true, "0xA6": true, "0x194": true}, "controls": {"0x84": 3, "0x87": 2, "0x89": 3, "0x8B": 1, "0x91": 2}}}
+    {"label": "Island, hidden cache and music hall retained by original Save and Continue", "expect": {"frame": 1761, "map_bank": 4, "map_index": 13, "opcode": 33, "main_cursor": "0x0808085D", "leader_x": 128.5, "leader_z": 196.5, "learned_words": 32, "seeds": 22, "scene_selection": 4, "follower_slot": 13, "partner_joined": true, "loves_rescued": 4, "flags": {"0x11F": true, "0x121": true, "0x143": true, "0x97": true, "0x14F": true, "0xA6": true, "0x194": true}, "controls": {"0x84": 3, "0x87": 2, "0x89": 3, "0x8B": 1, "0x91": 2}}}
   ]
 }
