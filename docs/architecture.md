@@ -121,7 +121,7 @@ optional activities and later visits remain unverified.
 `sandy_bay.json` continues from the exact saved Clubhouse endpoint above. Boss's
 Hamha conversation sets pending destination flag 0x183; the original map unlock
 consumes it and enables flag 0x43. Selection 4 enters Sandy Bay (map bank 4; bank 3
-is a separate area). The 138,742-update route retains the first arrival and map 4:2
+is a separate area). The 143,084-update route retains the first arrival and map 4:2
 beach conversation/save. It continues west to the swimming lesson and word 26,
 then the Lookie conversation in map 4:4 and changed entrance scene. Tinglie raises
 the word count to 27; using it at the cart obtains the ball. The team receives it,
@@ -132,11 +132,16 @@ enable Barrette's request and Spat's shore scene, which teaches Gasp-P. The pair
 returns through the original destination map to alert Seamore in Clubhouse; flag
 0x1AB changes from false to true. Back in Sandy Bay, Seamore rescues Barrette,
 Trust-T is learned and the fourth love is restored. Hif-hif retrieves the bottle
-message. Original End Game/Continue restores map 4:5 at x=152.5, z=24.5, 31 words,
+message and then collects the wooden board. Its Items entry is rendered and
+selected with ordinary keyboard inputs. Original End Game/Continue restores
+map 4:5 at x=160.5, z=48, 31 words,
 22 seeds, four loves and Bijou. Read-only flag and control-byte assertions establish
 the unlocks, words, ball delivery, rally results, rescue prerequisite, reconciliation
-and bottle acquisition. The complete route passes 138,742 SDK updates and 145,216
-host-session checks, including SRAM-file persistence and fresh continuation.
+and bottle/board acquisition. The unchanged 138,742-update prefix previously passed
+the SDK replay and 145,216 host-session checks. The extension passes a separate
+6,103-update SDK replay and 8,209 host-session checks, including SRAM-file
+persistence and fresh continuation; board flags 0xA6/0x194 remain set.
+The combined 143,084-update SDK replay also passes in 216.04 seconds.
 A separate SDK process reloads the host-written SRAM and rechecks the saved flags,
 scene controls, map, position and counters. The complete Sandy Bay story, remaining
 activities and later visits remain unverified. The input SRAM is a private output of the erased-SRAM
@@ -605,8 +610,15 @@ primary/backup branch through all ten reconciliations, credits and selected post
 activities. Use this route to plan the remaining areas and compare original outcomes.
 It begins from a Spanish MonTak SRAM checkpoint; its prerequisite, language, timing
 and VCOUNT-dependent randomness must be checked when adapting native inputs. These
-are mGBA reference results. Full native execution and the remaining optional content
-still require separate evidence.
+are mGBA reference results. The Spanish prerequisite now has native input-only
+coverage through four fresh SRAM-only runtimes, ending with 13 words and 15 seeds;
+the last segment also passes host-file persistence and fresh continuation.
+Verbatim story timings drift at map/vine transitions. A normal-input approach
+adjustment passes the first Spanish reconciliation and saved continuation, then
+the training-seat route needs another movement adjustment. External text schedules
+are accepted directly by run_scenario.py; their labels observe native state and
+do not assert reference parity. Full native execution and the remaining optional
+content still require separate evidence.
 
 Within batch 1, class_anchor_presets.c and scene_control_callbacks.c have complete
 function-level comparisons for their 40 functions. script_callbacks_render_presets.c

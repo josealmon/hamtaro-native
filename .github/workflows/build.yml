@@ -11,6 +11,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -B tools/check_repository.py
+      - run: python -B tests/unit/scenario.py
       - run: cmake -S . -B build -A x64 -DBUILD_TESTING=ON
       - run: cmake --build build --config Release --parallel 4
       - run: ctest --test-dir build -C Release --output-on-failure

@@ -16,6 +16,32 @@ import time
 
 ROOT=Path(__file__).resolve().parents[1]
 BUTTONS={name:1<<i for i,name in enumerate(("A","B","Select","Start","Right","Left","Up","Down","R","L"))}
+MAX_UPDATES=2000000
+
+
+def input_schedule(text: str, name: str) -> dict:
+    """Read external frame/hex-key/label schedules without copying game data.
+
+    Labels observe native state; only JSON expectations assert game semantics.
+    """
+    steps=[];labels=set()
+    for number,line in enumerate(text.splitlines(),1):
+        fields=line.split("#",1)[0].split()
+        if not fields:continue
+        if len(fields)!=3:raise ValueError(f"Schedule line {number}: expected frames, hexadecimal keys and label.")
+        try:
+            frames=int(fields[0],10);keys=int(fields[1],16)
+        except ValueError as error:
+            raise ValueError(f"Schedule line {number}: invalid duration or key mask.") from error
+        if not 0<=keys<1024:raise ValueError(f"Schedule line {number}: key mask must use only the ten GBA buttons.")
+        steps.append(dict(frames=frames,buttons=[button for button,mask in BUTTONS.items() if keys&mask]))
+        label=fields[2]
+        if label!="-":
+            if label in labels:raise ValueError(f"Schedule line {number}: duplicate label {label}.")
+            labels.add(label);steps.append(dict(observe=label))
+    if not steps:raise ValueError("An input schedule must contain updates.")
+    validate_steps(steps)
+    return dict(name=name,steps=steps)
 
 class NativeGame:
     def __init__(self,library: Path,rom: bytes,save: bytes|None):
@@ -71,6 +97,9 @@ def validate_steps(steps,depth=0):
             if set(step)!={"repeat","steps"} or type(step["repeat"]) is not int or not 1<=step["repeat"]<=10000:
                 raise ValueError("Invalid repeat step.")
             total+=step["repeat"]*validate_steps(step["steps"],depth+1)
+        elif "observe" in step:
+            if set(step)!={"observe"} or not isinstance(step["observe"],str) or not step["observe"].strip():
+                raise ValueError("An observation requires a nonempty label.")
         elif "expect" in step:
             if set(step)-{"expect","label"} or not isinstance(step["expect"],dict):raise ValueError("Invalid checkpoint.")
             fields={"frame","map_bank","map_index","opcode","main_cursor","leader_x","leader_z","learned_words","seeds","scene_selection","follower_slot","partner_joined","loves_rescued","flags","controls"}
@@ -93,13 +122,15 @@ def validate_steps(steps,depth=0):
             if not isinstance(buttons,list) or any(not isinstance(b,str) or b not in BUTTONS for b in buttons):
                 raise ValueError("Unknown scenario button.")
             total+=step["frames"]
-        if total>1000000:raise ValueError("A scenario must contain at most one million updates.")
+        if total>MAX_UPDATES:raise ValueError("A scenario must contain at most two million updates.")
     return total
 
 def run_steps(game,steps):
     for step in steps:
         if "repeat" in step:
             for _ in range(step["repeat"]):run_steps(game,step["steps"])
+        elif "observe" in step:
+            print(f"Observation {step['observe']}: {game.checkpoint()}",flush=True)
         elif "expect" in step:
             actual=game.checkpoint(step["expect"].get("flags"),step["expect"].get("controls"))
             for key,expected in step["expect"].items():
@@ -113,7 +144,9 @@ def run_steps(game,steps):
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--rom",type=Path,required=True)
-    parser.add_argument("--scenario",type=Path,required=True)
+    source=parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--scenario",type=Path)
+    source.add_argument("--input-schedule",type=Path,help="External frames/hex-key/label text; labels observe state, without asserting reference parity")
     parser.add_argument("--save",type=Path,help="Optional read-only 32 KiB SRAM input")
     parser.add_argument("--until",help="Stop after a uniquely named top-level checkpoint for a focused replay")
     parser.add_argument("--library",type=Path,default=ROOT/"build/Release/hn_reference_probe.dll")
@@ -136,11 +169,13 @@ def main():
         if args.save.stat().st_size!=32768:raise ValueError("Expected 32 KiB SRAM input.")
         saved=args.save.read_bytes()
         if len(saved)!=32768:raise ValueError("SRAM input changed while reading.")
-    scenario=json.loads(args.scenario.read_text(encoding="utf-8"))
+    scenario=(input_schedule(args.input_schedule.read_text(encoding="utf-8"),args.input_schedule.stem)
+              if args.input_schedule else json.loads(args.scenario.read_text(encoding="utf-8")))
     if not isinstance(scenario,dict) or set(scenario)!={"name","steps"}:raise ValueError("Invalid scenario document.")
     count=validate_steps(scenario["steps"])
     if args.until:
-        matches=[i for i,step in enumerate(scenario["steps"]) if "expect" in step and step.get("label")==args.until]
+        matches=[i for i,step in enumerate(scenario["steps"]) if
+                 ("expect" in step and step.get("label")==args.until) or step.get("observe")==args.until]
         if len(matches)!=1:raise ValueError("--until must name exactly one top-level checkpoint.")
         scenario=dict(name=f"{scenario['name']} (through {args.until})",steps=scenario["steps"][:matches[0]+1])
         count=validate_steps(scenario["steps"])

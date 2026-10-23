@@ -155,9 +155,17 @@ and Ta-dah, uses Lookie to enable Barrette's request and runs Spat's shore scene
 Gasp-P is then used with Seamore in Clubhouse: rescue flag 0x1AB must change from
 false to true before the return to Sandy Bay. The rescue teaches Trust-T and
 raises the love count from three to four. Hif-hif retrieves the bottle message.
-The route passes 138,742 SDK updates in 205.90 seconds and 145,216 host-session
-checks in 209.97 seconds. It ends with original save/Continue in map 4:5 at x=152.5,
-z=24.5, 31 words, 22 seeds, four loves and Bijou. The source SRAM stays unchanged.
+The preceding 138,742-update prefix passed in 205.90 seconds with 145,216
+host-session checks in 209.97 seconds. Its inputs and checkpoints are preserved.
+The extended route adds the wooden board pickup, Items display and original
+save/Continue. A 6,103-update focused replay from the verified bottle-message SRAM
+passes in 8.08 seconds; 8,209 host checks pass in 10.52 seconds, including exact
+SRAM-file persistence and fresh continuation. The endpoint is map 4:5 at x=160.5,
+z=48, 31 words, 22 seeds, four loves and Bijou, with board flags 0xA6/0x194 and
+bottle flag 0x195 retained. The combined 143,084-update SDK replay also passes in
+216.04 seconds. A fresh SDK process reopens the host-written file and checks the
+saved flags and the board selection (control 0x180 = 1) in 2,255 updates.
+The source SRAM stays unchanged.
 This does not establish the complete Sandy Bay story or a desktop playthrough.
 The prerequisite is reproducible from erased SRAM without duplicating the opening:
 
@@ -187,6 +195,42 @@ after an original in-game save when combining this option with `--session-test`,
 because that test compares the persisted state after restarting. This can produce
 a private reusable profile at the cart or Clubhouse milestone without repeating
 all later steps during focused development.
+
+External reference schedules can be read directly with `--input-schedule PATH`
+instead of `--scenario`. Each non-comment line is a decimal frame count, a
+hexadecimal GBA button mask and a label (`-` omits the label). Blank lines and
+`#` comments are accepted. Invalid masks, duplicate labels, nonpositive durations
+and malformed lines fail before execution. The same two-million-update total
+budget applies to text and JSON, including repeated steps. `--until LABEL` can
+stop a text replay at a unique observation after the entire input is validated.
+
+Text labels print native observations, not semantic assertions or original-ROM
+parity. JSON `expect` checkpoints retain strict scalar/flag/control assertions.
+Both formats execute every requested update with the same native graphics/audio
+path and stop on faults; no renderer, audio, comparison domain or game update is
+skipped. `--save` and `--session-test` work with either format. Keep external
+reference files and all saves outside this checkout. Run the asset-free parser
+and malformed-input checks with `python -B tests/unit/scenario.py`.
+
+The Spanish reference prerequisite has now been reconstructed with normal native
+inputs: erased-SRAM tutorial/save (31,136 updates), fresh Continue and five-seed
+pickup (5,103), pickup persistence and word acquisition (14,448), then a fresh
+word-persistence/MonTak route (17,940). Only original 32 KiB SRAM passes between
+the four fresh runtimes. The last route also passes 20,466 host-session checks,
+including exact SDK/host SRAM equality and fresh continuation at map 2:2,
+x=288.5, z=111.5, 13 words and 15 seeds. The English progress profile is separate.
+
+The reference's verbatim longer Spanish story sequence diverges before the
+Pepper/Oxnard reunion. A replay of the original ROM from the same native-produced
+SRAM shows position/timing differences first at the vine descent and later at
+the return transition. Map-only landmarks did not detect the earlier drift.
+Aligning the approach to Pepper with normal movement inputs then passes the
+first reconciliation, original save/Continue and Clubhouse return in Spanish.
+The next divergence is a later map transition on the training-seat delivery
+route. Further input adjustments and semantic checks are required before reusing
+the remainder. These observations do not establish a missing native handler or
+completed native credits. The full reference schedule is planning material,
+not proof that all 443 original checkpoints pass natively.
 
 For a focused continuation, `--save PATH_TO_PRIVATE_SRAM --session-test
 build/Release/hn_session_tests.exe` starts both replays from the same private SRAM
