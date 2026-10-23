@@ -87,6 +87,7 @@ statically. A separate clean-machine validation remains pending.
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Later areas, full optional activities and complete desktop story coverage remain pending |
+| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House and the jungle/hat eighth reconciliation; original Save/Continue and exact SRAM equality checked at stage boundaries; wedding/red marble, later Sunny Peak and full desktop progression remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
 | Complete single-player playthrough | Pending | Story, secondary activities and minigames |
 | Cable Link | Out of first release | No local/network link emulation |
@@ -229,6 +230,22 @@ A separate 2,103-update SDK reload/Status inspection passes in 2.598 seconds.
 This is SDK and chained host-session evidence; optional activities and complete
 desktop progression remain pending. Inputs and scalar assertions contain no
 game resources or state injection.
+
+`jungle_hat.json` continues from that saved jungle unlock in a fresh process.
+Its 102,159 input updates and 19 checkpoints cover Wait-Q, Hampact, Sunny Peak's
+robbery and hat request, and the required Hamteam lesson from Stan in Fun Land.
+The route checks that the trap remains inactive without Hamteam, then uses it
+with Bog and follows Cappy around the jungle until the cage drops. Bluhoo and
+the original Yep-P choice return to Sunny Peak; the hat scene teaches Hamboree
+and restores the eighth love. Original Save/Continue retains map 2:5 at x=80.5,
+z=176.5, 51 words, 17 seeds and both characters, flags 0x55/0x8C/0x71/0x8F/
+0x1A0/0x1A7/0x1AC set and controls 0x6D=4, 0x6F=3, 0xC9=8.
+The SDK replay passes in 166.08 seconds; the same complete input stream passes
+107,364 host-session checks in 173.37 seconds. All 32 KiB match the SDK and
+input-only scout. A separate 2,103-update SDK reload/Status inspection passes
+in 2.766 seconds. The preceding Haunted House scenario and its SRAM input remain
+unchanged. Wedding/red-marble progression, the temple/workshop and complete
+desktop playthrough coverage remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -646,14 +663,12 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from the saved Clubhouse jungle unlock through the jungle/hat story
-   (eighth reconciliation), then the jungle wedding and red marble (ninth).
+1. Continue from the saved eighth reconciliation through the thermal egg,
+   jungle wedding and red marble (ninth).
    The original route reaches Sunny Peak's temple/workshop (tenth) after all
    three marbles; keep these dependencies explicit.
-   Sunny Peak's later hat story, temple, workshop and optional activities still
-   need native integration proof. The hat story follows Haunted House and jungle
-   prerequisites in the reference route; prioritize these dependencies over
-   unrelated optional detours.
+   The temple, workshop and optional activities still need native integration
+   proof. Keep their story prerequisites ahead of unrelated optional detours.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.

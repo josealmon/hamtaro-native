@@ -263,6 +263,25 @@ Literal input recordings from the original guide agree at
 entry but diverge later in this native route; their observation labels are not
 semantic assertions and the divergent recording is not used as native proof.
 
+`jungle_hat.json` starts from the final Haunted House SRAM in a fresh process.
+The 102,159-update, 19-checkpoint route learns Wait-Q and Hampact, follows the
+Sunny Peak robbery/hat request and returns to Fun Land for Stan's Hamteam lesson.
+It asserts the missing word and inactive trap before that lesson, then the book
+entry and active trap afterward. Bog's cage, Cappy's chase, Bluhoo and Yep-P
+lead to the returned hat, Hamboree and eighth reconciliation. Original
+Save/Continue retains map 2:5 at x=80.5, z=176.5, 51 words, 17 seeds and Bijou;
+flags 0x55/0x8C/0x71/0x8F/0x1A0/0x1A7/0x1AC remain set and controls 0x6D=4,
+0x6F=3, 0xC9=8. The complete SDK replay passes in 166.08 seconds and the complete
+host replay passes 107,364 checks in 173.37 seconds, including fresh-session
+continuation and exact 32 KiB SDK/host/scout SRAM equality. Another independent
+2,103-update SDK reload/Status inspection passes in 2.766 seconds. Input SRAM
+and every preceding scenario remain unchanged. The next chain step is:
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/jungle_hat.json --save PATH_TO_PRIVATE_HAUNTED_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_HAT_PROFILE
+
+These results cover the SDK and host session. The wedding/red marble, later
+Sunny Peak temple/workshop and complete desktop playthrough remain unverified.
+
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
 `"classes": {"0xE1": 630}` for the musical challenge's score. IDs are decimal or hexadecimal
