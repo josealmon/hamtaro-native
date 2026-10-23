@@ -6,7 +6,8 @@ You must provide your own compatible .gba file. No game assets or ROM are includ
 The application imports and validates a ROM, runs adapted native game logic,
 configures keyboard/gamepad input and manages compatible saves. Native input
 replays cover the first Sunny Peak story, three reconciliations and a saved return
-to Clubhouse. This development build still stops at unfinished functions;
+to Clubhouse, followed by Sandy Bay's normal unlock, first arrival and a saved
+beach continuation. This development build still stops at unfinished functions;
 complete story, optional activities, minigames and desktop playthrough coverage
 remain unverified. See docs/architecture.md for the current evidence.
 

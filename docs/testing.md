@@ -78,9 +78,9 @@ oracle, in 678.102 seconds on the development machine. The preceding log spanned
 approximately 1,238 seconds; that older value comes from file timestamps. Concurrent
 native route replays ran during both executions, so the roughly 45% reduction is
 an observed local comparison, not a portable performance guarantee. Those measurements preceded the scene-copy and paired-actor additions.
-The expanded suite now passes 4,204,830 checks in 700.669 seconds, with the same
-exhaustive domains and oracles plus the new contracts; the full native and host
-story replays ran concurrently.
+The expanded suite now passes 4,208,502 checks in 613.221 seconds, with the same
+exhaustive domains and oracles plus scene-copy, paired-actor and render-selection
+contracts; the Sandy Bay native and host replays ran concurrently.
 
 `compare_reference.py` prints elapsed time and assertion counts per family and for
 its complete invocation. Optional `--timings-json PATH_OUTSIDE_CHECKOUT` retains a
@@ -141,6 +141,21 @@ Bijou present). It checks Lovedove, the Clubhouse return and original save/Conti
 23 words, two loves) and retains the optional ride, Rubrub and save/reload coverage:
 11,469 SDK updates and 13,692 host checks. Different prerequisites fail the initial
 checkpoint; no input save or resource data is shipped.
+
+`sandy_bay.json` starts from the final private SRAM produced by `sunny_peak.json`,
+before talking to Boss about the next mission (Clubhouse map 1:1, 25 words, two
+seeds, three loves, Bijou present). It checks the normal destination unlock,
+Sandy Bay arrival and beach conversation, then original save/Continue in map 4:2.
+It passes 18,948 SDK updates in 37.64 seconds and 21,399 host-session checks in
+44.53 seconds, including SRAM-file persistence and fresh continuation. The source
+SRAM stays unchanged. This does not establish the complete Sandy Bay story.
+The prerequisite is reproducible from erased SRAM without duplicating the opening:
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_peak.json --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay.json --save PATH_TO_NEW_PRIVATE_SUNNY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe
+
+The first command requires a new profile directory outside the checkout. The
+second reads its SRAM without changing it and tests a separate temporary session.
 
 `--until "CHECKPOINT LABEL"` stops after exactly one named top-level checkpoint,
 while omitting it retains the entire scenario. An unknown or ambiguous label fails.
@@ -571,11 +586,13 @@ Additional focused area-dependency checks use:
     python -B tools/compare_reference.py --wave-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
     python -B tools/compare_reference.py --counter-scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-These pass 37,798 scene actor comparisons, 91,597 actor preset comparisons,
+These pass 41,470 scene actor comparisons, 95,870 actor preset comparisons,
 30,930 record comparisons and 16,497 scanline-wave comparisons. The scene group
-covers 44 functions across 15 families and one shared bank-3 condition, including
+covers 45 functions across 16 families and one shared bank-3 condition, including
 approach completion, signed limits, all ARM shift counts, direction constructors,
-snapshots and copy aliases. The preset group covers all 476 functions in five
+snapshots, copy aliases and the three-byte render-selection Main callback. Its
+primary/secondary paths cover every byte selection, inactive mapped records and
+arguments overwritten by slot reset. The preset group covers all 498 functions in six
 families, Main rejection of void callbacks, F4 dispatch, direction sectors,
 captured auxiliary arguments versus live selector aliases and inactive mapped
 byte selectors at 0, 1, 254 and 255. Record checks cover

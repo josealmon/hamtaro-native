@@ -1642,6 +1642,19 @@ static void scene_actor_contract(void)
     for(unsigned i=9;i;i--)hn_write8(&memory,args+4+i-1,hn_read8(&memory,args+i-1));hn_write32(&memory,args,0x08050C85);
     HNScript script;hn_script_init(&script,&memory,NULL,0);
     CHECK(hn_main_command(&script,0x1C,args)&&hn_read32(&memory,0x03000014)==0&&hn_read32(&memory,0x03002C60)==0x02030000);
+    hn_write8(&memory,args,0);hn_write8(&memory,args+1,0x33);hn_write8(&memory,args+2,3);
+    hn_write32(&memory,0x02000858+3*4,0x02031000);
+    hn_write16(&memory,0x0201DC84,0xFFFF);hn_write16(&memory,0x0201DC86,0x8000);
+    CHECK(hn_scene_callback(&memory,0x0801D889,args,&consumed)==HN_SCENE_OK&&consumed==3);
+    CHECK(hn_read32(&memory,leader+4)==0x02031000&&hn_read8(&memory,leader+0x60)==4&&hn_read8(&memory,leader+0x62)==0x33);
+    CHECK(hn_read32(&memory,leader+0x18)==0xFFFF8000&&hn_read32(&memory,leader+0x20)==0x80008000);
+    CHECK(hn_read32(&memory,0x02028000+6*44+0x18)==0x088E1340);
+    CHECK(hn_read32(&memory,hn_render_slot(&memory,11)+4)==0x088AEEB9&&hn_read8(&memory,hn_render_slot(&memory,15)+0x65)==10);
+    hn_write8(&memory,args,255);hn_write8(&memory,args+2,255);
+    CHECK(hn_scene_callback(&memory,0x0801D889,args,&consumed)==HN_SCENE_OK&&consumed==3);
+    CHECK(hn_read32(&memory,follower+4)==0x088B668B&&hn_read8(&memory,follower+0x60)==0&&hn_read8(&memory,follower+0x62)==0x72);
+    CHECK(hn_read8(&memory,hn_render_slot(&memory,11)+0x65)==13);
+    CHECK(hn_scene_actor_task(&memory,0x0801D889)==HN_SCENE_UNKNOWN); /* Argument-dependent Main only. */
     free(rom);
 }
 static void actor_presets_contract(void)

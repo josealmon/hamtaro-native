@@ -435,6 +435,21 @@ HNSceneResult hn_scene_actor_callback(HNMemory *m,GameAddr callback,GameAddr arg
         }
         break;
     }
+    case 0x0801D888:{ /* ScriptCallbackConfigureRenderSelection: three-byte Main contract. */
+        uint8_t secondary=hn_read8(m,arguments),field62=hn_read8(m,arguments+1),selection=hn_read8(m,arguments+2);
+        int16_t x=(int16_t)hn_read16(m,0x0201DC84),z=(int16_t)hn_read16(m,0x0201DC86);
+        uint8_t slot=secondary?13:10;
+        GameAddr image=secondary?0x088B668B:hn_read32(m,0x02000858+selection*4);
+        if(!hn_render_configure_raw(m,slot,(uint8_t)(selection+1),secondary?0x72:field62,x,0,z,image)||
+           !hn_graphics_configure_raw(m,6,0x088E1340)||
+           !hn_render_configure_raw(m,11,1,0x72,0,0,0,0x088AEEB9)||
+           !hn_render_configure_raw(m,12,1,0x72,0,0,0,0x088AEEF9)||
+           !hn_render_configure_raw(m,14,1,0x72,0,0,0,0x088AEF39)||
+           !hn_render_configure_raw(m,15,1,0x72,0,0,0,0x088AEF61))return HN_SCENE_RESOURCE;
+        if(!hn_render_modes_raw(m,11,2,3,slot)||!hn_render_modes_raw(m,12,2,3,slot)||
+           !hn_render_modes_raw(m,14,2,3,slot)||!hn_render_modes_raw(m,15,2,3,slot))return HN_SCENE_RESOURCE;
+        *consumed=3;break;
+    }
     case 0x0801D9C4:case 0x0801D9F8:case 0x0801DA18:{
         GameAddr slot=hn_render_slot(m,hn_read8(m,arguments));unsigned a=hn_read8(m,arguments+1),b=hn_read8(m,arguments+2);
         uint32_t value=(callback&~1u)==0x0801D9C4?(a<<8)|(b<<16):(a<<16)|(b<<8);

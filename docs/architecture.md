@@ -64,7 +64,7 @@ statically. A separate clean-machine validation remains pending.
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
-| Scene actor state and panels | Adapted | 44 functions across 15 source families plus one shared cross-bank condition compared: snapshots with and without execution-flag clearing, forward copy/swap, signed accelerations, class-target approach, panel presets and direction constructors; 36 reviewed argument-free task contracts; complete scene integration remains pending |
+| Scene actor state and panels | Adapted | 45 functions across 16 source families plus one shared cross-bank condition compared: snapshots with and without execution-flag clearing, forward copy/swap, signed accelerations, class-target approach, panel presets, direction constructors and render-selection setup; 36 reviewed argument-free task contracts; complete scene integration remains pending |
 | Actor render presets | Adapted | All 993 functions across ten base/linked/neighbor/class/secondary/render-setup/graphics/directional/extended/sequence families compared; task ABI, captured auxiliary arguments, live selectors, inactive mapped slots, byte-sized neighbors and direction sectors preserved; only the base family's defined-zero no-op also accepts Main; later-area integration remains pending |
 | Map-choice scene control | Adapted | All 273 functions in map_choice_callbacks.c compared: 93 Main contracts, 253 argument-free task targets, five animation contracts and four slot helpers, including cursor skips/jumps, packed choices, motion, regions, phases and presets; complete area/activity integration remains pending |
 | Map particles | Adapted | All four functions in map_particles.c and the alternate parameter selection compared; initialization, reset boundaries, live parameter reads, scaling and field60-only hiding; timed scene integration remains pending |
@@ -117,6 +117,17 @@ cart-area SRAM (23 words, two loves) and passes 11,469 SDK updates plus 13,692 h
 checks through the cart ride, Rubrub lesson and save/reload. The story route skips
 that optional ride, so its word count describes a different route. Full Sunny Peak
 optional activities and later visits remain unverified.
+
+`sandy_bay.json` continues from the exact saved Clubhouse endpoint above. Boss's
+Hamha conversation sets pending destination flag 0x183; the original map unlock
+consumes it and enables flag 0x43. Selection 4 enters Sandy Bay (map bank 4; bank 3
+is a separate area). The 18,948-update route checks the destination selection,
+arrival dialogue, control in map 4:1, transition to the beach in map 4:2, a beach
+conversation, and original End Game/Continue at x=112, z=64.5 with the same 25
+words, two seeds, three loves and Bijou. The SDK replay and 21,399 host-session
+checks pass, including SRAM-file persistence and fresh continuation. Full Sandy Bay story and activities remain
+unverified. The input SRAM is a private output of the erased-SRAM Sunny Peak route;
+the versioned continuation contains only buttons and scalar checkpoints.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -530,10 +541,10 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Verify the next mission unlock from the saved three-love Clubhouse state, then
-   continue into Sandy Bay. Its declared
-   bank-3 source families are adapted; review literal task/animation dependencies
-   alongside the reachable story route and adapt any missing complete families.
+1. Continue Sandy Bay's story from the saved beach state. Its bank-4 source
+   families are adapted; review literal task/animation dependencies alongside the
+   reachable story route and adapt any missing complete families. Its normal Boss
+   unlock, arrival and beach save/Continue now have focused native input coverage.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.
@@ -641,7 +652,7 @@ Auxiliary arguments remain captured; separate calls reload class selectors after
 each potentially overlapping write. These function checks prepare later-area
 dependencies; they do not establish that those areas are playable.
 
-Forty-four scene actor/state/panel functions across 15 source families preserve
+Forty-five scene actor/state/panel functions across 16 source families preserve
 the nine-byte class-coordinate approach state, fixed-point/signed boundaries,
 forward copy/swap order, two-slot backup/restore, screen-pair presets and direction
 constructors. One additional shared bank-3 value condition supports the bank-2
@@ -650,6 +661,14 @@ packed counters, the twelve-byte query result and original underflow/clamp behav
 The three-function scanline-wave family has typed Main/task/HBlank adapters with
 all-line threshold and frame-end phase comparisons; timed raster images remain
 unverified.
+
+The render-selection Main callback captures all three argument bytes and signed
+class coordinates before resetting a slot. It selects either the player's ROM
+table entry or the secondary animation, then initializes graphics slot 6 and four
+linked overlays in source order. Selection 255 preserves the byte-wrapped zero
+mode; inactive mapped records remain writable. Exhaustive byte selections,
+nonzero secondary values, signed coordinates and arguments overlapping the reset
+slot are compared. This argument-dependent callback has no F4 contract.
 
 tools/inventory_reference.py --area-bank 2 now finds explicit dispatch for all 383
 functions declared by the four recovered bank-2 script sources. This is a planning

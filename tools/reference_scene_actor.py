@@ -17,9 +17,9 @@ def check_scene_actors(*, entries, reference, rom, memory, cpu, bind, call, both
         "src/graphics/screen_pair_presets.c", "src/graphics/screen_pair_state_presets.c",
         "src/graphics/screen_pair_more_presets.c", "src/actors/actor_restore_slots.c",
         "src/scripts/script_callbacks_direction_slots.c", "src/scripts/script_callbacks_direction_variants.c",
-        "src/scripts/script_callback_render_shake15248.c"}
+        "src/scripts/script_callback_render_shake15248.c", "src/scripts/script_callback_render_selection.c"}
     rows = [row for row in entries if row["source"] in sources or row["name"] == "ScriptCallbackJumpUnlessMapBank3ValueEquals"]
-    equal(len(rows), 45, "complete scene actor families and shared cross-bank condition")
+    equal(len(rows), 46, "complete scene actor families and shared cross-bank condition")
     task_rows = [row for row in rows if row["name"] == "ScriptCallbackStoreClassScreenYSide" or not re.search(
         r"\barguments\b", body((reference / row["source"]).read_text(encoding="utf-8"), row["name"]))]
     equal(len(task_rows), 36, "reviewed argument-free scene actor task contracts")
@@ -57,6 +57,8 @@ def check_scene_actors(*, entries, reference, rom, memory, cpu, bind, call, both
         both(0x03002E10, b"\x10")
 
     def payload(name, case):
+        if name == "ScriptCallbackConfigureRenderSelection":
+            return bytes([(0, 1, 2, 255)[case % 4], (0, 0x33, 0x72, 255)[case % 4], case % 256])
         if name == "ScriptCallbackJumpUnlessMapBank3ValueEquals":
             mode, index = case % 3, case * 257 % 65536
             current = (int.from_bytes(native_bytes(classes + index * 2, 2), "little") if mode
@@ -162,4 +164,17 @@ def check_scene_actors(*, entries, reference, rom, memory, cpu, bind, call, both
         fixture(shift)
         both(controls + 0x63, bytes([shift]))
         check_main(adjust, f"ARM shift count {shift}")
-    print("44 scene actor/panel functions across 15 families and one shared condition passed; area/story completion remains unverified.")
+    selection = next(row for row in rows if row["name"] == "ScriptCallbackConfigureRenderSelection")
+    for secondary in (0, 1, 255):
+        for choice in range(256):
+            fixture(choice)
+            both(args, bytes([secondary, (0, 0x33, 0x72, 255)[choice % 4], choice]))
+            check_main(selection, f"selection byte domain {secondary}/{choice}")
+    for secondary in (0, 1):
+        for offset in (4, 0x18, 0x20, 0x60, 0x62):
+            fixture(offset)
+            argument = base + (13 if secondary else 10) * 104 + offset
+            both(argument, bytes([secondary, 0x33, 3]))
+            both(0x03002DC0, b"\x01");both(0x03002E10, b"\x01")
+            check_main(selection, f"selection arguments captured before slot reset {secondary}/{offset}", argument)
+    print("45 scene actor/panel functions across 16 families and one shared condition passed; area/story completion remains unverified.")
