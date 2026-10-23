@@ -180,6 +180,20 @@ Complete Sandy Bay activities, later visits and full desktop progression remain 
 The input SRAM is a private output of the erased-SRAM
 Sunny Peak route; the versioned continuation contains only buttons and scalar checkpoints.
 
+`fun_land.json` continues from the saved fifth reconciliation in another fresh
+native process. It returns by ferry, uses Digdig at Sandy Bay's entrance, returns
+to Clubhouse for the original destination unlock and Boss lesson, then enters
+Fun Land. Scrub and its book return, trash acquisition and the musical-note
+challenge run through ordinary input. A read-only class checkpoint asserts 630
+points, within the original green-marble reward tier. Flags 0xAB/0x127 verify the
+award, and original Save/Continue retains map 3:4 at x=232.5, z=216.5 with 36
+words, 19 seeds, five loves and Bijou. The 35,899-update scenario contains no
+adaptive controller, game data or state writes: its literal buttons and scalar
+checks replay the full stage, including the three-seed entry fee and No-P at the
+replay prompt. Operator rescue, Ham-Bot repair and the sixth love remain pending.
+The complete SDK replay passes in 56.59 seconds; 39,574 host-session checks pass
+in 59.11 seconds, including exact 32 KiB persistence and fresh-session continuation.
+
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
 rescued loves. Focused input saves are read-only; all writes use disposable profiles.
@@ -592,12 +606,14 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Continue from the saved fifth reconciliation through Sandy Bay's remaining
-   prerequisites and Fun Land toward the sixth love and green marble. The original
+1. Continue from the saved Fun Land green marble through operator rescue and
+   Ham-Bot repair toward the sixth love. The original
    route reaches Sunny Peak's temple/workshop after obtaining all three marbles,
    including the jungle wedding's red marble; keep these dependencies explicit.
    Sunny Peak's later hat story, temple, workshop and optional activities still
-   need native integration proof.
+   need native integration proof. The hat story follows Haunted House and jungle
+   prerequisites in the reference route; prioritize these dependencies over
+   unrelated optional detours.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.

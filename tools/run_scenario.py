@@ -74,7 +74,7 @@ class NativeGame:
         out=C.create_string_buffer(size)
         if not self.read(self.memory,address,out,size):raise RuntimeError("Native checkpoint read failed.")
         return int.from_bytes(out.raw,"little",signed=signed)
-    def checkpoint(self,flags=None,controls=None):
+    def checkpoint(self,flags=None,controls=None,classes=None):
         report=self.check();slot=self.value(0x03002D98)+self.value(0x03002C0C,1)*104
         result=dict(frame=report[4],map_bank=self.value(0x03002C58,1),map_index=self.value(0x03001F68,1),
                     opcode=self.value(0x03000010,1),main_cursor=f"0x{self.value(0x03002C60):08X}",leader_x=self.value(slot+0x18,signed=True)/65536,
@@ -85,6 +85,8 @@ class NativeGame:
             result["flags"]={key:bool(self.value(0x03002180+int(key,0)//8,1)&(1<<(int(key,0)%8))) for key in flags}
         if controls is not None:
             result["controls"]={key:self.value(0x02004520+int(key,0),1) for key in controls}
+        if classes is not None:
+            result["classes"]={key:self.value(0x0201DC40+int(key,0)*2,2) for key in classes}
         return result
     def frame(self,buttons):
         if not self.advance(self.game,buttons):self.check();raise RuntimeError("Native update failed without a diagnostic.")
@@ -103,16 +105,16 @@ def validate_steps(steps,depth=0):
                 raise ValueError("An observation requires a nonempty label.")
         elif "expect" in step:
             if set(step)-{"expect","label"} or not isinstance(step["expect"],dict):raise ValueError("Invalid checkpoint.")
-            fields={"frame","map_bank","map_index","opcode","main_cursor","leader_x","leader_z","learned_words","seeds","scene_selection","follower_slot","partner_joined","loves_rescued","flags","controls"}
+            fields={"frame","map_bank","map_index","opcode","main_cursor","leader_x","leader_z","learned_words","seeds","scene_selection","follower_slot","partner_joined","loves_rescued","flags","controls","classes"}
             if not step["expect"] or set(step["expect"])-fields:raise ValueError("Unknown or empty checkpoint fields.")
-            for field,limit in (("flags",768),("controls",512)):
+            for field,limit,maximum in (("flags",768,1),("controls",512,255),("classes",256,65535)):
                 if field not in step["expect"]:continue
                 values=step["expect"][field]
                 if not isinstance(values,dict) or not values:raise ValueError(f"Checkpoint {field} must be a nonempty object.")
                 ids=set();value_type=bool if field=="flags" else int
                 for key,value in values.items():
-                    if not isinstance(key,str) or type(value) is not value_type or (field=="controls" and not 0<=value<=255):
-                        raise ValueError(f"Checkpoint {field} require string IDs and {'boolean' if field=='flags' else 'byte'} values.")
+                    if not isinstance(key,str) or type(value) is not value_type or not 0<=value<=maximum:
+                        raise ValueError(f"Checkpoint {field} require string IDs and {'boolean' if field=='flags' else 'bounded unsigned'} values.")
                     index=int(key,0)
                     if not 0<=index<limit or index in ids:raise ValueError(f"Checkpoint {field} IDs must be unique and within 0 through {limit-1}.")
                     ids.add(index)
@@ -133,7 +135,7 @@ def run_steps(game,steps):
         elif "observe" in step:
             print(f"Observation {step['observe']}: {game.checkpoint()}",flush=True)
         elif "expect" in step:
-            actual=game.checkpoint(step["expect"].get("flags"),step["expect"].get("controls"))
+            actual=game.checkpoint(step["expect"].get("flags"),step["expect"].get("controls"),step["expect"].get("classes"))
             for key,expected in step["expect"].items():
                 if actual[key]!=expected:raise RuntimeError(f"Checkpoint {step.get('label','')} {key}: expected {expected}, got {actual[key]}.")
             print(f"Checkpoint {step.get('label','')}: {actual}",flush=True)

@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 import runpy
+from types import SimpleNamespace
 import unittest
 
 MODULE=runpy.run_path(str(Path(__file__).resolve().parents[2]/"tools/run_scenario.py"))
@@ -51,6 +52,26 @@ class ScenarioTests(unittest.TestCase):
         for path in paths:
             with self.subTest(path=path.name):
                 self.assertGreater(validate(json.loads(path.read_text(encoding="utf-8"))["steps"]),0)
+
+    def test_class_checkpoints_reject_truncation_and_aliases(self):
+        self.assertEqual(validate([dict(expect={"classes":{"0":0,"255":65535}})]),0)
+        for values in ({"0":True},{"0":-1},{"0":65536},{"256":0},
+                       {"-1":0},{"1":1,"0x1":2},{}):
+            with self.subTest(values=values),self.assertRaises(ValueError):
+                validate([dict(expect={"classes":values})])
+
+    def test_class_checkpoints_read_halfwords_and_enforce_scores(self):
+        calls=[]
+        def value(address,size=4,signed=False):
+            calls.append((address,size))
+            return {0x0201DE00:3600,0x0201DE02:600}.get(address,0)
+        game=SimpleNamespace(check=lambda:[0,0,0,0,9],value=value)
+        actual=MODULE["NativeGame"].checkpoint(game,classes={"0xE0":3600,"0xE1":600})
+        self.assertEqual(actual["classes"],{"0xE0":3600,"0xE1":600})
+        self.assertEqual(calls[-2:],[(0x0201DE00,2),(0x0201DE02,2)])
+        game.checkpoint=lambda flags,controls,classes: {"classes":{"0xE1":599}}
+        with contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,"expected.*600.*got.*599"):
+            run(game,[dict(label="score",expect={"classes":{"0xE1":600}})])
 
 
 if __name__=="__main__":unittest.main()

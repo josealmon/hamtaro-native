@@ -207,17 +207,31 @@ The prerequisite is reproducible from erased SRAM without duplicating the openin
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_peak.json --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay.json --save PATH_TO_NEW_PRIVATE_SUNNY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_ISLAND_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/treasure_island.json --save PATH_TO_NEW_PRIVATE_ISLAND_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_FIFTH_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land.json --save PATH_TO_NEW_PRIVATE_FIFTH_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_GREEN_PROFILE
 
 Each output profile must be new and outside the checkout. Every continuation
 reads its prerequisite SRAM without changing it and tests a fresh host session.
 
+The Fun Land continuation has 35,899 updates and 17 semantic checkpoints. It
+checks the return ferry's confirmation, preserved fifth love, Digdig destination
+exit, Clubhouse unlock and Boss lesson, Scrub and book return, trash acquisition,
+musical challenge entry fee, 630-point score, green-marble award and the original
+No-P replay choice. Original Save/Continue retains map 3:4 at x=232.5, z=216.5
+with 36 words, 19 seeds, five loves and Bijou, including flags 0xAB/0x127.
+The later operator/Ham-Bot story and sixth reconciliation remain unverified.
+The full SDK stage passes in 56.59 seconds and the host replay passes 39,574
+checks in 59.11 seconds, including original disk persistence and a fresh session.
+No earlier scenario, exhaustive reference domain or independent oracle was removed.
+
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
-`"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. IDs are decimal or hexadecimal
+`"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
+`"classes": {"0xE1": 630}` for the musical challenge's score. IDs are decimal or hexadecimal
 strings, unique after parsing. Flags address the 96-byte game flag block (0 through
 767) and require boolean values; controls address the 512-byte control block (0
-through 511) and require integer bytes (0 through 255). Both mappings are nonempty
+through 511) and require integer bytes (0 through 255). Classes address the first
+256 scene halfwords and require integers from 0 through 65,535. These mappings are nonempty
 read-only assertions. Malformed/out-of-range IDs, numeric aliases and incorrect
-value types fail validation; booleans are rejected as control bytes. Deliberately
+value types fail validation; booleans are rejected as numeric values. Deliberately
 incorrect flag/control expectations are also rejected by ROM-backed tests.
 Original Continue checks word flags, ball acquisition/delivery, team progress and
 the final rescue/bottle state. A separate SDK process reloads the host-written
