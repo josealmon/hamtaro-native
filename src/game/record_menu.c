@@ -67,6 +67,48 @@ static bool record_message(HNMemory *m,GameAddr arguments)
     }
     return false;
 }
+bool hn_record_tile_pairs(HNMemory *m,GameAddr text,GameAddr table,GameAddr upper,GameAddr lower,uint32_t palette)
+{
+    unsigned attributes=(palette&15)<<12;
+    for(unsigned count=0;count<65536&&!m->fault;count++,text++){
+        if(!hn_read8(m,text))return !m->fault;
+        if(!hn_read8(m,table))continue;
+        GameAddr entry=table;bool finished=false;
+        for(unsigned i=0;i<65536&&!m->fault;i++,entry+=4){
+            if(hn_read8(m,text)==hn_read8(m,entry)){
+                hn_write16(m,upper,(uint16_t)(attributes|((hn_read32(m,entry)>>8)&1023)));upper+=2;
+                hn_write16(m,lower,(uint16_t)(attributes|((hn_read32(m,entry)>>18)&1023)));lower+=2;
+                finished=true;break;
+            }
+            if(!hn_read8(m,entry+4)){finished=true;break;}
+        }
+        if(!finished)return false;
+    }
+    return false;
+}
+static bool caption(HNMemory *m,GameAddr arguments)
+{
+    unsigned selected=hn_read16(m,0x0201DC40+hn_read8(m,arguments)*2);
+    GameAddr descriptor=0x0858D344+selected*24,created=hn_task_allocate(m);
+    hn_write32(m,CONTEXTS,created);
+    if(!created||!hn_task_graphics(m,created,12,2,255,1,0,3,24,0x06005400,0x0200FF2E))return false;
+    GameAddr text=resource(m,CAPTION_TEXT_BUNDLES,selected);
+    if(text!=HN_TASK_DEFAULT_SCRIPT)text=resource(m,text,control(m,0xEB));
+    uint8_t index=0;bool terminated=false;
+    for(unsigned reads=0;reads<65536&&!m->fault;reads++){
+        uint8_t code=hn_read8(m,text++);hn_write8(m,MESSAGE_TEXT+index,code);
+        if((!index||(hn_read8(m,MESSAGE_TEXT+(unsigned)index-1)==1&&control(m,0xEB)!=3))&&
+           (uint8_t)(code-0x61)<=0x31)hn_write8(m,MESSAGE_TEXT+index,(uint8_t)(code-0x55));
+        if(!hn_read8(m,text)){hn_write8(m,MESSAGE_TEXT+(uint8_t)(index+1),0);terminated=true;break;}
+        index=(uint8_t)(index+1);
+    }
+    if(!terminated||!hn_task_set_script(m,hn_read32(m,CONTEXTS),MESSAGE_TEXT))return false;
+    unsigned value=hn_read8(m,descriptor+7);
+    hn_write8(m,0x03003DCC,(uint8_t)(value/10+2));hn_write8(m,0x03003DCD,(uint8_t)(value%10+2));
+    hn_write8(m,0x03003DCE,0);created=hn_task_allocate(m);hn_write32(m,CONTEXTS+4,created);
+    if(!created||!hn_task_graphics(m,created,2,2,255,1,0,3,24,0x06005C00,0x0200FF4A))return false;
+    return hn_task_set_script(m,hn_read32(m,CONTEXTS+4),0x03003DCC);
+}
 static void hide(HNMemory *m,uint8_t index){hn_write8(m,hn_render_slot(m,index)+0x60,0);}
 static void clear_marker(HNMemory *m,uint8_t index)
 {if(index==hn_read8(m,HN_RENDER_CLASS_FOLLOWER))hn_write8(m,0x03002170,0);hide(m,index);hn_render_set_animation(m,index,0);priority(m,index,0);}
@@ -204,6 +246,13 @@ HNSceneResult hn_record_menu_callback(HNMemory *m,GameAddr callback,GameAddr arg
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x080232C0:hn_write16(m,0x0400001A,8);break;
+    case 0x080232D0:
+        for(unsigned i=1;i<=30;i++)hn_write8(m,COUNTERS+i,10);
+        hn_write16(m,0x0201DC52,256);break;
+    case 0x080232FC:REQUIRE(caption(m,arguments));*consumed=1;break;
+    case 0x08023468:
+        REQUIRE(hn_task_remove(m,hn_read32(m,CONTEXTS+4)));REQUIRE(hn_task_remove(m,hn_read32(m,CONTEXTS)));break;
     case 0x080247A4:REQUIRE(record_message(m,arguments));*consumed=1;break;
     case 0x080C1B84:{
         uint8_t selector=control(m,0xE5);store(m,0xE5,0);
@@ -392,6 +441,8 @@ HNSceneResult hn_record_menu_callback(HNMemory *m,GameAddr callback,GameAddr arg
 HNSceneResult hn_record_menu_task(HNMemory *m,GameAddr callback)
 {
     switch(callback&~1u){
+    case 0x080232C0:case 0x080232D0:case 0x08023468:{
+        uint32_t ignored;return hn_record_menu_callback(m,callback,0,&ignored);}
     case 0x08024988:animation(m,19,0x088D1272);break;
     case 0x0802499C:animation(m,19,0x088D12CF);break;
     case 0x080249B0:hn_write16(m,0x0201DC40+45*2,40);animation(m,19,0x088D1236);break;

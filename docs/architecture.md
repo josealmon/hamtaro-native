@@ -76,11 +76,12 @@ statically. A separate clean-machine validation remains pending.
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Local music and SaveGroup4 support | Adapted | All 29 functions in communication_record_callbacks.c and communication_record_selection.c compared: 28 Main callbacks and one void layout task, plus the prior payload classifier; resource songs/readers, render layout/aliases, affine selection, record numbering/depth, both SRAM copies and local/ROM selection; complete music activity and Cable Link transport remain outside this evidence |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; photo-room entry/exit and greeting run natively; complete activity and save integration remain pending |
-| Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; complete Items/Gems and timed raster integration remain pending |
+| Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; three owned Gems entries and wrap navigation inspected in the SDK; complete Items/Gems and timed raster integration remain pending |
 | Record messages and eligible-item count | Adapted | All 12 game_record_messages.c functions and the save_counter_prefix.s Main51 leaf compared; five-language text, byte-index wrap, live aliases, eleven void animation presets and the excluded final counter byte; the Clubhouse desk's empty-inventory greeting completes in the SDK; populated activity branches remain pending |
 | Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; complete crafting activity coverage remains pending |
 | Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; empty entry/return and a one-item training-seat SDK view/save/reload run; multi-item inventories and complete activity integration remain pending |
 | Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
+| Rock use, counters and captions | Adapted | All 18 functions in game_record_use.c, script_callbacks_game_record_counter.c and record_display.c compared: 15 Main, 14 F4 contracts and two direct helpers; native SDK Rubrub identifies Banana Stone, Crystal and Ammonite, retains partial rocks and enforces the love-meter strength limit; complete crafting and store branches remain pending |
 | Status counters and stage sequence | Adapted | All 13 functions in map10_4_counter_sequence.c compared, including the complete 16-bit counter domain, five tile banks, windows, stage/scroll graphics and sequence phases; nine Main and twelve argument-free task contracts; later-stage live integration remains pending |
 | Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Ham-Chat book | Adapted | Acquisition, learned-word order, five language permutations, category/page selection, paired text contexts, counters, markers and cleanup compared; initial book display and return run natively; manual book navigation remains unverified |
@@ -344,8 +345,26 @@ checkpoints remain unchanged. The expanded 153,436-update, 32-checkpoint SDK
 replay passes in 291.86 seconds. The full host stream passes 160,567 checks in
 279.29 seconds. SDK, host and scout match all 32 KiB; a separate 2,103-update
 SDK reload/Status inspection passes in 2.679 seconds. Both earlier source saves
-remain unchanged. The newly collected rocks are not yet identified or polished;
-populated record-desk branches and other optional content remain pending.
+remain unchanged. At that stage the newly collected rocks are still unidentified.
+
+The latest extension enters Rubrub with those eight records and identifies a
+Banana Stone, then the bath's Crystal and Ammonite. The populated selector checks
+its first-record boundary and forward navigation. A further rock retains its
+three partial polishes; the next attempt is rejected at the current love-meter
+strength without consuming it. The exit summary, owned Gems panel, wrap to Crystal,
+Ammonite/Banana Stone entries and return to the same scene complete normally.
+Original Save/Continue retains map 1:4 at x=80.5, z=80.5, 64 words, 12 seeds,
+five rocks, ten loves and Bijou, with both songs and the prior ending/key retained.
+All 153,436 prior updates and 32 checkpoints remain unchanged. The expanded
+177,048-update, 48-checkpoint SDK replay passes in 296.31 seconds. The same full
+host stream passes 184,866 checks in 300.02 seconds. SDK, host and scout match
+all 32 KiB. A separate 2,103-update SDK reload/Status inspection passes in 2.826
+seconds and reads the three gem counters and eight packed record counts: each
+gem is retained once, the partial rock has one polish remaining and the four
+untouched rocks retain four each. Earlier source profiles remain unchanged.
+The five remaining rocks need a higher love-meter strength; other optional
+activities, 22 words, populated crafting/store branches and full desktop
+progression remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -1232,8 +1251,8 @@ comparisons. It preserves the high selection bit, special lower row, flag-253
 cursor variants, before/after entry flags, byte-wrapped coordinates and original
 removal animation. The detail builder deliberately retains both original task
 allocations for a populated entry and one for an empty entry; it normalizes the
-first character and characters after line breaks with the original Japanese
-exception. Its static guest text buffer does not need pointer relocation.
+first character and characters after spaces with the original French
+capitalization exception. Its static guest text buffer does not need pointer relocation.
 A native End Game save made in the photo room is also restored by a separate
 Windows application process. Its status screen retains 21 words, ten seeds and
 one rescued love; this does not establish complete photo activity progression.
@@ -1272,6 +1291,27 @@ and strings that do not terminate within 65,536 reads stop explicitly.
 The assembly counter-prefix leaf has a separate Main51 binding: it reads 32
 counter bytes, excludes index 31 and values zero/255, and writes control 0x60.
 Its original R0 result is unused by Main51; it is not an ordinary Main callback.
+
+records.c also contains the complete ten-function game_record_use.c family and
+the three game-record counter callbacks. They retain packed-slot scans, signed
+selection/sentinel behavior, the shared halfword result store, original accumulator
+categories, eight-bit counts, localized text casing, decompression and queued
+tile/palette transfers. The three counter callbacks preserve the independent
+second occupied-record count and leave old animation fields intact when empty.
+record_menu.c contains all five record_display.c functions: two linked caption
+contexts, byte-wrapped title copying, decimal digits, counter defaults, BG2 offset
+and the packed tile-pair helper. The latter reloads the text and descriptor after
+overlapping writes and masks the original four palette bits.
+
+When ConsumeGameRecord rejects its comparison, the source leaves its local
+result unwritten but copies two bytes from it into controls 0x2C/0x2D. The adapter
+initializes that local to zero, returns the original failure result and consumes
+nothing. Comparisons supply the corresponding zeroed inactive ARM stack; they do
+not establish arbitrary stack-history identity. A normal SDK rejection also
+preserves the selected rock and reports the need for a higher love meter.
+An empty remaining-graphics query, an out-of-range local class-word index and
+nonterminating text/tile-pair input stop explicitly rather than using indeterminate
+source locals or hanging the host.
 
 The shared strided-transfer family uses the original halfword-normalized width,
 row count and stride, forward BIOS halfword copies, cleared heap allocation and

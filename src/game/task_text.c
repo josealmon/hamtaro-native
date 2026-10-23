@@ -216,6 +216,7 @@ static bool task_callback(HNMemory *m,GameAddr callback)
         result=hn_group3_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_group4_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_record_menu_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
+        result=hn_records_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_counter_scene_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_scene_actor_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_bank2_apply(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;

@@ -2,8 +2,9 @@
 #include "game/input.h"
 #include <iostream>
 #include <stdexcept>
+#include <string>
 static int checks=0;
-#define CHECK(c) do { checks++; if(!(c))throw std::runtime_error("Check failed: " #c); }while(0)
+#define CHECK(c) do { checks++; if(!(c))throw std::runtime_error("Check failed at line "+std::to_string(__LINE__)+": " #c); }while(0)
 static void pump(hn::Input &input){SDL_Event e;SDL_PumpEvents();while(SDL_PollEvent(&e))input.event(e);}
 static void key(hn::Input &input,SDL_Scancode code,bool down)
 {
@@ -15,6 +16,8 @@ int main()
         CHECK(SDL_Init(SDL_INIT_GAMEPAD|SDL_INIT_EVENTS));
         {
             hn::Input input;auto settings=hn::Settings::defaults();
+            // Connected controllers must not influence the generated keyboard checks.
+            input.select(0);CHECK(input.active()==nullptr);
             key(input,SDL_SCANCODE_Z,true);CHECK(input.buttons(settings)&HN_A);
             key(input,SDL_SCANCODE_Z,false);CHECK(!(input.buttons(settings)&HN_A));
             CHECK(input.sample(settings)&HN_A);CHECK(!input.sample(settings));

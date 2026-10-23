@@ -7,6 +7,7 @@ extern "C" {
 HNSceneResult hn_record_menu_callback(HNMemory *,GameAddr callback,GameAddr arguments,uint32_t *consumed);
 HNSceneResult hn_record_menu_task(HNMemory *,GameAddr callback);
 bool hn_record_menu_load_list(HNMemory *);
+bool hn_record_tile_pairs(HNMemory *,GameAddr text,GameAddr table,GameAddr upper,GameAddr lower,uint32_t palette);
 #ifdef __cplusplus
 }
 #endif

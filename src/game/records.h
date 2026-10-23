@@ -10,7 +10,9 @@ int32_t hn_record_query(HNMemory *,uint8_t index,GameAddr result);
 int32_t hn_record_consume(HNMemory *,uint16_t index,uint8_t comparison,GameAddr result);
 uint32_t hn_record_adjust_counter(HNMemory *,uint8_t index,int32_t delta);
 uint8_t hn_record_counter(HNMemory *,uint8_t index);
+bool hn_record_accumulate(HNMemory *,GameAddr entries,GameAddr data,uint8_t kind,uint8_t index);
 HNSceneResult hn_records_callback(HNMemory *,GameAddr callback,GameAddr arguments,uint32_t *consumed);
+HNSceneResult hn_records_task(HNMemory *,GameAddr callback);
 #ifdef __cplusplus
 }
 #endif

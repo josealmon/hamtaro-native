@@ -59,6 +59,10 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
 - input: injected keyboard events and a local SDL virtual gamepad. Covers hotplug,
   deadzone, diagonals, opposite-direction cancellation, remapping, disconnect and
   one-update delivery of taps pressed/released between game updates.
+  Generated keyboard checks explicitly deselect connected devices; the gamepad
+  portion selects its virtual device. Held hardware input cannot contaminate
+  these checks. The production input code is unchanged; physical models remain
+  a separate validation requirement.
 - session: invalid-ROM rejection without file writes. With a private ROM argument,
   verifies initialization persistence, failed-write retry, retained backups and
   rejection of partially modified SRAM after a native runtime fault.
@@ -72,14 +76,14 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 4,508,671 checks in 723.333 seconds. It retains
-all 4,446,989 preceding cases and adds 61,682 record-message/counter-prefix comparisons.
+The latest complete suite passes 4,616,757 checks in 680.377 seconds. It retains
+all 4,508,671 preceding cases and adds 108,086 record-use/counter/caption comparisons.
 The preceding 66,963 local music/record comparisons, 61,195 six/eight-choice room checks and 71,722 unassigned-I/O
 collision checks, including even/odd register boundaries and every render count,
 remain enabled.
 Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
 enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
-11 CTest suites pass, including 17,319 game checks. Story replays ran concurrently,
+11 CTest suites pass, including 17,345 game and 34 keyboard/gamepad checks. Story replays ran concurrently,
 so these are local observations, not portable performance guarantees.
 Earlier optimization reduced the same 4,200,342-check suite from approximately
 1,238 seconds (log timestamps) to 678.102 seconds without reducing coverage.
@@ -351,20 +355,29 @@ Tran-Q and Hamtast increase the dictionary to 64 words. The route obtains all
 Panda's materials, completes his bridge and collects the Rainbow Key. It then
 obtains Condor's Wings and Great Springs, digs two additional rocks in Seedric's
 sand bath and completes the Clubhouse record desk's empty-inventory greeting.
-All 125,864 prior updates and 24 checkpoints remain unchanged; the expanded
-153,436-update route has 32 checkpoints and passes the SDK in 291.86 seconds.
-Original Save/Continue retains map 1:6 at x=96.5, z=64.5, 64 words, 12 seeds,
-eight rocks, ten loves and Bijou. The final checkpoint includes both song flags,
-the desk greeting, bridge completion, Rainbow Key and original ending flag.
-The same full input stream passes 160,567 host-session checks in 279.29 seconds.
-SDK, host and scout match all 32 KiB; a fresh 2,103-update SDK reload and Status
-inspection passes in 2.679 seconds. The earlier ending and bridge saves remain
-unchanged. Only normal inputs and scalar expectations are stored in the scenario.
+The extension identifies Banana Stone, Crystal and Ammonite through Rubrub,
+retains three partial polishes and checks that the strength limit does not consume
+the selected rock. It completes the result summary and inspects all three owned
+Gems entries, including wrap navigation and return to the same scene.
+All 153,436 prior updates and 32 checkpoints remain unchanged; the expanded
+177,048-update route has 48 checkpoints and passes the SDK in 296.31 seconds.
+Original Save/Continue retains map 1:4 at x=80.5, z=80.5, 64 words, 12 seeds,
+five rocks, ten loves and Bijou. The final checkpoint includes both song flags,
+the Rubrub visit, bridge completion, Rainbow Key and original ending flag.
+The full host stream passes 184,866 checks in 300.02 seconds, and all 32 KiB
+match SDK, host and scout. A separate 2,103-update SDK reload/Status inspection
+passes in 2.826 seconds. It also reads the original collection counters
+23/27/30 as one each, counter 10 as still undiscovered, and all eight packed
+record counts: the consumed records stay empty, the partial rock retains one
+polish and the four untouched rocks retain four each. Earlier source profiles
+remain unchanged.
+Only normal inputs and scalar expectations are stored in the scenario.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --save PATH_TO_PRIVATE_POSTGAME_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_OPTIONAL_PROFILE
 
-The other 22 words, rock identification/polishing, populated record-desk branches,
-remaining activities and the complete desktop playthrough remain unverified.
+The other 22 words, the higher love meter needed for the remaining rocks,
+populated crafting/store branches, other activities and the complete desktop
+playthrough remain unverified.
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
@@ -863,7 +876,7 @@ Additional focused area-dependency checks use:
     python -B tools/compare_reference.py --counter-scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
 These pass 51,514 scene actor comparisons, 95,870 actor preset comparisons,
-120,391 record/local-SaveGroup4 comparisons and 16,497 scanline-wave comparisons. The scene group
+228,477 record/local-SaveGroup4 comparisons and 16,497 scanline-wave comparisons. The scene group
 covers 45 functions across 16 families and one shared bank-3 condition, including
 approach completion, signed limits, all ARM shift counts, direction constructors,
 snapshots, copy aliases and the three-byte render-selection Main callback. Its
@@ -903,8 +916,23 @@ bundles, special initials, default scripts, wrapped output indices, source/outpu
 and live-argument aliases, eleven void presets, follower gates, timers and actual
 Main/F4 dispatch. The assembly leaf covers every byte value at all 32 positions,
 including the read-but-excluded final byte; ordinary Main dispatch rejects it.
-Undefined message selectors fail explicitly. The combined 120,391 checks pass in
-8.333 seconds; all prior record comparisons remain enabled.
+Undefined message selectors fail explicitly. That 120,391-check portion remains
+enabled; its earlier focused run took 8.333 seconds.
+
+The record group adds 108,086 comparisons for the complete 18-function consume,
+navigation, counter and caption families. Cases cover all sixty original record
+descriptors and five languages, exhausted/partial/forced consumption, accumulator
+insertion/full tables/count wraps, the original catalog's graphics, signed navigation
+and sentinels, every occupancy count, all 81 caption bundles, wrapped titles,
+two-context removal, packed tile pairs and live output aliases. Typed Main/F4
+commands run the callbacks and reject inappropriate argument-dependent or void
+contracts. The full focused group passes 228,477 checks in 13.872 seconds.
+All EWRAM, game IWRAM, palette and VRAM are compared. I/O comparison excludes
+only the synchronous fill-DMA source address, which points at a transient ARM
+stack word; destination/control remain checked, as in the existing task tests.
+Rejected consumption uses the explicit zero-initialized local described in
+architecture.md. The original ROM file is unchanged; synthetic kind/index cases
+modify and restore only the two private in-memory engine fixtures.
 
 Wave checks cover
 all 228 scanlines, blend thresholds, signed wrapping, frame-end phase updates and

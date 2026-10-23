@@ -111,6 +111,189 @@ def check_record_counter_prefix(*,entries,memory,bind,call,both,fresh,equal,comp
     print('Counter-prefix Main51 leaf matched all 32 positions and all 256 byte values; index 31 remains excluded.')
 
 
+def check_record_use(*,entries,rom,rom_buffer,cpu,memory,bind,call,both,fresh,equal,compare,command):
+    """Complete consume/navigation, counter and caption families, with ROM data private."""
+    from unicorn.arm_const import UC_ARM_REG_SP
+    families={'src/save/game_record_use.c':10,'src/scripts/script_callbacks_game_record_counter.c':3,'src/text/record_display.c':5}
+    rows=[r for r in entries if r['source'] in families];names={r['name']:r for r in rows}
+    equal({s:sum(r['source']==s for r in rows) for s in families},families,'all eighteen record-use/counter/caption functions')
+    u=C.c_uint32;main=bind('hn_scene_callback',C.c_int,C.c_void_p,u,u,C.POINTER(u))
+    record_task=bind('hn_records_task',C.c_int,C.c_void_p,u);menu_task=bind('hn_record_menu_task',C.c_int,C.c_void_p,u)
+    accumulate=bind('hn_record_accumulate',C.c_bool,C.c_void_p,u,u,C.c_uint8,C.c_uint8)
+    pairs=bind('hn_record_tile_pairs',C.c_bool,C.c_void_p,u,u,u,u,u)
+    heap=bind('hn_heap_init',None,C.c_void_p);contexts=bind('hn_task_contexts_init',None,C.c_void_p)
+    task_command=bind('hn_probe_task_command',C.c_int,C.c_void_p,u,C.c_uint,C.POINTER(u))
+    rng=random.Random(0x524543555345);args=0x0203F001;controls=0x02004520;classes=0x0201DC40
+    slots=0x0201CB20;acc=0x02026000;text=0x03003CE0;out=0x03003B00
+    # Synchronous fill DMA uses a temporary ARM stack word as source. Its
+    # address is transient; retain destination/control checks as in task_checks.
+    ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x04000000,0xD4),(0x040000D8,0x28),(0x05000000,0x400),(0x06000000,0x18000))
+    def byte(a,v):both(a,bytes([v&255]))
+    def half(a,v):both(a,struct.pack('<H',v&65535))
+    def word(a,v):both(a,struct.pack('<I',v&0xFFFFFFFF))
+    def fixture():
+        fresh();both(0x02000000,rom[0x8FE018:0x900EC8]);heap(memory);call('InitializeHeap',0)
+        contexts(memory);call('InitializeTaskContexts')
+        both(controls,rng.randbytes(512));both(classes,rng.randbytes(512));both(slots,bytes(256))
+        both(0x0201CC20,rng.randbytes(256));both(0x02008000,rng.randbytes(256*104));word(0x03002D98,0x02008000)
+        byte(0x03002DC0,255);byte(0x03001F50,2);word(0x03002BB4,acc)
+        both(text,rng.randbytes(64));both(out-8,rng.randbytes(544));byte(controls+0xEB,0)
+        # Source stack locals are not serialized game state. The rejected-consume
+        # result is unwritten; compare the adapter's explicit zero initialization.
+        cpu.mem_write(cpu.reg_read(UC_ARM_REG_SP)-256,bytes(256))
+    def exercise(name,argument=args,vm=False):
+        row=names[name]
+        if vm:
+            both(argument,struct.pack('<I',row['address']|1)+b'\0\0');byte(0x03000010,0x1C)
+            equal(command(memory,0x1C,argument),1,'record-use actual Main')
+            call('MainScriptInvokeCallback',argument,limit=2000000)
+        else:
+            consumed=u(99);equal(main(memory,row['address']|1,argument,C.byref(consumed)),1,'record-use Main '+name)
+            equal(consumed.value,call(name,argument,limit=2000000),'record-use consumed '+name)
+        compare(name,ranges)
+    nav=('ScriptCallbackSelectNextGameRecord','ScriptCallbackSelectPreviousGameRecord','ScriptCallbackSelectCurrentOrNextGameRecord','ScriptCallbackSelectLastGameRecord')
+    for name in nav:
+        for selected in (-2,-1,*range(66),127,255,32767):
+            for pattern in range(5):
+                if name=='ScriptCallbackSelectNextGameRecord' and selected==32767:continue # wraps to unmapped negative slot
+                fixture();half(classes+66,selected)
+                for i in range(64):half(slots+i*4,(i%60)|((1 if pattern==1 or pattern==2 and i==0 or pattern==3 and i==63 or pattern==4 and i%7==0 else 0)<<7))
+                exercise(name)
+    for selected in range(65):
+        for name in ('ScriptCallbackInitializeGameRecordCounter','ScriptCallbackShowGameRecordCounter','ScriptCallbackPrepareGameRecordRemoval'):
+            fixture()
+            for i in range(selected):half(slots+i*4,(i%60)|128)
+            exercise(name)
+    # Accumulator insertion, match before vacancy, full table and byte overflow.
+    for position in (0,1,31,63,64):
+        for kind in (0,1,2,3,255):
+            for index in (0,1,6,255):
+                fixture();both(acc,struct.pack('<IBBBB',0x02030000,254,254,254,0xA5)*64)
+                if position<64:word(acc+position*8,0)
+                equal(accumulate(memory,acc,0x02031000,kind,index),True,'accumulator insertion/full')
+                call('AccumulateGameRecordEntry',acc,0x02031000,kind,index);compare('accumulator insertion/full',ranges)
+    for kind,index in ((0,6),(0,2),(2,10)):
+        for count in range(256):
+            fixture();both(acc,struct.pack('<IBBBB',0x02030000,kind,index,count,0xA5))
+            equal(accumulate(memory,acc,0,kind,index),True,'accumulator count wrap')
+            call('AccumulateGameRecordEntry',acc,0,kind,index);compare('accumulator count wrap',ranges)
+    def setup_consume(key,count,comparison,language,forced=0):
+        fixture();half(classes+66,0);half(slots,key|(count<<7));byte(classes+24,comparison-1)
+        byte(controls+0xEB,language);byte(0x030021B2,forced<<1)
+        descriptor=struct.unpack_from('<H',rom,0x58CFE8+key*4)[0]
+        byte(0x0201CC20+((descriptor>>2)&127),(0,1,127,128,254,255)[(key+count)%6])
+    for key in range(60):
+        maximum=struct.unpack_from('<H',rom,0x58CFE8+key*4)[0]>>11
+        for language in range(5):
+            for count in sorted({0,1,maximum,31}):
+                for comparison in sorted({0,1,maximum,maximum+1,255}):
+                    for forced in (0,1):
+                        setup_consume(key,count,comparison,language,forced);exercise('ScriptCallbackConsumeSelectedGameRecord')
+    # Kind 1 and the other material indices are valid helper contracts but have
+    # no corresponding descriptor in the original 60-slot catalog. Change only
+    # the in-memory private ROM fixture, then restore both engines exactly.
+    descriptor_address=0x0858CFE8;original=rom[0x58CFE8:0x58CFEC]
+    try:
+        for kind,index in ((0,1),(0,3),(0,4),(0,5),(1,1),(1,31),(3,1)):
+            patch=struct.pack('<I',kind|(index<<2)|(1<<11))
+            C.memmove(C.addressof(rom_buffer)+0x58CFE8,patch,4);cpu.mem_write(descriptor_address,patch)
+            for language in range(5):
+                setup_consume(0,1,2,language,1);exercise('ScriptCallbackConsumeSelectedGameRecord')
+    finally:
+        C.memmove(C.addressof(rom_buffer)+0x58CFE8,original,4);cpu.mem_write(descriptor_address,original)
+    equal(C.string_at(C.addressof(rom_buffer)+0x58CFE8,4),original,'native private descriptor restored')
+    equal(bytes(cpu.mem_read(descriptor_address,4)),original,'reference private descriptor restored')
+    for key in range(60):
+        maximum=struct.unpack_from('<H',rom,0x58CFE8+key*4)[0]>>11
+        for count in range(1,maximum+1):
+            fixture();half(classes+66,0);half(slots,key|count<<7);exercise('ScriptCallbackQueueRemainingGameRecordGraphics')
+    # All real rendering kinds/indices, using only the player's resource banks.
+    for kind,count in ((0,6),(1,1),(2,30),(3,2)):
+        for index in range(1,count+1):
+            fixture();byte(controls+0x2C,kind);byte(controls+0x2D,index);exercise('ScriptCallbackQueueSelectedGameRecordGraphics')
+    for language in range(5):
+        for category in range(4):
+            for kind,index in ((0,2),(0,6),(1,1),(2,1),(2,30),(3,2)):
+                for count in (1,2,10,255):
+                    fixture();byte(controls+0xEB,language);byte(controls+0x70,category);half(args,0x70)
+                    both(acc+category*512,struct.pack('<IBBBB',0x02030000,kind,index,count,0xA5))
+                    exercise('ScriptCallbackPresentNextAccumulatedGameRecord')
+    # Every selector whose initial entry is mapped in this isolated RAM oracle.
+    # Larger values point into EWRAM mirrors, outside this function-level map.
+    for category in range(208):
+        fixture();byte(acc+category*512+5,0);byte(controls+0x70,category);half(args,0x70)
+        exercise('ScriptCallbackPresentNextAccumulatedGameRecord')
+    for skipped in (1,31,63,64):
+        fixture();byte(controls+0x70,0);half(args,0x70)
+        both(acc,struct.pack('<IBBBB',0x02030000,0,255,1,0)*skipped)
+        both(acc+skipped*8,struct.pack('<IBBBB',0x02030000,0,2,10,0));exercise('ScriptCallbackPresentNextAccumulatedGameRecord')
+    for selected in range(81):
+        for language in range(5):
+            fixture();byte(args,33);half(classes+66,selected);byte(controls+0xEB,language)
+            exercise('ScriptCallbackCreateRecordCaption');exercise('ScriptCallbackRemoveRecordCaption')
+    for length in (0,1,31,32,254,255,256,257,511):
+        for language in range(5):
+            fixture();byte(args,33);half(classes+66,7);byte(controls+0xEB,language)
+            word(0x02000FC0+7*4,0x02018000);both(0x02018000,struct.pack('<I',0x02019000)*5)
+            both(0x02019000,(b'\x61\x01\x92'*171)[:length]+b'\0')
+            exercise('ScriptCallbackCreateRecordCaption');exercise('ScriptCallbackRemoveRecordCaption')
+    for name in ('SetBG2VerticalOffset8','InitializeRecordCounterDefaults'):
+        fixture();exercise(name)
+    # Generated tile-pair data; reload text/entry fields after overlapping writes.
+    for case in range(128):
+        fixture();table=0x02012000;input_address=0x02012200;upper=0x02012400;lower=0x02012500
+        both(table,b''.join(struct.pack('<I',code|(rng.randrange(1024)<<8)|(rng.randrange(1024)<<18)) for code in range(2,34))+bytes(4))
+        both(input_address,bytes([2,0xFF,3,4,33,2,0])+bytes(512))
+        if case%7==1:upper=input_address
+        if case%7==2:lower=upper
+        if case%7==3:upper=table
+        if case%7==4:lower=table+2
+        if case%7==5:byte(table,0)
+        if case%7==6:lower=input_address+2
+        palette=(0,1,15,16,255,0xFFFFFFFF)[case%6]
+        if case%7 in (1,6):
+            # Keep a terminating high byte when output overwrites the source.
+            # Arbitrary nonzero tile/palette bytes can otherwise feed this
+            # original loop indefinitely, which is not a returning contract.
+            palette=0
+            both(table,b''.join(struct.pack('<I',code|(rng.randrange(256)<<8)|(rng.randrange(256)<<18)) for code in range(2,34))+bytes(4))
+        equal(pairs(memory,input_address,table,upper,lower,palette),True,'tile-pair native helper '+str(case))
+        call('WriteTextTilePairs',input_address,table,upper,lower,palette,limit=2000000);compare('tile pairs, live aliases and palette mask',ranges)
+    main_only={'ScriptCallbackCreateRecordCaption','ScriptCallbackPresentNextAccumulatedGameRecord'}
+    helpers={'AccumulateGameRecordEntry','WriteTextTilePairs'}
+    def task(address):
+        result=record_task(memory,address)
+        return menu_task(memory,address) if result==0 else result
+    for name,row in names.items():
+        if name in helpers:continue
+        if name in main_only:
+            fixture();equal(task(row['address']|1),0,'argument-dependent record callback rejects F4');continue
+        fixture()
+        if name in nav:half(classes+66,0)
+        if name=='ScriptCallbackConsumeSelectedGameRecord':half(slots,54|128);half(classes+66,0);byte(classes+24,1)
+        elif name=='ScriptCallbackQueueSelectedGameRecordGraphics':byte(controls+0x2C,2);byte(controls+0x2D,1)
+        elif name=='ScriptCallbackQueueRemainingGameRecordGraphics':half(slots,128);half(classes+66,0)
+        elif name=='ScriptCallbackRemoveRecordCaption':byte(args,33);half(classes+66,0);exercise('ScriptCallbackCreateRecordCaption')
+        equal(task(row['address']|1),1,'record function typed void '+name)
+        call(name,0x12345678,limit=2000000);compare('record function void ABI '+name,ranges)
+        both(0x0201F000,bytes(52));word(0x0201F010,args);both(args,b'\x01\xE1');word(0x03001FC4,row['address']|1)
+        if name=='ScriptCallbackRemoveRecordCaption':byte(0x0201F080,33);exercise('ScriptCallbackCreateRecordCaption',0x0201F080)
+        report=(u*4)();equal(task_command(memory,0x0201F000,0xF4,report),1,'record actual F4 '+name)
+        equal(report[3],call('TaskCommandF4',0x0201F000,limit=2000000),'record F4 continuation');compare('record F4 '+name,ranges)
+    for name in names:
+        if name in helpers or name=='GameRecordInitializationNoop':continue
+        fixture();half(classes,0);half(classes+66,0);byte(controls,0)
+        if name=='ScriptCallbackConsumeSelectedGameRecord':half(slots,54|128);byte(classes+24,1)
+        elif name=='ScriptCallbackQueueSelectedGameRecordGraphics':byte(controls+0x2C,2);byte(controls+0x2D,1)
+        elif name=='ScriptCallbackQueueRemainingGameRecordGraphics':half(slots,128)
+        elif name=='ScriptCallbackRemoveRecordCaption':byte(args,33);exercise('ScriptCallbackCreateRecordCaption')
+        exercise(name,vm=True)
+    fixture();consumed=u(99);equal(main(memory,0x08023265,args,C.byref(consumed)),0,'void initialization noop rejected by Main')
+    fixture();half(classes+66,0)
+    equal(main(memory,0x080231B1,args,C.byref(consumed)),2,'empty remaining-graphics result has no defined source local')
+    print('All 18 record-use/counter/caption functions matched: complete real descriptors/languages, packed records, accumulation, graphics, task lifetime, tile aliases and typed Main/F4. Failed-consume undefined bytes use explicit zero; empty remaining-graphics input remains invalid.')
+
+
 def check_group4(*,entries,rom,memory,bind,call,both,fresh,equal,compare):
     """Shared offline save-group-4 operations used by the music hall.
 
