@@ -53,7 +53,7 @@ int main(int argc,char **argv)
             CHECK(session.frame(paths,0));CHECK(game->sample_frames>=548&&game->sample_frames<=549);
             /* A failed frame's partial SRAM must not replace the preceding committed snapshot. */
             hn_write8(&game->memory,0x0E007FFE,0x31);
-            hn_write16(&game->memory,0x04000200,4);hn_write16(&game->memory,0x04000208,1);game->memory.io[0x202]=4;
+            hn_write16(&game->memory,0x04000200,8);hn_write16(&game->memory,0x04000208,1);game->memory.io[0x202]=8;
             CHECK(!session.frame(paths,0)&&game->fault==HN_GAME_IRQ);
             CHECK(!session.save_pending()&&hn::load_save(paths)==committed);
             session.stop(paths);CHECK(!session.present()&&hn::load_save(paths)==committed);

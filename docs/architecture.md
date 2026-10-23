@@ -38,8 +38,8 @@ statically. A separate clean-machine validation remains pending.
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session retains twenty-one words, ten seeds, Bijou and one rescued love in the Clubhouse; actual-window End Game preserves its previous backup, and closing/relaunching the executable restores the same scene and counters |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division, integer square root, ObjAffine and native angular math; 37,009 angular cases compared with mGBA; square root checked throughout the 16-bit domain and at 32-bit boundaries; hardware conformance remains unverified |
-| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 30 private ROM snapshots compared, including directional movement; raster timing still pending |
-| Video timing and IRQ | Foundation | Scanline/VBlank/HBlank, timers, IRQ flags, FIFO DMA and native VBlank service connected; 9,000 clocked native updates completed; full-machine cadence and DMA bus contention remain unverified |
+| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 30 private ROM snapshots compared, including directional movement; nine clocked VCOUNT frames match independent PPU bands; remaining raster timing pending |
+| Video timing and IRQ | Foundation | Scanline/VBlank/HBlank/VCOUNT, timers, IRQ flags, FIFO DMA and native IRQ services connected; 9,000 clocked native updates completed; coincident VBlank/HBlank/VCOUNT priority checked; full-machine cadence and DMA bus contention remain unverified |
 | Native game helpers | Adapted | Original guest input layout, directions/repeat/query semantics and integer PRNG/ranges compared; host controls and per-frame PRNG connected |
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |
 | Video state and transfer queues | Adapted | Original video shadows, mosaic/blend/fade updates, DMA queue wrap/fill/flush; private function comparisons |
@@ -47,6 +47,7 @@ statically. A separate clean-machine validation remains pending.
 | Objects and animation scripts | Partial | Physics, positions, priority ordering, affine reuse, OAM and animation/sound commands compared; animation callback bindings remain incomplete |
 | Background scripts and transforms | Adapted | All 61 command handlers, repeat/call flow, motion, clamping, affine layers and tilemap copies compared; invalid stacks/resources fail explicitly |
 | Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular and wave HBlank callbacks compared, remaining scanline callbacks and timed DMA/PPU integration pending |
+| VCOUNT blend and counter modes | Adapted | Ten connected functions compared, including complete blend/increment families, byte selectors/scanlines, 16-bit status/counter domains and five Main/F4 contracts; original pending bits, transition phase and live callback table retained; nine clocked frames match independent PPU bands at line 104; complete bank-9 list activity and original CPU timing remain pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
 | Scene actor snapshots | Adapted | Four 104-byte render snapshots and six modal map roundtrips compared, including a hidden primary actor during Bijou-only play; byte-wrapped idle animation selectors, optional slots and script cursor retention preserved |
@@ -394,12 +395,14 @@ Save/Continue returns to map 9:1 at x=104.5, z=96.5 with 65 words, two seeds,
 five rocks, eleven loves and Bijou. The three spent gem counters remain zero;
 Crystal remains one and the undiscovered counter remains 255. All earlier
 49,102 updates and eleven checkpoints remain in the expanded chapter. The full
-102,283-update chapter passes twenty SDK checkpoints in 184.14 seconds and
-107,506 host-session checks in 186.82 seconds. All 32 KiB of SDK, host and scout
-SRAM match; a fresh SDK reload and Status inspection pass in 2.876 seconds and
+102,283-update chapter passes twenty SDK checkpoints in 265.29 seconds and
+107,506 host-session checks in 271.68 seconds after the VCOUNT changes. All 32 KiB
+of SDK, host and scout SRAM match; a fresh SDK reload and Status inspection pass in 3.163 seconds and
 retain the checked flags, counters and rock slots. The source profiles remain
-unchanged. No native functional sources changed. Manual crafting, the other
-twenty-one words, the full love meter and full desktop progression remain pending.
+unchanged. All 65 learned identifiers are unique and match their learned flags;
+none required by the Sunny Peak destination indicator is missing. Manual crafting,
+the other twenty-one words, the full love meter and full desktop progression
+remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

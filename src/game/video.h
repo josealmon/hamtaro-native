@@ -10,6 +10,7 @@ void hn_video_set_layers(HNMemory *,uint8_t enabled,uint8_t mask);
 void hn_video_forced_blank(HNMemory *,int32_t blank);
 void hn_video_mark_backgrounds(HNMemory *,uint8_t mask);
 void hn_video_hblank(HNMemory *,uint32_t selector);
+void hn_video_vcount(HNMemory *,uint8_t selector,uint8_t scanline);
 void hn_video_blend_effect(HNMemory *,uint32_t effect);
 void hn_video_blend_targets(HNMemory *,uint8_t first,uint8_t second);
 void hn_video_blend_coefficients(HNMemory *,uint8_t first,uint8_t second,uint8_t brightness);

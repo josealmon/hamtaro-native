@@ -19,6 +19,12 @@ HNGame *hn_probe_game_create(const uint8_t *rom,size_t size,const uint8_t *sram)
 }
 void hn_probe_game_destroy(HNGame *g){free(g);}
 int hn_probe_game_frame(HNGame *g,uint16_t buttons){return hn_game_frame(g,buttons);}
+int hn_probe_game_advance(HNGame *g,uint32_t cycles)
+{
+    if(!g->initialized||g->fault||cycles>HN_CYCLES_PER_FRAME)return 0;
+    /* Isolated hardware interval, without Main; PCM belongs to this interval. */
+    g->sample_frames=0;hn_clock_advance(&g->clock,&g->memory,cycles);return !g->fault;
+}
 HNMemory *hn_probe_game_memory(HNGame *g){return &g->memory;}
 const uint32_t *hn_probe_game_pixels(const HNGame *g){return g->pixels;}
 const int16_t *hn_probe_game_samples(const HNGame *g){return g->samples;}

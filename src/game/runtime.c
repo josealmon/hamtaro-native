@@ -57,11 +57,20 @@ static void interrupt(void *context,uint16_t pending)
             hn_write16(m,0x03007FF8,hn_read16(m,0x03007FF8)|1);
         }
     }
+    /* The ARM dispatcher prioritizes VBlank, HBlank, then VCOUNT. A preceding
+       handler may mask an IRQ or acknowledge its pending bit. */
+    pending=hn_read16(m,0x04000200)&hn_read16(m,0x04000202);
     if((pending&2)&&!g->fault){
         hn_write16(m,0x04000202,2);
         if(!hn_raster_hblank(m))fail(g,HN_GAME_IRQ,0,2,hn_read8(m,HN_HBLANK_SELECTOR));
     }
-    if((pending&~3u)&&!g->fault)fail(g,HN_GAME_IRQ,0,pending&~3u,0x04000202);
+    pending=hn_read16(m,0x04000200)&hn_read16(m,0x04000202);
+    if((pending&4)&&!g->fault){
+        hn_write16(m,0x04000202,4);
+        if(!hn_raster_vcount(m))fail(g,HN_GAME_IRQ,0,4,hn_read8(m,HN_VCOUNT_SELECTOR));
+    }
+    pending=hn_read16(m,0x04000200)&hn_read16(m,0x04000202);
+    if((pending&~7u)&&!g->fault)fail(g,HN_GAME_IRQ,0,pending&~7u,0x04000202);
     hn_write16(m,0x04000208,(uint16_t)master);
     if(m->fault)fail(g,HN_GAME_MEMORY,0,0,m->fault_address);
 }

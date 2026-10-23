@@ -46,6 +46,8 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   explicit faults for cyclic or unsupported commands.
   Raster tests cover allocation clearing/replacement, window sweeps and layer/DMA
   cleanup, radius arithmetic, circular HBlank phase/termination and unknown IRQ targets.
+  VCOUNT tests cover exact line-104/frame-wrap transitions, pending IRQ delivery
+  after re-enabling, counter wrap, zero/unknown handlers and original pending bits.
 - audio: synthetic driver/player setup, parameters and fades, linked-channel
   release, typed sequence dispatch, note allocation, complete synthetic track
   progression, PCM interpolation/end/reverb behavior, PSG wave-register writes,
@@ -76,14 +78,16 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 4,616,757 checks in 680.377 seconds. It retains
-all 4,508,671 preceding cases and adds 108,086 record-use/counter/caption comparisons.
+The latest complete suite passes 5,356,967 checks in 814.843 seconds. It retains
+all 4,616,757 preceding cases and adds 740,210 VCOUNT comparisons, including the
+independent timed pixel checks. Every other named phase retains its previous
+assertion count.
 The preceding 66,963 local music/record comparisons, 61,195 six/eight-choice room checks and 71,722 unassigned-I/O
 collision checks, including even/odd register boundaries and every render count,
 remain enabled.
 Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
 enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
-11 CTest suites pass, including 17,345 game and 34 keyboard/gamepad checks. Story replays ran concurrently,
+11 CTest suites pass, including 17,349 game, 503 graphics and 34 keyboard/gamepad checks. Story replays ran concurrently,
 so these are local observations, not portable performance guarantees.
 Earlier optimization reduced the same 4,200,342-check suite from approximately
 1,238 seconds (log timestamps) to 678.102 seconds without reducing coverage.
@@ -414,13 +418,15 @@ undiscovered 255 counter and all eight original packed rock counts. The artisan
 branch does not invoke the separate manual-crafting failure/refund handler.
 
 The expanded chapter retains every earlier update and checkpoint: 102,283 SDK
-updates and twenty checkpoints pass in 184.14 seconds, followed by 107,506
-host-session checks in 186.82 seconds. SDK, host and scout match all 32 KiB of
+updates and twenty checkpoints pass in 265.29 seconds, followed by 107,506
+host-session checks in 271.68 seconds after connecting VCOUNT. SDK, host and scout match all 32 KiB of
 SRAM byte for byte. A fresh SDK reload and Status inspection pass 2,103 updates
-in 2.876 seconds, checking the saved flags, collection counters and packed rock
+in 3.163 seconds, checking the saved flags, collection counters and packed rock
 counts. Both source profiles remain unchanged. The ten scenario-parser tests,
-eleven CTest suites and app smoke test also pass. Native functional sources are
-unchanged, so the prior full reference comparison still applies.
+eleven CTest suites and app smoke test also pass. The rerun retains every input
+and expectation. A read-only dictionary audit confirms 65 unique identifiers,
+exact agreement with learned flags and no missing word required by the Sunny
+Peak destination indicator. This does not establish complete optional activities.
 
 The other 21 words, the higher love meter needed for the remaining rocks,
 manual crafting/resale branches, other activities and the complete desktop
@@ -928,7 +934,8 @@ Additional focused area-dependency checks use:
     python -B tools/compare_reference.py --counter-scenes-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
 These pass 51,514 scene actor comparisons, 95,870 actor preset comparisons,
-228,477 record/local-SaveGroup4 comparisons and 16,497 scanline-wave comparisons. The scene group
+228,477 record/local-SaveGroup4 comparisons and 756,707 scanline-wave/VCOUNT comparisons
+when the independent video oracle is supplied. The scene group
 covers 45 functions across 16 families and one shared bank-3 condition, including
 approach completion, signed limits, all ARM shift counts, direction constructors,
 snapshots, copy aliases and the three-byte render-selection Main callback. Its
@@ -991,6 +998,27 @@ all 228 scanlines, blend thresholds, signed wrapping, frame-end phase updates an
 typed Main/F4/HBlank calls. Public synthetic game tests cover these boundaries
 without original assets. These comparisons do not establish full-area progression,
 the complete inventory UI, SRAM integration or timed raster-image fidelity.
+
+The same `--wave-only` group includes ten connected VCOUNT functions: the shared
+enable setter and IRQ/noop, both complete blend/increment families, and the two
+pair-list IRQ controls. It retains every byte selector/scanline pair with both
+pending-bit paths, the complete 16-bit status and increment domains, arbitrary
+transition phases, original dirty flags and five typed Main/F4 contracts. The
+VCOUNT transition phase is separate from the wave phase. An already enabled
+compare change alone retains the original pending-bit behavior. Native runtime
+tests check VBlank/HBlank/VCOUNT priority and invalid selectors. Fault-save tests
+still require a failed frame to leave committed SRAM intact; their unsupported
+IRQ is now bit 3 because VCOUNT bit 2 has an implementation.
+
+With `--video-oracle PATH_TO_HN_VIDEO_ORACLE`, this group also advances the actual
+native game clock through nine synthetic frames without Main. All pixels match
+independently rendered mGBA bands before and after line 104, including initial
+phases zero, one and 255 and subsequent frame wrap. The focused group passes in
+5.470 seconds. These checks establish the selected register/line/pixel contracts;
+they do not model original CPU instruction latency or complete list-activity
+progression. All previous wave comparisons and full-suite oracles remain enabled.
+
+    python -B tools/compare_reference.py --wave-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --video-oracle PATH_TO_HN_VIDEO_ORACLE --oracle-runtime-dir PATH_TO_ORACLE_RUNTIME_DLLS
 
 The counter-scene group passes 179,460 comparisons across all thirteen functions
 in map10_4_counter_sequence.c. It covers every 16-bit counter value, five tile banks,

@@ -4,6 +4,7 @@
 #include "game/render.h"
 #include "game/heap.h"
 #include "game/raster.h"
+#include "gba/timing.h"
 #include <stdio.h>
 #include <stdlib.h>
 static HNMemory memory;
@@ -124,6 +125,56 @@ static void raster_effects(void)
     hn_write8(&memory,HN_HBLANK_SELECTOR,16);hn_write32(&memory,0x02000040,0x08012345);
     CHECK(!hn_raster_hblank(&memory)&&!memory.fault);
 }
+typedef struct { HNMemory *memory;unsigned count,lines[8]; } VcountTrace;
+static void vcount_irq(void *context,uint16_t pending)
+{
+    VcountTrace *trace=context;CHECK(pending==4&&trace->count<8);
+    trace->lines[trace->count++]=hn_read16(trace->memory,0x04000006);
+    hn_write16(trace->memory,0x04000202,4);CHECK(hn_raster_vcount(trace->memory));
+}
+static void vcount_timing(void)
+{
+    reset();uint32_t consumed=99;HNClock clock;VcountTrace trace={&memory,0,{0}};
+    hn_write32(&memory,HN_VCOUNT_HANDLERS+4,0x080CD4E1);hn_write32(&memory,HN_VCOUNT_HANDLERS+8,0x080CF239);
+    hn_write32(&memory,HN_VIDEO_STATE,2);hn_write8(&memory,HN_VCOUNT_PHASE,0);
+    CHECK(hn_raster_callback(&memory,0x080CD33D,&consumed)==HN_SCENE_OK&&consumed==0);
+    CHECK(hn_read32(&memory,HN_VIDEO_STATE)==2&&hn_read8(&memory,HN_VCOUNT_PHASE)==0);
+    CHECK(hn_read8(&memory,HN_VCOUNT_SELECTOR)==1&&hn_read16(&memory,HN_DISPLAY_STATUS)==0x6868);
+    hn_video_commit(&memory);CHECK(hn_read16(&memory,0x04000050)==0x1342&&hn_read16(&memory,0x04000052)==0x0E03);
+    CHECK(hn_raster_callback(&memory,0x080CD581,&consumed)==HN_SCENE_OK);
+    hn_write16(&memory,0x04000208,1);hn_clock_init(&clock,&memory,NULL,vcount_irq,&trace);
+    hn_clock_advance(&clock,&memory,104*HN_CYCLES_PER_LINE-1);CHECK(trace.count==0);
+    hn_clock_advance(&clock,&memory,1);CHECK(trace.count==1&&trace.lines[0]==104);
+    CHECK(hn_read16(&memory,0x04000052)==0x0A06&&hn_read8(&memory,HN_VCOUNT_PHASE)==1);
+    hn_clock_advance(&clock,&memory,124*HN_CYCLES_PER_LINE);CHECK(trace.count==1&&clock.line==0);
+    hn_clock_advance(&clock,&memory,104*HN_CYCLES_PER_LINE);CHECK(trace.count==2&&trace.lines[1]==104);
+    CHECK(hn_read16(&memory,0x04000052)==0x040C&&hn_read8(&memory,HN_VCOUNT_PHASE)==0);
+    hn_clock_advance(&clock,&memory,124*HN_CYCLES_PER_LINE);CHECK(trace.count==3&&trace.lines[2]==0);
+    CHECK(hn_read16(&memory,0x04000052)==0x0A06&&hn_read8(&memory,HN_VCOUNT_PHASE)==1);
+    hn_clock_advance(&clock,&memory,HN_CYCLES_PER_FRAME);
+    CHECK(trace.count==5&&trace.lines[3]==104&&trace.lines[4]==0&&clock.frames==3);
+    CHECK(hn_read16(&memory,0x04000050)==0x1D42&&!(hn_read16(&memory,0x04000202)&4));
+    /* Rearm through the original disable/enable path; changing an already
+       enabled compare value alone does not set the video pending bits. */
+    CHECK(hn_raster_callback(&memory,0x080CF219,&consumed)==HN_SCENE_OK);hn_video_commit(&memory);
+    CHECK((hn_read16(&memory,0x04000004)>>8)==104);
+    hn_video_vcount(&memory,0,0);hn_video_commit(&memory);
+    trace.count=0;CHECK(hn_raster_callback(&memory,0x080CF219,&consumed)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,HN_VCOUNT_PHASE)==1);hn_video_commit(&memory);
+    hn_write16(&memory,0x0201DC92,65535);hn_clock_advance(&clock,&memory,HN_CYCLES_PER_FRAME);
+    CHECK(trace.count==1&&trace.lines[0]==1&&hn_read16(&memory,0x0201DC92)==0);
+    CHECK(hn_raster_callback(&memory,0x080CF249,&consumed)==HN_SCENE_OK);
+    hn_clock_advance(&clock,&memory,HN_CYCLES_PER_FRAME);
+    CHECK(trace.count==1&&(hn_read16(&memory,0x04000202)&4)&&hn_read16(&memory,0x0201DC92)==0);
+    CHECK(hn_raster_callback(&memory,0x080CD581,&consumed)==HN_SCENE_OK);
+    hn_clock_advance(&clock,&memory,1);CHECK(trace.count==2&&trace.lines[1]==0&&hn_read16(&memory,0x0201DC92)==1);
+    hn_video_vcount(&memory,0,159);CHECK(hn_read8(&memory,HN_VCOUNT_PHASE)==1);
+    CHECK(hn_raster_vcount(&memory)&&!(hn_read16(&memory,0x04000004)&32));
+    hn_write8(&memory,HN_VCOUNT_SELECTOR,3);CHECK(!hn_raster_vcount(&memory));
+    hn_write8(&memory,HN_VCOUNT_SELECTOR,1);hn_write32(&memory,HN_VCOUNT_HANDLERS+4,0x08012345);
+    CHECK(!hn_raster_vcount(&memory)&&!memory.fault);
+    hn_write32(&memory,HN_VCOUNT_HANDLERS+4,0x080005B9);CHECK(hn_raster_vcount(&memory));
+}
 static void transitions(void)
 {
     reset();HNGraphics graphics;hn_graphics_init(&graphics,&memory);
@@ -154,6 +205,6 @@ int main(void)
 {
     rom=calloc(1,0x600000);CHECK(rom!=NULL);
     for(unsigned i=1;i<8;i++)rom[HN_PALETTE_GROUP_SIZES-HN_ROM_BASE+i]=(uint8_t)(1u<<i);
-    palettes();flows();transitions();raster_effects();free(rom);
+    palettes();flows();transitions();raster_effects();vcount_timing();free(rom);
     printf("%u native graphics checks passed.\n",checks);return 0;
 }

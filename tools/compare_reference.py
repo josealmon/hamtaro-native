@@ -87,7 +87,7 @@ def main() -> None:
     parser.add_argument("--group3-scenes-only", action="store_true", help="Run SaveGroup3 Main/task contracts")
     parser.add_argument("--record-menus-only", action="store_true", help="Run complete record selection/menu family")
     parser.add_argument("--selection-scenes-only", action="store_true", help="Run complete shared map-10/5 item selection family")
-    parser.add_argument("--wave-only", action="store_true", help="Run complete scanline-wave family and typed IRQ dispatch")
+    parser.add_argument("--wave-only", action="store_true", help="Run scanline-wave and VCOUNT families, typed IRQs and optional timed PPU checks")
     parser.add_argument("--counter-scenes-only", action="store_true", help="Run complete map-10 counter/sequence family")
     parser.add_argument("--shared-motion-only", action="store_true", help="Run shared actor geometry/motion families (requires BIOS oracle)")
     parser.add_argument("--scene-effects-only", action="store_true", help="Run complete background/render shake and screen-window families (requires BIOS oracle)")
@@ -2407,9 +2407,15 @@ def main() -> None:
 
     @timed
     def wave_checks():
-        from reference_wave import check_wave
+        from reference_wave import check_wave,check_vcount,check_vcount_video
         check_wave(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
                    fresh=fresh,equal=equal,compare=compare,command=command)
+        check_vcount(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
+                     fresh=fresh,equal=equal,compare=compare,command=command)
+        if args.video_oracle:
+            check_vcount_video(rom_buffer=buffer,rom_size=len(rom),bind=bind,equal=equal,
+                               oracle=args.video_oracle,runtime_dir=args.oracle_runtime_dir)
+        else:print("Timed VCOUNT pixel checks skipped; supply --video-oracle to include them.")
 
     @timed
     def counter_scene_checks():
@@ -2638,7 +2644,7 @@ def main() -> None:
             return
         if args.wave_only:
             wave_checks()
-            print(f"{checks} private scanline-wave comparisons passed; full raster timing remains unverified.")
+            print(f"{checks} private scanline-wave/VCOUNT comparisons passed; full scene and CPU timing remain unverified.")
             return
         if args.actor_presets_only:
             actor_preset_checks()

@@ -130,6 +130,17 @@ HNSceneResult hn_raster_callback(HNMemory *m,GameAddr callback,uint32_t *consume
         hn_video_hblank(m,1);hn_write16(m,HN_SCANLINE_RADIUS,hn_read16(m,HN_VIDEO_STATE+0x6C));
         hn_write8(m,HN_SCANLINE_PHASE,0);hn_write8(m,HN_SCANLINE_PHASE+1,45);break;
     case 0x0802E258:hn_video_hblank(m,0);break;
+    case 0x080CD33C:
+        /* These original field stores leave the existing dirty mask intact. */
+        hn_write8(m,HN_BLEND,0x42);hn_write8(m,HN_BLEND+1,(uint8_t)((hn_read8(m,HN_BLEND+1)&0xC0)|19));
+        hn_write8(m,HN_BLEND+2,3);hn_write8(m,HN_BLEND+3,14);hn_video_vcount(m,1,104);break;
+    case 0x080CF218:
+        hn_write16(m,0x04000200,hn_read16(m,0x04000200)|4);hn_video_vcount(m,2,1);break;
+    case 0x080CD580:hn_write16(m,0x04000200,hn_read16(m,0x04000200)|4);break;
+    case 0x080CD554:case 0x080CF248:{
+        uint16_t master=hn_read16(m,0x04000208);hn_write16(m,0x04000208,0);
+        hn_write16(m,0x04000200,hn_read16(m,0x04000200)&0xFFFB);hn_write16(m,0x04000208,master);break;
+    }
     default:return HN_SCENE_UNKNOWN;
     }
     *consumed=0;return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
@@ -144,6 +155,30 @@ bool hn_raster_hblank(HNMemory *m)
     if(callback==0x0800F4FC)return circle_window(m);
     if(callback==0x0802E268)return hn_raster_wave(m);
     return false;
+}
+bool hn_raster_vcount_blend(HNMemory *m)
+{
+    bool second=hn_read8(m,HN_VCOUNT_PHASE)!=0;
+    hn_write16(m,0x04000052,second?0x040C:0x0A06);
+    hn_write16(m,0x04000004,hn_read16(m,0x04000004)&0x003F);
+    if(!second)hn_write16(m,0x04000004,hn_read16(m,0x04000004)|0x6800);
+    hn_write8(m,HN_VCOUNT_PHASE,second?0:1);hn_write16(m,0x04000050,0x1D42);return !m->fault;
+}
+bool hn_raster_vcount_increment(HNMemory *m)
+{
+    GameAddr value=0x0201DC40+0x29*2;hn_write16(m,value,(uint16_t)(hn_read16(m,value)+1));return !m->fault;
+}
+bool hn_raster_vcount(HNMemory *m)
+{
+    unsigned selector=hn_read8(m,HN_VCOUNT_SELECTOR);
+    if(!selector){hn_write16(m,0x04000004,hn_read16(m,0x04000004)&0xFFDF);return !m->fault;}
+    if(selector>=3)return false;
+    switch(hn_read32(m,HN_VCOUNT_HANDLERS+selector*4)&~1u){
+    case 0x080005B8:return !m->fault;
+    case 0x080CD4E0:return hn_raster_vcount_blend(m);
+    case 0x080CF238:return hn_raster_vcount_increment(m);
+    default:return false;
+    }
 }
 static bool begin(HNMemory *m,GameAddr state,GameAddr effect)
 {

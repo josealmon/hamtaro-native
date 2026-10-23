@@ -2844,11 +2844,29 @@ static void runtime_contract(void)
     game->fault=HN_GAME_OK;hn_write32(&game->memory,0x03002B90,0x08086551);game->memory.io[0x202]=1;
     hn_clock_advance(&game->clock,&game->memory,1);
     CHECK(game->fault==HN_GAME_IRQ&&game->address==0x08086551&&hn_read32(&game->memory,0x03002BB0)==1);
+    /* Coincident IRQs retain ARM priority: VBlank commits before VCOUNT changes
+       live blending; the HBlank handler runs between them. */
+    hn_memory_init(&game->memory,rom,0x1000000);game->fault=HN_GAME_OK;
+    hn_write32(&game->memory,HN_AUDIO_CORE_POINTER,HN_AUDIO_CORE);
+    hn_write32(&game->memory,0x03001F98,1);hn_write32(&game->memory,0x03001F5C,1);
+    hn_write32(&game->memory,HN_VIDEO_STATE,2);hn_write16(&game->memory,HN_BLEND,0x0040);
+    hn_write8(&game->memory,HN_BLEND+2,3);hn_write8(&game->memory,HN_BLEND+3,14);
+    hn_write8(&game->memory,HN_HBLANK_SELECTOR,1);hn_write32(&game->memory,0x02000004,0x0802E269);
+    hn_write8(&game->memory,HN_VCOUNT_SELECTOR,1);hn_write32(&game->memory,HN_VCOUNT_HANDLERS+4,0x080CD4E1);
+    hn_write8(&game->memory,HN_VCOUNT_PHASE,0);game->sample_frames=0;
+    hn_write16(&game->memory,0x04000200,7);hn_write16(&game->memory,0x04000208,1);game->memory.io[0x202]=7;
+    hn_clock_advance(&game->clock,&game->memory,1);
+    CHECK(game->fault==HN_GAME_OK&&hn_read16(&game->memory,0x04000050)==0x1D42);
+    CHECK(hn_read16(&game->memory,0x04000052)==0x0A06&&hn_read8(&game->memory,HN_VCOUNT_PHASE)==1);
+    CHECK(!hn_read16(&game->memory,0x04000202)&&hn_read16(&game->memory,0x04000208)==1);
+    hn_write8(&game->memory,HN_VCOUNT_SELECTOR,255);game->memory.io[0x202]=4;
+    hn_clock_advance(&game->clock,&game->memory,1);
+    CHECK(game->fault==HN_GAME_IRQ&&game->opcode==4&&game->address==255);
     /* A pending unsupported IRQ fails before running Main, and remains sticky. */
     game->memory.fault=false;game->fault=HN_GAME_OK;game->initialized=true;
-    hn_write16(&game->memory,0x04000200,4);hn_write16(&game->memory,0x04000208,1);
-    game->memory.io[0x202]=4;
-    CHECK(!hn_game_frame(game,0));CHECK(game->fault==HN_GAME_IRQ&&game->opcode==4);
+    hn_write16(&game->memory,0x04000200,8);hn_write16(&game->memory,0x04000208,1);
+    game->memory.io[0x202]=8;
+    CHECK(!hn_game_frame(game,0));CHECK(game->fault==HN_GAME_IRQ&&game->opcode==8);
     CHECK(!game->frames&&!hn_game_frame(game,HN_START));
     free(rom);free(game);
 }

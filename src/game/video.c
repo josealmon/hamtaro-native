@@ -44,6 +44,16 @@ void hn_video_hblank(HNMemory *m,uint32_t selector)
     if(!enabled)hn_write8(m,HN_DISPLAY_STATUS,(uint8_t)((status&~0xD0u)|0x40));
     else if(!(status&16))hn_write8(m,HN_DISPLAY_STATUS,(uint8_t)((status&~0xC0u)|0x50));
 }
+void hn_video_vcount(HNMemory *m,uint8_t selector,uint8_t scanline)
+{
+    uint8_t status=hn_read8(m,HN_DISPLAY_STATUS);hn_write8(m,HN_VCOUNT_SELECTOR,selector);
+    if(selector){
+        if(!(status&32))hn_write8(m,HN_DISPLAY_STATUS,(uint8_t)((status&~0xC0u)|0x60));
+        hn_write8(m,HN_DISPLAY_STATUS+1,scanline<=159?scanline:0);
+    }else{
+        hn_write8(m,HN_DISPLAY_STATUS,(uint8_t)((status&~0xE0u)|0x40));hn_write8(m,HN_DISPLAY_STATUS+1,0);
+    }
+}
 void hn_video_blend_effect(HNMemory *m,uint32_t effect)
 {
     hn_write8(m,HN_BLEND,(uint8_t)((hn_read8(m,HN_BLEND)&0x3F)|((effect&3)<<6)));dirty(m,2);

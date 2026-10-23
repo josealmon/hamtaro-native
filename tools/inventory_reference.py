@@ -42,6 +42,7 @@ def dispatches() -> dict[int, list[str]]:
         ("animation", "scene.c", "hn_scene_animation_callback"),
         ("text-task", "task_text.c", "task_callback"),
         ("hblank", "raster.c", "hn_raster_hblank"),
+        ("vcount", "raster.c", "hn_raster_vcount"),
         ("main", "scene_motion.c", "hn_scene_motion_callback"),
         ("animation", "scene_motion.c", "hn_scene_motion_animation"),
         ("text-task", "presets.c", "hn_preset_apply"),
