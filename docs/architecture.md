@@ -76,8 +76,8 @@ statically. A separate clean-machine validation remains pending.
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Local music and SaveGroup4 support | Adapted | All 29 functions in communication_record_callbacks.c and communication_record_selection.c compared: 28 Main callbacks and one void layout task, plus the prior payload classifier; resource songs/readers, render layout/aliases, affine selection, record numbering/depth, both SRAM copies and local/ROM selection; complete music activity and Cable Link transport remain outside this evidence |
-| SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; native dressing changes, two saved photos, slot-six navigation, erase rejection, title photo/Dress Up and original Save/Continue exercised; complete wardrobe/gallery and desktop activity coverage remain pending |
-| Clothing catalog and variations | Adapted | All 40 script_callbacks_pair_list.c functions accounted for and compared: 18 Main, 26 F4 and 13 helper contracts, with overlaps; six ROM-backed lists, five languages, ownership masks, prices, cursors and palettes; Sunny Boutique rejection, cancellation, two Antlers colors, sold-out selection, row navigation and original Save/Continue run natively; other purchases and complete wardrobe coverage remain pending |
+| SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; all three worn parts, Corsage sharing rejection, photo replacement/cancellation, Toss confirmation/rejection/empty-category behavior, title photo/Dress Up and original Save/Continue exercised; further gallery/settings and full desktop activity coverage remain pending |
+| Clothing catalog and variations | Adapted | All 40 script_callbacks_pair_list.c functions accounted for and compared: 18 Main, 26 F4 and 13 helper contracts, with overlaps; six ROM-backed lists, five languages, ownership masks, prices, cursors and palettes; Sunny Boutique rejection, cancellation, two Antlers colors, Corsage and Kerchief purchases, sold-out selection and saved continuation run natively; other purchases and complete wardrobe coverage remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; three owned Gems entries and wrap navigation inspected in the SDK; complete Items/Gems and timed raster integration remain pending |
 | Record messages and eligible-item count | Adapted | All 12 game_record_messages.c functions and the save_counter_prefix.s Main51 leaf compared; five-language text, byte-index wrap, live aliases, eleven void animation presets and the excluded final counter byte; the Clubhouse desk's empty-inventory greeting completes in the SDK; populated activity branches remain pending |
 | Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; paid artisan Pooie Earrings and delivery tested; manual crafting, resale and other recipes remain separate |
@@ -430,16 +430,36 @@ The title's scene counters are temporarily zero while outside the story; the
 world save restores 65 words and eleven loves. Native PPU output confirms the
 two outfits and that the first photo appears behind the title menu.
 
-All 73,776 updates and 29 checkpoints pass the current SDK in 132.64 seconds, followed
-by 77,733 host-session checks in 146.07 seconds. SDK, host and input-only scout
-SRAM agree across all 32 KiB. A fresh SDK process passes 2,103 updates in
-3.084 seconds, including Status, both photos, the four empty slots and the earlier
-gem/rock assertions. The endpoint is map 1:3 at x=144.5, z=48.5 with 65 words,
-two seeds, five rocks, eleven loves, Bijou and both purchased colors. The source
-profiles stay unchanged. This replay also passes after the native scanline-window
-batch described below; no private source profile is overwritten.
+A further 45,123 updates retain all 73,776 preceding updates and 29 checkpoints,
+then add 22 checkpoints for Sunny's item/body purchases and related wardrobe
+operations. Two ordinary seed pickups raise the balance from two to twelve.
+Declining Corsage confirmation retains both seeds and ownership; purchasing it
+costs three. Kerchief costs five, leaving four seeds and four owned variants.
+Hamtaro wears white Antlers, the Corsage and red Kerchief together. Bijou cannot
+select the Corsage while Hamtaro wears that same variant.
 
-Other clothing purchases, gallery operations, settings and full desktop activity
+Cancelling after accepting a photo replacement keeps the original record. Saving
+the replacement puts all three Hamtaro pieces and Bijou's brown Antlers into slot
+one, retaining setting 1, slot six and four unused slots. Declining Toss keeps
+ownership; confirming discards only the Corsage and reduces the Outfit counter
+from four to three. Toss on the empty category cannot decrement it again. The
+stored photo retains the discarded Corsage, while the worn selection clears it.
+Remove clears Hamtaro's worn hat and Kerchief without changing purchases or photos.
+Title Dress Up renders the saved photo but skips its unowned item when rebuilding
+the selectable wardrobe. Original Save/Continue restores the story and all records.
+
+All 118,899 updates and 51 checkpoints pass the SDK in 211.57 seconds, followed
+by 123,990 host-session checks in 214.76 seconds. SDK, host and input-only scout
+SRAM agree across all 32 KiB. A fresh SDK process passes 2,103 updates in
+3.019 seconds, including Status, both photos, the four empty slots and the earlier
+gem/rock assertions. The endpoint is map 1:3 at x=144.5, z=48.5 with 65 words,
+four seeds, five rocks, eleven loves, Bijou, both Antlers colors and Kerchief.
+The Outfit counter is three; Corsage ownership is cleared while its image remains
+stored in photo one. The source profiles stay unchanged. Native source and binary
+hashes are identical to the complete 5,793,256-check HBlank/window boundary, whose
+proof remains applicable to this input/checkpoint extension.
+
+Further clothing purchases, gallery operations/settings and full desktop activity
 coverage remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the

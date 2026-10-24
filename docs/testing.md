@@ -93,7 +93,7 @@ collision checks, including even/odd register boundaries and every render count,
 remain enabled.
 Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
 enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
-11 CTest suites pass in 1.81 seconds, including 17,383 game, 823 renderer,
+11 CTest suites pass in 0.82 seconds, including 17,383 game, 823 renderer,
 522 graphics and 34 keyboard/gamepad checks. Replay and full-suite timing are
 separate local observations, not portable performance guarantees.
 Earlier optimization reduced the same 4,200,342-check suite from approximately
@@ -447,28 +447,41 @@ Save/Continue. The original thirteen checkpoints include prices, seeds, ownershi
 bytes and the Outfit counter: one count per acquired color. Existing
 Sunny optional and postgame scenarios retain every earlier input/checkpoint.
 
-The expanded chapter retains all 37,274 preceding updates and thirteen
+The first photo extension retains all 37,274 preceding updates and thirteen
 checkpoints, then adds dressing and two saved photos. Hamtaro's brown and
 Bijou's white Antlers are stored in slot one with setting 1. Removing Hamtaro's
 worn hat leaves the photo and purchases intact. Title Dress Up reloads both
 stored colors; a second photo swaps them and uses setting 2 in slot six.
 Declining to erase slot one preserves both photos. Continue restores the earlier
 story, and another original Save/Continue retains both records and all four
-unused slots. All 73,776 SDK updates and 29 semantic checkpoints pass in
-132.64 seconds, followed by 77,733 host-session checks in 146.07 seconds.
-SDK, host and input-only scout match all 32 KiB of SRAM. A fresh SDK process
-passes 2,103 updates in 3.084 seconds, including Status, both photo records,
-four unused slots and the previous gem/rock assertions. The endpoint is map 1:3
-at x=144.5, z=48.5 with 65 words, two seeds, five rocks, eleven loves and Bijou.
-Both input profiles are unchanged. Fifteen scenario-parser tests and all eleven
-CTest suites pass, including the actual application smoke test.
+unused slots. All 73,776 updates and 29 semantic checkpoints remain unchanged
+in the current chapter.
 
-The scenario extension changes only scalar checkpoints and recorded input.
-The same route also passes with the subsequent native HBlank/window batch,
-whose function and timed-pixel checks are described below.
-The canonical route omits 6,370 unasserted scouting updates, retaining every old
-purchase update/checkpoint and the scout's exact final SRAM. Only ordinary
-buttons and read-only scalar assertions are versioned. Other
+The current extension retains every preceding update/checkpoint, then adds 45,123
+updates and 22 checkpoints for Corsage/Kerchief purchases and all three worn parts.
+It checks declined purchase confirmation, the exact three/five-seed costs, attempted
+Corsage sharing, cancellation after accepting photo replacement, and replacement
+of slot one while the other five slots remain intact. Toss rejection retains
+ownership; confirmed Toss removes one variant and decrements the counter once;
+an empty-category retry cannot underflow it. Current selections clear the missing
+item while the stored photo keeps it. Remove clears the worn head/body without
+deleting purchases or photos. Title Dress Up and original Save/Continue check
+the interaction between stored photographs and a discarded garment.
+
+All 118,899 SDK updates and 51 checkpoints pass in 211.57 seconds, followed by
+123,990 host-session checks in 214.76 seconds. SDK, host and input-only scout
+match all 32 KiB of SRAM. A fresh SDK process passes 2,103 updates in 3.019
+seconds, including Status, all six photo slots, ownership/count fields and the
+earlier gem/rock assertions. The endpoint is map 1:3 at x=144.5, z=48.5 with
+65 words, four seeds, five rocks, eleven loves, Bijou and three owned variants.
+Corsage is discarded, Kerchief retained, and the replacement photo still includes
+the Corsage. All source profiles remain unchanged. Fifteen scenario-parser tests
+and all eleven CTest suites pass, including the actual application smoke test.
+
+The extension changes only scalar checkpoints and recorded input. Native source,
+application and probe hashes are identical to the complete 5,793,256-check
+HBlank/window boundary, whose function and timed-pixel checks remain applicable.
+Only ordinary buttons and read-only scalar assertions are versioned. Further
 clothing purchases, gallery operations/settings and full desktop activity
 coverage remain unverified.
 
