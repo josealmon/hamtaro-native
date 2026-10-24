@@ -486,13 +486,28 @@ reload also checks the unique word list against its flags and reopens Status in
 the native source and binaries remain identical to the complete 5,793,256-check
 HBlank/window boundary.
 
-The love-meter level is class 0x0C, with progress in class 0x0D. This save has
-level two and progress 35; the next thresholds are 42 and 56. Boss's GoFor and
-Lalalala lessons require levels three and four. The normal rock-polishing limit
-also uses the level plus one. These gates require further reconciliations.
-Fifteen words, other optional activities,
-remaining Sunny content, clothing/gallery/settings branches and full desktop
-activity coverage remain pending.
+`fun_land_optional.json` continues from the 71-word save through the Ferris wheel
+date. Offdoff, Howdy and Blash-T coach the nervous hamster, with two original
+confirmations. Three No-P answers in the date's conversation lead to Minglie;
+using that lesson completes the reunion and teaches Twirlie. Fifteen checkpoints
+retain those choices, each quest transition and original Save/Continue. The
+48,913-update route removes 19.92% of its post-boot exploratory inputs and retains
+73 words, fourteen loves, four seeds, five rocks, Bijou, all six photos and the
+same clothing ownership.
+
+The SDK replay passes in 86.51 seconds and the host session passes 52,459 checks
+in 88.80 seconds. Both produce the canonical scout's exact 32 KiB SRAM. A separate
+2,103-update fresh-process reload verifies all 73 unique word IDs against their
+flags, the retained inventory/photos and Status in 2.908 seconds. Native code
+and binaries remain unchanged, preserving the complete reference comparison.
+
+The love-meter level is class 0x0C, with progress in class 0x0D. The Ferris reunion
+raises progress from 35 to 39, retaining level two; the next thresholds are 42
+and 56. Boss's GoFor and Lalalala lessons require levels three and four. The
+normal rock-polishing limit also uses the level plus one. These gates require
+further reconciliations. Thirteen words, other optional activities, remaining
+Sunny content, clothing/gallery/settings branches and full desktop activity
+coverage remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
