@@ -566,10 +566,32 @@ learned flags, the retained inventory/photos and Status. The eleven CTest suites
 selection isolation, unknown/malformed routes, retained semantic failures and
 rejection of `--route` with external input schedules.
 
+`routes.performers` starts from the 74-word Ferris save and covers the complete
+connected performer search in 81,465 updates and ten checkpoints. Its 79,543
+post-boot updates remove 12.97% of exploratory inputs. Assertions retain the
+host's search state, both park artists, the Haunted House discovery and
+conversation, the partner's invitation, the restroom message and the automatic
+theater performance. The reconciliation
+teaches Hardihar, raises the love-meter level from two to three (progress 41 to
+43), and retains 75 words and sixteen loves through original Save/Continue.
+Initial and final assertions retain all six photos, clothing flags/count,
+collection counters and packed rock quantities. The earlier default and Ferris
+routes remain unchanged. Eleven words and the other documented optional/desktop
+activities remain pending.
+
+The performer SDK replay passes in 125.98 seconds; 85,746 host-session checks
+pass in 128.79 seconds. Both produce the canonical scout's exact 32 KiB SRAM.
+An independent 2,103-update reload takes 2.915 seconds, checks all 75 unique words
+against learned flags and retains inventory/photos when opening Status. The
+eleven CTest suites (1.18 seconds) and nineteen scenario tests (0.041 seconds)
+pass. Native sources/binaries are unchanged, preserving the complete
+5,793,256-check reference boundary without rerunning identical comparisons.
+
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/optional_words.json --save PATH_TO_PRIVATE_WARDROBE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_OPTIONAL_WORDS_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/family_reunions.json --save PATH_TO_PRIVATE_OPTIONAL_WORDS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_REUNION_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land_optional.json --save PATH_TO_PRIVATE_REUNION_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_PARK_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land_optional.json --route ferris --save PATH_TO_PRIVATE_PARK_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_FERRIS_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land_optional.json --route performers --save PATH_TO_PRIVATE_FERRIS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_PERFORMER_PROFILE
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert

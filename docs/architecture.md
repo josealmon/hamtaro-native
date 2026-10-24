@@ -518,14 +518,27 @@ The Ferris SDK replay takes 50.40 seconds and 30,152 host checks take 53.30 seco
 Their 32 KiB saves match the canonical scout exactly. An independent 2,103-update
 reload checks all 74 unique words, inventory, photos and Status in 2.959 seconds.
 
-The love-meter level is class 0x0C, with progress in class 0x0D. The Tea Cups and
-Ferris reunions raise progress from 35 through 39 to 41, retaining level two;
-the next thresholds are 42 and 56. Boss's GoFor and Lalalala lessons require
-levels three and four. The
-normal rock-polishing limit also uses the level plus one. These gates require
-further reconciliations. Twelve words, other optional activities, remaining
-Sunny content, clothing/gallery/settings branches and full desktop activity
-coverage remain pending.
+The independent `performers` route continues from the 74-word Ferris save through
+the entire connected Fun Land/Haunted House comedian family. The theater host
+starts the search, two artists return from the park and bridge, and Lookie finds
+the comedian in Haunted House. Perksie and two Fussfuss conversations resolve the
+misunderstanding. The Gasp-P response returns the pair directly to the theater,
+where the performance completes their reconciliation and teaches Hardihar.
+Its 81,465 updates and ten checkpoints retain the entire search and original
+Save/Continue, with 12.97% fewer post-boot inputs than the
+exploratory route. The saved continuation retains 75 words and sixteen loves.
+The SDK replay (125.98 seconds), 85,746 host checks (128.79 seconds) and canonical
+scout produce identical 32 KiB saves. A fresh 2,103-update reload checks all
+75 unique words against their flags, the retained inventory/photos and Status
+in 2.915 seconds. Native source and binaries retain the full reference proof.
+
+The love-meter level is class 0x0C, with progress in class 0x0D. Tea Cups, Ferris
+and the performers raise progress from 35 through 39 and 41 to 43, reaching level
+three at the threshold of 42. Boss's GoFor lesson is now available; Lalalala still
+requires level four at 56. The normal rock-polishing limit also uses the level
+plus one, allowing the next Sunny rock branches. Eleven words, other optional
+activities, remaining Sunny content, clothing/gallery/settings branches and
+full desktop activity coverage remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
