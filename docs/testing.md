@@ -487,6 +487,29 @@ coverage remain unverified.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/wardrobe.json --save PATH_TO_PRIVATE_MATERIALS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WARDROBE_PROFILE
 
+`optional_words.json` starts from that final wardrobe save. Its 22,472 updates and
+13 checkpoints cover Zuzuzu, Delin-Q, Lost-T and Koochi-Q, increasing the dictionary
+from 65 to 69 words through ordinary input. It checks the original action menus,
+Snoozer's topic-menu cancellation, each learned flag and the family-search control
+changes. The route removes 45.1% of the exploratory inputs without dropping these
+four encounters or the original Save/Continue boundary. Trust-T remains unlearned;
+the missing-child search is not a completed reconciliation.
+
+The SDK replay passes in 35.87 seconds, followed by 25,097 host-session checks in
+39.16 seconds. Scout, SDK and host saves match all 32 KiB. A fresh process checks
+the learned-word list against its flags, rejects duplicate entries and reopens
+Status. All eleven CTest suites and fifteen scenario-parser tests also pass.
+
+Initial and final checkpoints also retain all six photo slots, clothing ownership
+and count, packed rock quantities and collection counters. Source saves remain
+read-only. Native source, application and probe hashes match the complete
+5,793,256-check HBlank/window boundary, so its function-level proof still applies.
+Only the new input route, save/reload checks and the quick regression suites need
+to run for this test-only extension. Seventeen words and the other documented
+optional/desktop activities remain pending.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/optional_words.json --save PATH_TO_PRIVATE_WARDROBE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_OPTIONAL_WORDS_PROFILE
+
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
 `"classes": {"0xE1": 630}` for the musical challenge's score. IDs are decimal or hexadecimal

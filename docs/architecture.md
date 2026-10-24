@@ -459,8 +459,25 @@ stored in photo one. The source profiles stay unchanged. Native source and binar
 hashes are identical to the complete 5,793,256-check HBlank/window boundary, whose
 proof remains applicable to this input/checkpoint extension.
 
-Further clothing purchases, gallery operations/settings and full desktop activity
-coverage remain pending.
+`optional_words.json` continues from the wardrobe save through Snoozer's Zuzuzu
+lesson and Fun Land's Delin-Q, Lost-T and Koochi-Q encounters. Thirteen checkpoints
+cover the original action menus, each learned-word flag, conversation exit and
+family-search progression. Original Save/Continue retains 69 words, four seeds,
+five rocks, eleven loves, Bijou, all six photo slots and the same three clothing
+variants. Trust-T remains unlearned and the missing-child search remains open;
+learning Lost-T does not complete that reconciliation.
+
+The recorded route has 22,472 updates, removing 45.1% of the exploratory inputs
+while retaining all four lessons and the saved-continuation assertions. Only
+ordinary button inputs and scalar expectations are versioned. This chapter uses
+the same native source and binaries as the complete HBlank/window comparison.
+The SDK replay passes in 35.87 seconds and the host session passes 25,097 checks
+in 39.16 seconds; scout, SDK and host SRAM agree across all 32 KiB. A fresh process
+also verifies the saved word list against all learned flags and reopens Status.
+The other 17 words, later family-search steps, additional Ham-Jams, remaining
+Sunny activities, clothing purchases, gallery/settings branches and full desktop
+activity coverage remain pending. In particular, Boss's GoFor and Lalalala lessons
+require at least three and four Ham-Jams respectively; the current save has two.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
