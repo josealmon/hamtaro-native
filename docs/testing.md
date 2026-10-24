@@ -386,6 +386,30 @@ Only normal inputs and scalar expectations are stored in the scenario.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --save PATH_TO_PRIVATE_POSTGAME_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUNNY_OPTIONAL_PROFILE
 
+The independent `level_three` route in the same area file starts from the
+verified 75-word performer save. Its 37,650 updates and fifteen checkpoints cover
+Boss's GoFor lesson, the board and room return, ordinary Rubrub at love level
+three, a three-polish partial state, its successful fourth polish, all five
+Diamonds, the empty-selector exit and Gems selection/description. Sixteen normal
+rub actions consume exactly the remaining 1/4/4/3/4 polishes; the special strength
+flag stays clear. Initial and final checkpoints include all 64 packed rock slots.
+The final save retains 76 words, sixteen loves, five Diamonds and zero rocks,
+as well as the other collection counters, clothing flags/count and all six photos.
+The default 177,048-update, 48-checkpoint route retains every input and assertion,
+including the earlier level-two rejection. Selecting the independent continuation
+avoids replaying that earlier route when checking this new saved stage.
+
+The SDK replay passes in 60.16 seconds and 40,464 host checks pass in 62.96 seconds.
+Their 32 KiB saves match the canonical scout exactly. A fresh 2,103-update reload
+takes 2.938 seconds and confirms all 76 unique word IDs against their flags, five
+Diamonds, all 64 empty rock slots, inventory, clothing, photos and Status.
+The eleven CTest suites (0.98 seconds) and nineteen scenario tests (0.042 seconds)
+pass. Unchanged native sources and binaries retain the complete 5,793,256-check
+reference proof. Ten words and the other documented optional/desktop activities
+remain pending.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --route level_three --save PATH_TO_PRIVATE_PERFORMER_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_LEVEL_THREE_PROFILE
+
 `postgame.json` continues from the final `sunny_optional.json` save. It collects
 the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
 then obtains five seeds on each of two room visits. Rubrub identifies both new

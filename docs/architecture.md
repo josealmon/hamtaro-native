@@ -534,11 +534,25 @@ in 2.915 seconds. Native source and binaries retain the full reference proof.
 
 The love-meter level is class 0x0C, with progress in class 0x0D. Tea Cups, Ferris
 and the performers raise progress from 35 through 39 and 41 to 43, reaching level
-three at the threshold of 42. Boss's GoFor lesson is now available; Lalalala still
-requires level four at 56. The normal rock-polishing limit also uses the level
-plus one, allowing the next Sunny rock branches. Eleven words, other optional
-activities, remaining Sunny content, clothing/gallery/settings branches and
-full desktop activity coverage remain pending.
+three at the threshold of 42. The independent `sunny_optional.json` route
+`level_three` uses that saved continuation to learn GoFor from Boss, including
+the board and normal room return. It then polishes all five retained rocks
+into five Diamonds using sixteen ordinary Rubrub actions. The previous level-two
+rejection remains covered by the unchanged default Sunny route; at level three,
+the final polish succeeds. The special strength flag remains clear throughout.
+The empty selector exits normally, and the Gems panel selects all five Diamonds
+and opens their description without changing the count. Original Save/Continue
+retains 76 words, sixteen loves, inventory, clothing and photos. The final
+checkpoint checks that all 64 packed rock slots have zero remaining polishes.
+Its 37,650-update SDK replay (60.16 seconds), 40,464 host checks (62.96 seconds)
+and canonical scout produce identical 32 KiB SRAM. A fresh 2,103-update reload
+verifies all 76 unique words, five Diamonds, empty slots, retained inventory and
+photos in 2.938 seconds. Native code and binaries remain unchanged.
+
+The normal rock-polishing limit uses the level plus one. Lalalala still requires
+level four at 56. Ten words, other optional activities, remaining Sunny content,
+clothing/gallery/settings branches and full desktop activity coverage remain
+pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
