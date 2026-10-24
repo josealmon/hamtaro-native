@@ -1,7 +1,8 @@
-"""Compare ROM-free static video fixtures with an optional external mGBA PPU.
+"""Compare ROM-free video fixtures with an optional external mGBA PPU.
 
 No captures or game assets are written. Build the separate test oracle as
 documented in docs/testing.md; it is never a dependency of the Windows app.
+The default protocol is static; scanline callers supply six registers per row.
 """
 from __future__ import annotations
 import argparse
@@ -16,18 +17,23 @@ PIXELS = 240 * 160
 def word(data, offset, value):
     struct.pack_into("<H", data, offset, value & 0xFFFF)
 class VideoOracle:
-    def __init__(self, executable: Path, runtime_dir: Path | None = None):
+    def __init__(self, executable: Path, runtime_dir: Path | None = None, *, scanlines=False):
         environment = os.environ.copy()
         if runtime_dir:
             environment["PATH"] = str(runtime_dir.resolve()) + os.pathsep + environment.get("PATH", "")
-        self.process = subprocess.Popen([str(executable.resolve())], stdin=subprocess.PIPE,
+        self.scanlines=scanlines
+        self.process = subprocess.Popen([str(executable.resolve())]+(["--scanlines"] if scanlines else []), stdin=subprocess.PIPE,
                                         stdout=subprocess.PIPE, env=environment)
     def __enter__(self):
         return self
-    def render(self, parts) -> bytes:
+    def render(self, parts, line_registers=None) -> bytes:
         if tuple(map(len, parts)) != (1024, 1024, 98304, 1024):
             raise ValueError("A PPU snapshot requires IO, palette, VRAM and OAM.")
-        self.process.stdin.write(b"".join(parts))
+        if self.scanlines:
+            if not isinstance(line_registers,bytes) or len(line_registers)!=160*12:
+                raise ValueError("Scanline PPU input requires six halfword registers per visible row.")
+        elif line_registers is not None:raise ValueError("The static PPU protocol has no per-line registers.")
+        self.process.stdin.write(b"".join(parts)+(line_registers or b""))
         self.process.stdin.flush()
         reference = bytearray()
         while len(reference) < PIXELS * 4:

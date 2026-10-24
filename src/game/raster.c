@@ -98,6 +98,139 @@ static bool circle_window(HNMemory *m)
     }
     return !m->fault;
 }
+void hn_raster_scanline_phase_reset(HNMemory *m){hn_write8(m,HN_SCANLINE_PHASE,0);}
+bool hn_raster_scanline_profile(HNMemory *m,uint8_t retained_first)
+{
+    uint16_t phase=(uint16_t)(hn_read16(m,HN_SCANLINE_WINDOWS+2)+hn_read16(m,HN_SCANLINE_RADIUS));
+    hn_write16(m,HN_SCANLINE_RADIUS,phase);
+    unsigned increment=hn_read8(m,HN_SCANLINE_TRANSITION+3),old=hn_read8(m,HN_SCANLINE_TRANSITION+2),fraction=phase>>8;
+    unsigned radius=(uint8_t)(old+increment+fraction);
+    if(increment&128){if(old<256u-((increment+fraction)&255))radius=0;}
+    else if(radius>240)radius=240;
+    if(radius==255)return false; /* The original byte copy would never terminate. */
+    /* Contain the source scratch overrun at radius239/240 in host storage;
+       preserve every original guest destination write, including its last byte. */
+    uint8_t profile[256]={0};profile[0]=radius?retained_first:0;
+    if(radius){
+        unsigned x=0,y=radius;uint16_t decision=(uint16_t)(3-radius*2);
+        do{
+            profile[radius-y+1]=(uint8_t)x;profile[radius-x+1]=(uint8_t)y;
+            int d=(int16_t)decision;
+            if(d<0)decision=(uint16_t)(d+(int)x*4+6);
+            else{decision=(uint16_t)(d+((int)x-(int)y)*4+10);y=(uint16_t)(y-1);if(!y)break;}
+            x=(uint16_t)(x+1);
+        }while(x<=y);
+    }
+    GameAddr destination=hn_read32(m,HN_SCANLINE_PROFILE);
+    for(unsigned i=0;i<=radius;i++){
+        /* Configure's first pre-allocation update can target BIOS address zero.
+           CPU byte stores there are discarded; this is local to this copy. */
+        if(destination+i>=0x4000)hn_write8(m,destination+i,profile[i]);
+        if(m->fault)return false;
+    }
+    hn_write8(m,HN_SCANLINE_TRANSITION+2,(uint8_t)radius);return !m->fault;
+}
+static bool scanline_window(HNMemory *m,unsigned mode)
+{
+    unsigned line=hn_read16(m,0x04000006);bool scrolled=(mode&1)!=0;
+    if(line<160||line==227){
+        if(!hn_read8(m,HN_SCANLINE_PHASE)){
+            unsigned edge=240-hn_read8(m,HN_SCANLINE_TRANSITION);
+            if(scrolled&&mode<2)hn_write16(m,0x0400001C,(uint16_t)edge);
+            hn_write16(m,HN_SCANLINE_WINDOWS,(uint16_t)(edge&255));
+        }
+        unsigned phase=hn_read8(m,HN_SCANLINE_PHASE);
+        if(mode<2){
+            if(phase==1){
+                if(scrolled)hn_write16(m,0x0400001C,(uint16_t)(0xFF10+hn_read8(m,HN_SCANLINE_TRANSITION)));
+                hn_write16(m,HN_SCANLINE_WINDOWS,(uint16_t)((hn_read8(m,HN_SCANLINE_TRANSITION)<<8)+240));
+            }
+            hn_write8(m,HN_SCANLINE_PHASE,hn_read8(m,HN_SCANLINE_PHASE)^1);
+        }else{
+            if(scrolled&&phase==1)hn_write16(m,0x0400001C,(uint16_t)(0xFF10+hn_read8(m,HN_SCANLINE_TRANSITION)));
+            unsigned middle=hn_read8(m,HN_SCANLINE_PHASE+1)>>1;
+            if(phase==middle)hn_write16(m,HN_SCANLINE_WINDOWS,(uint16_t)((hn_read8(m,HN_SCANLINE_TRANSITION)<<8)+240));
+            if(scrolled&&hn_read8(m,HN_SCANLINE_PHASE)==middle+1)hn_write16(m,0x0400001C,(uint16_t)(240-hn_read8(m,HN_SCANLINE_TRANSITION)));
+            uint8_t next=(uint8_t)(phase+1);hn_write8(m,HN_SCANLINE_PHASE,next);
+            if(next>=hn_read8(m,HN_SCANLINE_PHASE+1))hn_write8(m,HN_SCANLINE_PHASE,0);
+        }
+    }
+    if(hn_read16(m,0x04000006)==160){
+        uint8_t next=(uint8_t)(hn_read8(m,HN_SCANLINE_TRANSITION+1)+hn_read8(m,HN_SCANLINE_TRANSITION));
+        hn_write8(m,HN_SCANLINE_TRANSITION,next);hn_write8(m,HN_SCANLINE_PHASE,0);
+        if(next>240){hn_write8(m,HN_SCANLINE_TRANSITION,240);hn_write8(m,HN_SCANLINE_TRANSITION+1,0);}
+    }
+    return !m->fault;
+}
+static uint16_t bounded_edge(uint32_t value)
+{uint16_t edge=(uint16_t)value;if(edge&0x8000)return 0;return edge>240?240:edge;}
+static bool scanline_steps(HNMemory *m,bool scrolled)
+{
+    unsigned line=hn_read16(m,0x04000006);line=line==227?0:(uint16_t)(line+1);
+    unsigned period=hn_read8(m,HN_SCANLINE_PHASE+1);
+    /* The original libgcc division and remainder return zero for divisor zero. */
+    if(line<=160&&(period?line%period:0)==0){
+        uint16_t edge=bounded_edge(hn_read16(m,HN_SCANLINE_WINDOWS+2)-hn_read8(m,HN_SCANLINE_PHASE));
+        hn_write16(m,HN_SCANLINE_WINDOWS,edge);
+        if(scrolled)hn_write16(m,0x0400001C,(uint16_t)(240-edge));
+        hn_write16(m,HN_SCANLINE_WINDOWS,(uint16_t)((hn_read16(m,HN_SCANLINE_WINDOWS)<<8)+240));
+        hn_write8(m,HN_SCANLINE_PHASE,(uint8_t)(hn_read8(m,HN_SCANLINE_PHASE)+hn_read8(m,HN_SCANLINE_PHASE+2)));
+    }
+    if(hn_read16(m,0x04000006)==160){
+        hn_write16(m,HN_SCANLINE_WINDOWS+2,(uint16_t)(hn_read16(m,HN_SCANLINE_WINDOWS+2)+hn_read8(m,HN_SCANLINE_TRANSITION+1)));
+        hn_write8(m,HN_SCANLINE_PHASE,0);period=hn_read8(m,HN_SCANLINE_PHASE+1);
+        unsigned limit=hn_read8(m,HN_SCANLINE_PHASE+2)*(period?160/period:0)+240;
+        if(hn_read16(m,HN_SCANLINE_WINDOWS+2)>limit){hn_write16(m,HN_SCANLINE_WINDOWS,(uint16_t)limit);hn_write8(m,HN_SCANLINE_TRANSITION+1,0);}
+    }
+    return !m->fault;
+}
+static bool scanline_circle(HNMemory *m)
+{
+    unsigned line=hn_read16(m,0x04000006);
+    if(line<160||line==227){
+        unsigned center=hn_read8(m,HN_SCANLINE_TRANSITION+1),radius=hn_read8(m,HN_SCANLINE_TRANSITION+2),phase=hn_read8(m,HN_SCANLINE_PHASE);
+        uint16_t packed=0;
+        if((int)center-(int)radius<(int)phase&&center+radius>phase){
+            unsigned distance=(center<phase?phase-center:center-phase)&255;
+            unsigned width=hn_read8(m,hn_read32(m,HN_SCANLINE_PROFILE)+radius-distance),x=hn_read8(m,HN_SCANLINE_TRANSITION);
+            unsigned left=x<width?0:(x-width)&255,right=hn_read8(m,HN_SCANLINE_TRANSITION);
+            right=(int)right>=240-(int)width?240:(width+right)&255;packed=(uint16_t)((left<<8)+right);
+        }
+        hn_write16(m,HN_SCANLINE_WINDOWS,packed);hn_write8(m,HN_SCANLINE_PHASE,(uint8_t)(hn_read8(m,HN_SCANLINE_PHASE)+1));
+    }
+    if(hn_read16(m,0x04000006)==160){
+        hn_write8(m,HN_SCANLINE_PHASE,0);
+        if((uint8_t)(hn_read8(m,HN_SCANLINE_TRANSITION+2)-1)>198)hn_write8(m,HN_SCENE_CONTROLS+0x180,255);
+        else return hn_raster_scanline_profile(m,0);
+    }
+    return !m->fault;
+}
+static bool configure_scanline(HNMemory *m,GameAddr arguments)
+{
+    hn_video_hblank(m,0);unsigned mode=hn_read8(m,HN_SCENE_CONTROLS+0x61),selector;
+    if(mode<=3){
+        hn_write8(m,HN_SCANLINE_PHASE+1,mode<2?1:hn_read8(m,HN_SCENE_CONTROLS+0x64));
+        hn_write8(m,HN_SCANLINE_TRANSITION+1,hn_read8(m,HN_SCENE_CONTROLS+0x63));
+        hn_write8(m,HN_SCANLINE_PHASE,0);hn_write8(m,HN_SCANLINE_TRANSITION,0);hn_write16(m,HN_SCANLINE_WINDOWS,0);
+        selector=(uint8_t)(hn_read8(m,arguments)+mode);
+    }else if(mode<=5){
+        hn_write8(m,HN_SCANLINE_PHASE+1,hn_read8(m,HN_SCENE_CONTROLS+0x65));hn_write8(m,HN_SCANLINE_PHASE+2,hn_read8(m,HN_SCENE_CONTROLS+0x64));
+        hn_write8(m,HN_SCANLINE_TRANSITION+1,hn_read8(m,HN_SCENE_CONTROLS+0x63));hn_write8(m,HN_SCANLINE_PHASE,0);
+        hn_write16(m,HN_SCANLINE_WINDOWS,0);hn_write16(m,HN_SCANLINE_WINDOWS+2,0);selector=(uint8_t)(hn_read8(m,arguments)+mode);
+    }else if(mode<=8){
+        hn_write8(m,HN_SCANLINE_TRANSITION,120);hn_write8(m,HN_SCANLINE_TRANSITION+1,mode==6?80:160);
+        hn_write8(m,HN_SCANLINE_TRANSITION+2,mode==6?120:mode==7?0:24);hn_write8(m,HN_SCANLINE_TRANSITION+3,mode==6?255:mode==7?2:0);
+        hn_write16(m,HN_SCANLINE_WINDOWS+2,0);hn_write16(m,HN_SCANLINE_WINDOWS,0);hn_write8(m,HN_SCANLINE_PHASE,0);
+        hn_write16(m,HN_SCANLINE_RADIUS,0);hn_write8(m,HN_SCENE_CONTROLS+0x180,0);
+        if(!hn_raster_scanline_profile(m,0))return false;
+        selector=(uint8_t)(hn_read8(m,arguments)+6);
+        GameAddr profile=hn_heap_allocate(m,240,true);hn_write32(m,HN_SCANLINE_PROFILE,profile);if(!profile)return false;
+    }else return false; /* The source selector word is unspecified above mode8. */
+    hn_write32(m,0x040000B0,HN_SCANLINE_WINDOWS);hn_write32(m,0x040000B4,0x04000040);
+    hn_write16(m,0x040000B8,1);hn_write16(m,0x040000BA,0xA340);
+    hn_write16(m,0x04000000,hn_read16(m,0x04000000)|0x2000);hn_write16(m,0x04000040,0);
+    hn_write16(m,0x04000044,160);hn_write16(m,0x04000048,31);hn_write16(m,0x0400004A,16);hn_video_hblank(m,selector);return !m->fault;
+}
 bool hn_raster_wave(HNMemory *m)
 {
     unsigned line=hn_read16(m,0x04000006),phase=hn_read8(m,HN_SCANLINE_PHASE+1);
@@ -123,9 +256,30 @@ bool hn_raster_wave(HNMemory *m)
     }
     return !m->fault;
 }
-HNSceneResult hn_raster_callback(HNMemory *m,GameAddr callback,uint32_t *consumed)
+HNSceneResult hn_raster_callback(HNMemory *m,GameAddr callback,GameAddr arguments,uint32_t *consumed)
 {
+    *consumed=0;
     switch(callback&~1u){
+    case 0x080CE678:{
+        unsigned operation=hn_read8(m,arguments);
+        if(operation<=5){
+            unsigned field=operation<2?1:operation<4?0:2,step=operation<4?4:2,maximum=operation<4?239:199;
+            int value=(int)hn_read8(m,HN_SCANLINE_TRANSITION+field)+((operation&1)?(int)step:-(int)step);
+            if((operation&1)?value<=(int)maximum:value>0)hn_write8(m,HN_SCANLINE_TRANSITION+field,(uint8_t)value);
+        }
+        *consumed=1;break;
+    }
+    case 0x080CE72C:if(!configure_scanline(m,arguments))return HN_SCENE_RESOURCE;*consumed=2;break;
+    case 0x080CE9F4:
+        hn_write16(m,0x04000000,hn_read16(m,0x04000000)&0x1FFF);hn_video_hblank(m,0);
+        hn_write32(m,0x040000B0,0);hn_write32(m,0x040000B4,0);hn_write32(m,0x040000B8,0);
+        hn_heap_free(m,hn_read32(m,HN_SCANLINE_PROFILE));break; /* Keep the source's retained pointer. */
+    case 0x080CEA34:{
+        unsigned parameter=hn_read8(m,HN_SCENE_CONTROLS+0x60);hn_video_hblank(m,4);
+        hn_write16(m,0x04000000,hn_read16(m,0x04000000)|0xB000);hn_write16(m,0x04000048,0x3F);
+        hn_write16(m,0x0400004A,0x3D3B);hn_write16(m,0x04000040,0xB9CF);
+        hn_write16(m,0x04000044,(uint16_t)(((16u-(parameter<<1))<<11)+138));break;
+    }
     case 0x0802E22C:
         hn_video_hblank(m,1);hn_write16(m,HN_SCANLINE_RADIUS,hn_read16(m,HN_VIDEO_STATE+0x6C));
         hn_write8(m,HN_SCANLINE_PHASE,0);hn_write8(m,HN_SCANLINE_PHASE+1,45);break;
@@ -143,7 +297,72 @@ HNSceneResult hn_raster_callback(HNMemory *m,GameAddr callback,uint32_t *consume
     }
     default:return HN_SCENE_UNKNOWN;
     }
-    *consumed=0;return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+    return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
+}
+static void complete_raster(HNMemory *m,GameAddr effect)
+{
+    restore_layers(m,effect);hn_video_hblank(m,0);dma_stop(m);free_effect(m);hn_write8(m,HN_SCENE_CONTROLS+0x60,1);
+}
+static bool raster_bands(HNMemory *m,unsigned mode)
+{
+    GameAddr effect=hn_read32(m,HN_RASTER_EFFECT);if(!effect)return false;
+    bool scrolled=mode==13,alternating=mode==17;unsigned line=hn_read16(m,0x04000006);
+    if(line<160||line==227){
+        if(!hn_read8(m,effect+5)){
+            uint32_t edge=240u-hn_read8(m,effect+6);
+            hn_write16(m,HN_RASTER_SCANLINE,(uint16_t)(alternating?(edge<<8)+240:edge));
+        }
+        effect=hn_read32(m,HN_RASTER_EFFECT);
+        if(scrolled&&hn_read8(m,effect+5)==1)hn_write16(m,0x0400001C,(uint16_t)(0xFF10+hn_read8(m,effect+6)));
+        if(hn_read8(m,effect+5)==(hn_read8(m,effect+4)>>1)){
+            unsigned edge=hn_read8(m,effect+6);hn_write16(m,HN_RASTER_SCANLINE,(uint16_t)(alternating?edge:(edge<<8)+240));
+        }
+        if(scrolled&&hn_read8(m,effect+5)==(unsigned)(hn_read8(m,effect+4)>>1)+1)
+            hn_write16(m,0x0400001C,(uint16_t)(240-hn_read8(m,effect+6)));
+        hn_write8(m,effect+5,(uint8_t)(hn_read8(m,effect+5)+1));
+        GameAddr current=hn_read32(m,HN_RASTER_EFFECT);
+        if(hn_read8(m,current+5)>=hn_read8(m,current+4))hn_write8(m,effect+5,0);
+    }
+    if(hn_read16(m,0x04000006)==160){
+        effect=hn_read32(m,HN_RASTER_EFFECT);hn_write8(m,effect+6,(uint8_t)(hn_read8(m,effect+3)+hn_read8(m,effect+6)));
+        effect=hn_read32(m,HN_RASTER_EFFECT);hn_write8(m,effect+5,0);
+        GameAddr sample=hn_read32(m,HN_RASTER_EFFECT);uint32_t edge=240u-hn_read8(m,sample+6);
+        uint16_t packed=(uint16_t)(alternating?(edge<<8)+240:edge);hn_write16(m,HN_RASTER_SCANLINE,packed);
+        hn_write16(m,hn_read8(m,sample)?0x04000042:0x04000040,packed);
+        GameAddr current=hn_read32(m,HN_RASTER_EFFECT);
+        if(scrolled)hn_write16(m,0x0400001C,(uint16_t)(0xFF10+hn_read8(m,current+6)));
+        unsigned value=hn_read8(m,current+6);
+        if((mode==12&&value>=240)||(mode!=12&&value>240))complete_raster(m,current);
+    }
+    return !m->fault;
+}
+static bool raster_steps(HNMemory *m,unsigned mode)
+{
+    unsigned line=hn_read16(m,0x04000006);line=line==227?0:(uint16_t)(line+1);
+    if(line<160){
+        GameAddr effect=hn_read32(m,HN_RASTER_EFFECT);if(!effect)return false;
+        int period=hn_read8(m,effect+4),remainder=period?(int)line%period:0;
+        if(remainder==period-1){
+            hn_write8(m,effect+6,(uint8_t)(hn_read8(m,effect+5)+hn_read8(m,effect+6)));
+            GameAddr sample=hn_read32(m,HN_RASTER_EFFECT);unsigned baseline=(hn_read8(m,sample+8)<<8)|hn_read8(m,sample+7);
+            hn_write16(m,HN_RASTER_SCANLINE,bounded_edge(baseline-hn_read8(m,sample+6)));
+            if(mode==15)hn_write16(m,0x0400001C,(uint16_t)(240-hn_read16(m,HN_RASTER_SCANLINE)));
+            if(mode!=18)hn_write16(m,HN_RASTER_SCANLINE,(uint16_t)((hn_read16(m,HN_RASTER_SCANLINE)<<8)+240));
+        }
+    }
+    if(hn_read16(m,0x04000006)==160){
+        GameAddr effect=hn_read32(m,HN_RASTER_EFFECT);if(!effect)return false;
+        unsigned baseline=(hn_read8(m,effect+8)<<8)|hn_read8(m,effect+7);
+        baseline=(uint16_t)(baseline+hn_read8(m,effect+3));hn_write8(m,effect+8,(uint8_t)(baseline>>8));hn_write8(m,effect+7,(uint8_t)baseline);
+        effect=hn_read32(m,HN_RASTER_EFFECT);hn_write8(m,effect+6,0);
+        GameAddr sample=hn_read32(m,HN_RASTER_EFFECT);hn_write16(m,HN_RASTER_SCANLINE,bounded_edge(baseline-hn_read8(m,sample+6)));
+        unsigned edge=hn_read16(m,HN_RASTER_SCANLINE);uint16_t packed=(uint16_t)(mode==18?edge:(edge<<8)+240);
+        hn_write16(m,hn_read8(m,sample)?0x04000042:0x04000040,packed);
+        if(mode!=18)hn_write16(m,HN_RASTER_SCANLINE,(uint16_t)((hn_read16(m,HN_RASTER_SCANLINE)<<8)+240));
+        GameAddr current=hn_read32(m,HN_RASTER_EFFECT);unsigned period=hn_read8(m,current+4),step=hn_read8(m,current+5);
+        unsigned limit=step*(period?160/period:0)+240;if(baseline>limit)complete_raster(m,current);
+    }
+    return !m->fault;
 }
 bool hn_raster_hblank(HNMemory *m)
 {
@@ -154,6 +373,22 @@ bool hn_raster_hblank(HNMemory *m)
     if(callback==0x08000578||callback==0x080CEA30)return !m->fault;
     if(callback==0x0800F4FC)return circle_window(m);
     if(callback==0x0802E268)return hn_raster_wave(m);
+    switch(callback){
+    case 0x080CEA90:hn_write16(m,0x04000018,hn_read16(m,HN_RENDER_SINE_TABLE+(hn_read16(m,0x04000006)>>1)*2));return !m->fault;
+    case 0x080CE0E0:return scanline_window(m,0);
+    case 0x080CE15C:return scanline_window(m,1);
+    case 0x080CE1F4:return scanline_window(m,2);
+    case 0x080CE280:return scanline_window(m,3);
+    case 0x080CE33C:return scanline_steps(m,false);
+    case 0x080CE3EC:return scanline_steps(m,true);
+    case 0x080CE4AC:return scanline_circle(m);
+    case 0x0800EF60:return raster_bands(m,12);
+    case 0x0800F084:return raster_bands(m,13);
+    case 0x0800F6AC:return raster_bands(m,17);
+    case 0x0800F1EC:return raster_steps(m,14);
+    case 0x0800F36C:return raster_steps(m,15);
+    case 0x0800F7D8:return raster_steps(m,18);
+    }
     return false;
 }
 bool hn_raster_vcount_blend(HNMemory *m)

@@ -46,7 +46,7 @@ statically. A separate clean-machine validation remains pending.
 | Map and core initialization | Adapted | Runtime tables read from ROM, task sentinel, render slots/order, background state and all 11 map banks tested at index 0 |
 | Objects and animation scripts | Partial | Physics, positions, priority ordering, affine reuse, OAM and animation/sound commands compared; animation callback bindings remain incomplete |
 | Background scripts and transforms | Adapted | All 61 command handlers, repeat/call flow, motion, clamping, affine layers and tilemap copies compared; invalid stacks/resources fail explicitly |
-| Graphics scripts and palette effects | Partial | All 48 command handlers compared, including raster allocation, position, windows, radius profiles and sweeps; circular and wave HBlank callbacks compared, remaining scanline callbacks and timed DMA/PPU integration pending |
+| Graphics scripts and palette effects | Adapted contracts | All 48 command handlers compared; all 19 HBlank selectors and 26 connected window/raster functions adapted, including source heap/DMA order and typed callbacks; 46 clocked frames match per-line source registers and independent PPU output; original ARM latency and DMA bus contention remain unverified |
 | VCOUNT blend and counter modes | Adapted | Ten connected functions compared, including complete blend/increment families, byte selectors/scanlines, 16-bit status/counter domains and five Main/F4 contracts; original pending bits, transition phase and live callback table retained; nine clocked frames match independent PPU bands at line 104; original CPU timing remains pending |
 | Word expressions | Adapted | Arithmetic, comparisons, short-circuit cursor effects and variable/flag updates; bounded recursion and private randomized comparisons |
 | Actor script contexts | Adapted | Sixteen 84-byte contexts, Main state preservation, nested calls/waits, activation/stop and same-frame activation compared; per-actor command budgets fail explicitly |
@@ -430,14 +430,14 @@ The title's scene counters are temporarily zero while outside the story; the
 world save restores 65 words and eleven loves. Native PPU output confirms the
 two outfits and that the first photo appears behind the title menu.
 
-All 73,776 updates and 29 checkpoints pass the SDK in 131.90 seconds, followed
-by 77,733 host-session checks in 134.03 seconds. SDK, host and input-only scout
+All 73,776 updates and 29 checkpoints pass the current SDK in 132.64 seconds, followed
+by 77,733 host-session checks in 146.07 seconds. SDK, host and input-only scout
 SRAM agree across all 32 KiB. A fresh SDK process passes 2,103 updates in
-2.911 seconds, including Status, both photos, the four empty slots and the earlier
+3.084 seconds, including Status, both photos, the four empty slots and the earlier
 gem/rock assertions. The endpoint is map 1:3 at x=144.5, z=48.5 with 65 words,
 two seeds, five rocks, eleven loves, Bijou and both purchased colors. The source
-profiles stay unchanged. No native sources or binaries changed in this extension;
-the complete reference-comparison boundary remains applicable.
+profiles stay unchanged. This replay also passes after the native scanline-window
+batch described below; no private source profile is overwritten.
 
 Other clothing purchases, gallery operations, settings and full desktop activity
 coverage remain pending.
@@ -733,9 +733,31 @@ functions. Invalid palette extents fail instead of taking the original zero-coun
 wraparound path. Fade, alpha and mosaic modes preserve their distinct delay and
 completion rules. Raster state retains guest heap ownership, DMA0 register setup,
 window/layer restoration, byte/phase wrapping and the signed radius-update condition.
-The typed HBlank dispatcher supports the circular effect, scanline wave/blend and known no-op callbacks;
-other callback addresses fail explicitly. Static snapshots and sampled callback
-comparisons do not establish raster-image fidelity or the real IRQ cadence. Main save-load
+The typed HBlank dispatcher resolves all 19 original selectors through the live
+guest table, including eighteen distinct targets. The complete window, stepped,
+circle, alternating-band, scrolled-band and wave families share raster.c. Four
+window/wave Main contracts, two argument-free F4 contracts and two direct helpers
+complete a 26-function comparison batch. Argument-dependent callbacks have no F4
+binding; the phase-reset helper has no invented script contract. Other callback
+addresses fail explicitly.
+
+The window transition phase remains separate from the wave phase. Configuration
+retains the original profile update before allocation, overlapping guest reads,
+DMA setup, completion thresholds and retained pointer after free. The radius
+helper uses bounded host scratch for the source's radius-239/240 overrun, preserving
+guest writes. Positive radii leave source scratch byte zero unwritten; runtime
+supplies zero, while comparisons also supply explicit nonzero retained values.
+Only this helper discards the original pre-allocation byte stores into protected
+BIOS memory. A nonterminating radius-255 copy and unspecified configure modes
+above eight fail explicitly. No arbitrary ARM stack-history identity is claimed.
+
+Forty-six synthetic clocked frames compare every visible line's scroll, window
+and blend registers with original callbacks, then all pixels with an independent
+mGBA PPU. They exercise HBlank DMA before the IRQ, frame wrap, changing stepped
+widths, completion and combined VCOUNT/window effects. Analytical native pixel
+tests retain narrow flipped-tile windows where mGBA 0.10.5 has a clipping defect.
+These checks establish the selected clock/register/pixel contracts, without
+modelling original ARM instruction latency or DMA bus contention. Main save-load
 commands preserve the failure cursor/depth behavior and reload the saved map with
 a white palette on success. The connected input scenario now verifies End Game's
 SRAM write and Continue; host-file persistence has separate session checks.
@@ -996,8 +1018,8 @@ constructors. One additional shared bank-3 value condition supports the bank-2
 scripts without claiming the rest of bank 3. Nine gameplay-record functions retain
 packed counters, the twelve-byte query result and original underflow/clamp behavior.
 The three-function scanline-wave family has typed Main/task/HBlank adapters with
-all-line threshold and frame-end phase comparisons; timed raster images remain
-unverified.
+all-line threshold and frame-end phase comparisons. Its clocked alpha and scroll
+pixels are included in the complete HBlank/window batch above.
 
 The render-selection Main callback captures all three argument bytes and signed
 class coordinates before resetting a slot. It selects either the player's ROM

@@ -16,9 +16,13 @@ static uint8_t io[1024],palette[1024],vram[98304],oam[1024];
 static uint16_t palette_channel[512],vram_channel[49152];
 static color_t output[240*160];
 static uint32_t rgba[240*160];
+static uint8_t line_registers[160][12];
+static const unsigned line_addresses[]={0x18,0x1C,0x40,0x42,0x50,0x52};
 static uint16_t word(const uint8_t *p){return (uint16_t)(p[0]|p[1]<<8);}
-int main(void)
+int main(int argc,char **argv)
 {
+    int scanlines=argc==2&&!strcmp(argv[1],"--scanlines");
+    if(argc!=1&&!scanlines)return 1;
 #ifdef _WIN32
     _setmode(_fileno(stdin),_O_BINARY);_setmode(_fileno(stdout),_O_BINARY);
 #endif
@@ -30,6 +34,7 @@ int main(void)
         if(!bytes&&feof(stdin))break;
         if(bytes!=sizeof(io)||fread(palette,1,sizeof(palette),stdin)!=sizeof(palette)||
            fread(vram,1,sizeof(vram),stdin)!=sizeof(vram)||fread(oam,1,sizeof(oam),stdin)!=sizeof(oam))return 4;
+        if(scanlines&&fread(line_registers,1,sizeof(line_registers),stdin)!=sizeof(line_registers))return 4;
         for(unsigned i=0;i<240*160;i++)rgba[i]=0xFF000000u;
         /* mGBA 0.10.5's RGB555 fade helper rounds shifted G/B differently
            from R. Channels are independent, so render each through R to keep
@@ -53,7 +58,11 @@ int main(void)
             /* A snapshot describes settled registers, not enable pipelines
                or mid-scanline writes. Warm up one frame before comparing. */
             for(unsigned frame=0;frame<2;frame++){
-                for(int y=0;y<160;y++)renderer->drawScanline(renderer,y);
+                for(int y=0;y<160;y++){
+                    if(scanlines)for(unsigned i=0;i<sizeof(line_addresses)/sizeof(*line_addresses);i++)
+                        renderer->writeVideoRegister(renderer,line_addresses[i],word(line_registers[y]+i*2));
+                    renderer->drawScanline(renderer,y);
+                }
                 renderer->finishFrame(renderer);
             }
             for(unsigned i=0;i<240*160;i++){

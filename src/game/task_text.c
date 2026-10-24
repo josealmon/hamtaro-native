@@ -206,8 +206,8 @@ static bool task_callback(HNMemory *m,GameAddr callback)
     case 0x0801EC6C:case 0x0801ECAC:case 0x0801ECC4:case 0x0801F118:{
         uint32_t ignored;return hn_scene_motion_callback(m,callback,0,&ignored)==HN_SCENE_OK;}
     case 0x0802E22C:case 0x0802E258:case 0x080CD33C:case 0x080CF218:
-    case 0x080CD554:case 0x080CD580:case 0x080CF248:{
-        uint32_t ignored;return hn_raster_callback(m,callback,&ignored)==HN_SCENE_OK;}
+    case 0x080CD554:case 0x080CD580:case 0x080CF248:case 0x080CE9F4:case 0x080CEA34:{
+        uint32_t ignored;return hn_raster_callback(m,callback,0,&ignored)==HN_SCENE_OK;}
     default:{HNSceneResult result=hn_bank3_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_bank4_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;
         result=hn_bank5_task(m,callback);if(result!=HN_SCENE_UNKNOWN)return result==HN_SCENE_OK;

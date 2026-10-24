@@ -530,7 +530,7 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         result=hn_group3_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_pair_list_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_record_menu_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
-        result=hn_raster_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_raster_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_scene_actor_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_wander_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_bank2_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;

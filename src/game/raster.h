@@ -13,7 +13,10 @@ bool hn_raster_vcount(HNMemory *);
 bool hn_raster_vcount_blend(HNMemory *);
 bool hn_raster_vcount_increment(HNMemory *);
 bool hn_raster_wave(HNMemory *);
-HNSceneResult hn_raster_callback(HNMemory *,GameAddr callback,uint32_t *consumed);
+/* For positive radii, the original leaves the first scratch byte unwritten. */
+bool hn_raster_scanline_profile(HNMemory *,uint8_t retained_first);
+void hn_raster_scanline_phase_reset(HNMemory *);
+HNSceneResult hn_raster_callback(HNMemory *,GameAddr callback,GameAddr arguments,uint32_t *consumed);
 bool hn_raster_command(HNMemory *,GameAddr state,unsigned opcode,GameAddr data,uint32_t *running);
 #ifdef __cplusplus
 }

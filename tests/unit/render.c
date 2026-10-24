@@ -191,6 +191,30 @@ static void pixel_contracts(void)
     hn_write16(&memory,0x07000008,0);hn_write16(&memory,0x0700000C,1);
     hn_video_render(&memory,pixels);CHECK(pixels[0]==0xFF0000FF);
 }
+static void clipped_text_tiles(void)
+{
+    /* Analytical 4bpp colors retain sub-tile window/flip coverage where
+       mGBA 0.10.5's flipped suffix optimization reads the wrong nibble. */
+    reset();hn_write16(&memory,0x04000000,0x2100);hn_write16(&memory,0x04000008,0x1000);
+    hn_write16(&memory,0x04000044,160);hn_write16(&memory,0x04000048,1);
+    for(unsigned i=1;i<=8;i++)hn_write16(&memory,0x05000000+i*2,(uint16_t)i);
+    for(unsigned row=0;row<8;row++){
+        hn_write16(&memory,0x06000020+row*4,0x4321);hn_write16(&memory,0x06000022+row*4,0x8765);
+    }
+    for(unsigned flip=0;flip<2;flip++){
+        for(unsigned entry=0;entry<1024;entry++)hn_write16(&memory,0x06008000+entry*2,(uint16_t)(1|(flip<<10)));
+        for(unsigned scroll=0;scroll<8;scroll++)for(unsigned width=1;width<=8;width++){
+            unsigned left=240-width;hn_write16(&memory,0x04000010,(uint16_t)scroll);
+            hn_write16(&memory,0x04000040,(uint16_t)((left<<8)|240));hn_video_render_line(&memory,0,pixels);
+            CHECK(pixels[left-1]==0xFF000000u);
+            for(unsigned x=left;x<240;x++){
+                unsigned index=(x+scroll)&7;index=1+(flip?7-index:index);
+                CHECK(pixels[x]==(0xFF000000u|(index<<3)|(index>>2)));
+            }
+        }
+    }
+    CHECK(!memory.fault);
+}
 static void backgrounds(void)
 {
     reset();HNBackground background;hn_background_init(&background,&memory);
@@ -283,6 +307,6 @@ int main(void)
         int16_t sine=(int16_t)lround(sin(i*3.14159265358979323846/128)*256);
         unsigned p=HN_RENDER_SINE_TABLE-HN_ROM_BASE+i*2;rom[p]=(uint8_t)sine;rom[p+1]=(uint8_t)(sine>>8);
     }
-    configuration();matrices();animations();callbacks_and_motion();drawing();pixel_contracts();backgrounds();
+    configuration();matrices();animations();callbacks_and_motion();drawing();pixel_contracts();clipped_text_tiles();backgrounds();
     free(rom);printf("%u native renderer checks passed.\n",checks);return 0;
 }

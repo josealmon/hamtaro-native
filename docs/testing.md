@@ -39,7 +39,9 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   signaling, allocation failure and rejected task contracts.
 - render: animation repeat/call/delay flow, typed callback guards, physics,
   affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
-  PPU regressions for tile mapping, transparency, mosaic/window phase and effects;
+  PPU regressions for tile mapping, transparency, mosaic/window phase and effects,
+  including analytically known 4bpp colors for every sub-tile window width and
+  scroll phase with both horizontal flip states;
   word-choice slot setup, coordinate truncation, class gates and priority flags.
 - graphics: palette interpolation/source wrapping, scripted repeat/call/delay
   flow, alpha/mosaic transitions, compressed palette frames, paused states and
@@ -48,6 +50,8 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
   cleanup, radius arithmetic, circular HBlank phase/termination and unknown IRQ targets.
   VCOUNT tests cover exact line-104/frame-wrap transitions, pending IRQ delivery
   after re-enabling, counter wrap, zero/unknown handlers and original pending bits.
+  Window tests cover alternating/stepped/circular setup, radius scratch bounds,
+  live phase state and explicit rejection of an unreviewed configure selector.
 - audio: synthetic driver/player setup, parameters and fades, linked-channel
   release, typed sequence dispatch, note allocation, complete synthetic track
   progression, PCM interpolation/end/reverb behavior, PSG wave-register writes,
@@ -78,18 +82,20 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 5,561,200 checks in 687.406 seconds. It retains
-all 5,356,967 preceding cases and adds 204,233 clothing-catalog comparisons.
+The latest complete suite passes 5,793,256 checks in 662.005 seconds. It retains
+all 5,561,200 preceding cases and adds 232,056 HBlank/window comparisons,
+including 46 independently rendered clocked frames. All 204,233 clothing-catalog
+comparisons remain enabled.
 The 740,210 VCOUNT checks, including independent timed pixels, remain enabled.
-Every preceding named phase retains its previous
-assertion count.
+Every one of the 44 preceding named phases retains its previous assertion count.
 The preceding 66,963 local music/record comparisons, 61,195 six/eight-choice room checks and 71,722 unassigned-I/O
 collision checks, including even/odd register boundaries and every render count,
 remain enabled.
 Full 16-bit domains, 30 private PPU snapshots and all independent oracles remain
 enabled. The focused motion group passes 16,095 checks in 2.561 seconds; all
-11 CTest suites pass, including 17,383 game, 503 graphics and 34 keyboard/gamepad checks. Story replays ran concurrently,
-so these are local observations, not portable performance guarantees.
+11 CTest suites pass in 1.81 seconds, including 17,383 game, 823 renderer,
+522 graphics and 34 keyboard/gamepad checks. Replay and full-suite timing are
+separate local observations, not portable performance guarantees.
 Earlier optimization reduced the same 4,200,342-check suite from approximately
 1,238 seconds (log timestamps) to 678.102 seconds without reducing coverage.
 Use focused groups during iteration and the complete suite at a functional batch
@@ -449,17 +455,17 @@ stored colors; a second photo swaps them and uses setting 2 in slot six.
 Declining to erase slot one preserves both photos. Continue restores the earlier
 story, and another original Save/Continue retains both records and all four
 unused slots. All 73,776 SDK updates and 29 semantic checkpoints pass in
-131.90 seconds, followed by 77,733 host-session checks in 134.03 seconds.
+132.64 seconds, followed by 77,733 host-session checks in 146.07 seconds.
 SDK, host and input-only scout match all 32 KiB of SRAM. A fresh SDK process
-passes 2,103 updates in 2.911 seconds, including Status, both photo records,
+passes 2,103 updates in 3.084 seconds, including Status, both photo records,
 four unused slots and the previous gem/rock assertions. The endpoint is map 1:3
 at x=144.5, z=48.5 with 65 words, two seeds, five rocks, eleven loves and Bijou.
 Both input profiles are unchanged. Fifteen scenario-parser tests and all eleven
 CTest suites pass, including the actual application smoke test.
 
-The extension changes only scalar checkpoints and recorded input. The native
-source tree, application and probe hashes remain identical to the complete
-reference-comparison boundary; its checks do not need another identical run.
+The scenario extension changes only scalar checkpoints and recorded input.
+The same route also passes with the subsequent native HBlank/window batch,
+whose function and timed-pixel checks are described below.
 The canonical route omits 6,370 unasserted scouting updates, retaining every old
 purchase update/checkpoint and the scout's exact final SRAM. Only ordinary
 buttons and read-only scalar assertions are versioned. Other
@@ -1062,8 +1068,9 @@ modify and restore only the two private in-memory engine fixtures.
 Wave checks cover
 all 228 scanlines, blend thresholds, signed wrapping, frame-end phase updates and
 typed Main/F4/HBlank calls. Public synthetic game tests cover these boundaries
-without original assets. These comparisons do not establish full-area progression,
-the complete inventory UI, SRAM integration or timed raster-image fidelity.
+without original assets. The additional clocked pixels are covered by the complete
+HBlank/window group below; these function checks alone do not establish full-area
+progression or complete inventory UI/SRAM integration.
 
 The same `--wave-only` group includes ten connected VCOUNT functions: the shared
 enable setter and IRQ/noop, both complete blend/increment families, and the two
@@ -1085,6 +1092,37 @@ they do not model original CPU instruction latency or complete list-activity
 progression. All previous wave comparisons and full-suite oracles remain enabled.
 
     python -B tools/compare_reference.py --wave-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --video-oracle PATH_TO_HN_VIDEO_ORACLE --oracle-runtime-dir PATH_TO_ORACLE_RUNTIME_DLLS
+
+The `--scanlines-only` group compares all nineteen HBlank selectors, eighteen
+distinct table targets and 26 connected functions. It includes complete global
+window/step/circle/radius and wave-setup families, the remaining graphics-script
+raster kernels, four Main contracts and two valid F4 contracts. Every real line,
+full byte phase/boundary domains, zero periods, radius increments/fractions,
+pre-allocation heap order, pointer aliases and wrong calling contracts are checked.
+Inactive ARM scratch is explicitly defined for the radius helper's unwritten
+first byte, including nonzero retained-value cases. This is a defined adaptation,
+not evidence for arbitrary stack-history equivalence.
+
+With the independent video oracle, the group passes 232,056 checks in 16.805
+seconds. Forty-six native frames compare six scroll/window/blend registers at
+every visible line before comparing every pixel. Original callback execution
+supplies the register timeline; the separate mGBA PPU consumes it through the
+oracle's optional `--scanlines` protocol (160 rows of six little-endian halfwords
+after the usual static snapshot). The ordinary static protocol is unchanged.
+Cases include repeating HBlank DMA before IRQ delivery, frame wrap, visible
+per-line alpha, multiple stepped widths, effect cleanup and combined VCOUNT/window
+phases. This models boundary ordering, not original ARM instruction latency.
+
+mGBA 0.10.5's optimized 4bpp flipped-tile suffix reads the wrong nibble when the
+window ends before the source tile does. A minimal one-pixel window at x=239,
+scroll 2 and flipped tile with nibbles 1..8 selects index 7; native returns red 57,
+whereas that oracle returns red 8 (index 1). The earlier forty clocked frames
+retain flipped maps. Six additional completion frames use unflipped maps to keep
+their pixel comparison independent of that defect. Native analytical regressions
+retain both flip states, all eight scroll phases and window widths one through
+eight, with no skipped output pixels. The external mGBA source is unchanged.
+
+    python -B tools/compare_reference.py --scanlines-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --video-oracle PATH_TO_HN_VIDEO_ORACLE --oracle-runtime-dir PATH_TO_ORACLE_RUNTIME_DLLS
 
 The counter-scene group passes 179,460 comparisons across all thirteen functions
 in map10_4_counter_sequence.c. It covers every 16-bit counter value, five tile banks,

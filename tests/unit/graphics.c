@@ -137,11 +137,11 @@ static void vcount_timing(void)
     reset();uint32_t consumed=99;HNClock clock;VcountTrace trace={&memory,0,{0}};
     hn_write32(&memory,HN_VCOUNT_HANDLERS+4,0x080CD4E1);hn_write32(&memory,HN_VCOUNT_HANDLERS+8,0x080CF239);
     hn_write32(&memory,HN_VIDEO_STATE,2);hn_write8(&memory,HN_VCOUNT_PHASE,0);
-    CHECK(hn_raster_callback(&memory,0x080CD33D,&consumed)==HN_SCENE_OK&&consumed==0);
+    CHECK(hn_raster_callback(&memory,0x080CD33D,0,&consumed)==HN_SCENE_OK&&consumed==0);
     CHECK(hn_read32(&memory,HN_VIDEO_STATE)==2&&hn_read8(&memory,HN_VCOUNT_PHASE)==0);
     CHECK(hn_read8(&memory,HN_VCOUNT_SELECTOR)==1&&hn_read16(&memory,HN_DISPLAY_STATUS)==0x6868);
     hn_video_commit(&memory);CHECK(hn_read16(&memory,0x04000050)==0x1342&&hn_read16(&memory,0x04000052)==0x0E03);
-    CHECK(hn_raster_callback(&memory,0x080CD581,&consumed)==HN_SCENE_OK);
+    CHECK(hn_raster_callback(&memory,0x080CD581,0,&consumed)==HN_SCENE_OK);
     hn_write16(&memory,0x04000208,1);hn_clock_init(&clock,&memory,NULL,vcount_irq,&trace);
     hn_clock_advance(&clock,&memory,104*HN_CYCLES_PER_LINE-1);CHECK(trace.count==0);
     hn_clock_advance(&clock,&memory,1);CHECK(trace.count==1&&trace.lines[0]==104);
@@ -156,17 +156,17 @@ static void vcount_timing(void)
     CHECK(hn_read16(&memory,0x04000050)==0x1D42&&!(hn_read16(&memory,0x04000202)&4));
     /* Rearm through the original disable/enable path; changing an already
        enabled compare value alone does not set the video pending bits. */
-    CHECK(hn_raster_callback(&memory,0x080CF219,&consumed)==HN_SCENE_OK);hn_video_commit(&memory);
+    CHECK(hn_raster_callback(&memory,0x080CF219,0,&consumed)==HN_SCENE_OK);hn_video_commit(&memory);
     CHECK((hn_read16(&memory,0x04000004)>>8)==104);
     hn_video_vcount(&memory,0,0);hn_video_commit(&memory);
-    trace.count=0;CHECK(hn_raster_callback(&memory,0x080CF219,&consumed)==HN_SCENE_OK);
+    trace.count=0;CHECK(hn_raster_callback(&memory,0x080CF219,0,&consumed)==HN_SCENE_OK);
     CHECK(hn_read8(&memory,HN_VCOUNT_PHASE)==1);hn_video_commit(&memory);
     hn_write16(&memory,0x0201DC92,65535);hn_clock_advance(&clock,&memory,HN_CYCLES_PER_FRAME);
     CHECK(trace.count==1&&trace.lines[0]==1&&hn_read16(&memory,0x0201DC92)==0);
-    CHECK(hn_raster_callback(&memory,0x080CF249,&consumed)==HN_SCENE_OK);
+    CHECK(hn_raster_callback(&memory,0x080CF249,0,&consumed)==HN_SCENE_OK);
     hn_clock_advance(&clock,&memory,HN_CYCLES_PER_FRAME);
     CHECK(trace.count==1&&(hn_read16(&memory,0x04000202)&4)&&hn_read16(&memory,0x0201DC92)==0);
-    CHECK(hn_raster_callback(&memory,0x080CD581,&consumed)==HN_SCENE_OK);
+    CHECK(hn_raster_callback(&memory,0x080CD581,0,&consumed)==HN_SCENE_OK);
     hn_clock_advance(&clock,&memory,1);CHECK(trace.count==2&&trace.lines[1]==0&&hn_read16(&memory,0x0201DC92)==1);
     hn_video_vcount(&memory,0,159);CHECK(hn_read8(&memory,HN_VCOUNT_PHASE)==1);
     CHECK(hn_raster_vcount(&memory)&&!(hn_read16(&memory,0x04000004)&32));
@@ -201,10 +201,46 @@ static void transitions(void)
     CHECK(hn_graphics_update(&graphics,64));CHECK(hn_graphics_update(&graphics,64));
     CHECK(hn_read8(&memory,0x02018000)==0&& !memory.fault);
 }
+static void scanline_windows(void)
+{
+    reset();uint32_t consumed=99;const GameAddr args=0x02020000;
+    hn_write32(&memory,0x02000014,0x080CE0E1);hn_write8(&memory,HN_HBLANK_SELECTOR,5);
+    hn_write8(&memory,HN_SCANLINE_TRANSITION,50);hn_write16(&memory,0x0400001C,123);
+    CHECK(hn_raster_hblank(&memory)&&hn_read16(&memory,HN_SCANLINE_WINDOWS)==190&&hn_read8(&memory,HN_SCANLINE_PHASE)==1);
+    CHECK(hn_raster_hblank(&memory)&&hn_read16(&memory,HN_SCANLINE_WINDOWS)==0x32F0&&!hn_read8(&memory,HN_SCANLINE_PHASE));
+    CHECK(hn_read16(&memory,0x0400001C)==123);
+    memory.io[6]=160;hn_write8(&memory,HN_SCANLINE_TRANSITION,250);hn_write8(&memory,HN_SCANLINE_TRANSITION+1,20);
+    CHECK(hn_raster_hblank(&memory)&&hn_read8(&memory,HN_SCANLINE_TRANSITION)==14&&hn_read8(&memory,HN_SCANLINE_TRANSITION+1)==20);
+    hn_write8(&memory,HN_SCANLINE_TRANSITION,250);hn_write8(&memory,HN_SCANLINE_TRANSITION+1,1);
+    CHECK(hn_raster_hblank(&memory)&&hn_read8(&memory,HN_SCANLINE_TRANSITION)==240&&!hn_read8(&memory,HN_SCANLINE_TRANSITION+1));
+    hn_write32(&memory,0x02000024,0x080CE33D);hn_write8(&memory,HN_HBLANK_SELECTOR,9);memory.io[6]=0;
+    hn_write8(&memory,HN_SCANLINE_PHASE,20);hn_write8(&memory,HN_SCANLINE_PHASE+1,0);hn_write8(&memory,HN_SCANLINE_PHASE+2,5);
+    hn_write16(&memory,HN_SCANLINE_WINDOWS+2,160);
+    CHECK(hn_raster_hblank(&memory)&&hn_read16(&memory,HN_SCANLINE_WINDOWS)==0x8CF0&&hn_read8(&memory,HN_SCANLINE_PHASE)==25);
+    memory.io[6]=160;hn_write16(&memory,HN_SCANLINE_WINDOWS+2,200);hn_write8(&memory,HN_SCANLINE_TRANSITION+1,100);
+    CHECK(hn_raster_hblank(&memory)&&hn_read16(&memory,HN_SCANLINE_WINDOWS+2)==300&&hn_read16(&memory,HN_SCANLINE_WINDOWS)==240);
+    CHECK(!hn_read8(&memory,HN_SCANLINE_TRANSITION+1)&&!hn_read8(&memory,HN_SCANLINE_PHASE));
+    reset();hn_write32(&memory,HN_SCANLINE_PROFILE,0x02018000);hn_write8(&memory,HN_SCANLINE_TRANSITION+2,1);
+    CHECK(hn_raster_scanline_profile(&memory,0xA5)&&hn_read8(&memory,0x02018000)==0xA5&&!hn_read8(&memory,0x02018001));
+    hn_heap_init(&memory);hn_write8(&memory,args,5);hn_write8(&memory,HN_SCENE_CONTROLS+0x61,6);
+    CHECK(hn_raster_callback(&memory,0x080CE72D,args,&consumed)==HN_SCENE_OK&&consumed==2);
+    GameAddr allocated=hn_read32(&memory,HN_SCANLINE_PROFILE);
+    CHECK(allocated&&allocated!=0x02018000&&!hn_read8(&memory,0x02018000)&&hn_read8(&memory,HN_SCANLINE_TRANSITION+2)==119);
+    CHECK(hn_read8(&memory,HN_HBLANK_SELECTOR)==11&&hn_read32(&memory,0x040000B0)==HN_SCANLINE_WINDOWS&&hn_read32(&memory,0x040000B4)==0x04000040);
+    CHECK(hn_read16(&memory,0x040000BA)==0xA340&&!hn_read8(&memory,allocated+118));
+    CHECK(hn_raster_callback(&memory,0x080CE9F5,args,&consumed)==HN_SCENE_OK&&!consumed);
+    CHECK(hn_read32(&memory,HN_SCANLINE_PROFILE)==allocated&&!hn_read32(&memory,0x040000B8)&&!hn_read8(&memory,HN_HBLANK_SELECTOR));
+    hn_write8(&memory,HN_SCENE_CONTROLS+0x61,9);
+    CHECK(hn_raster_callback(&memory,0x080CE72D,args,&consumed)==HN_SCENE_RESOURCE&&!memory.fault);
+    CHECK(hn_raster_callback(&memory,0x080CE721,args,&consumed)==HN_SCENE_UNKNOWN);
+    hn_write8(&memory,HN_SCANLINE_PHASE,255);hn_raster_scanline_phase_reset(&memory);CHECK(!hn_read8(&memory,HN_SCANLINE_PHASE));
+    reset();hn_heap_init(&memory);hn_write8(&memory,args,5);hn_write8(&memory,HN_SCENE_CONTROLS+0x61,8);
+    CHECK(hn_raster_callback(&memory,0x080CE72D,args,&consumed)==HN_SCENE_OK&&!memory.fault);
+}
 int main(void)
 {
     rom=calloc(1,0x600000);CHECK(rom!=NULL);
     for(unsigned i=1;i<8;i++)rom[HN_PALETTE_GROUP_SIZES-HN_ROM_BASE+i]=(uint8_t)(1u<<i);
-    palettes();flows();transitions();raster_effects();vcount_timing();free(rom);
+    palettes();flows();transitions();raster_effects();vcount_timing();scanline_windows();free(rom);
     printf("%u native graphics checks passed.\n",checks);return 0;
 }
