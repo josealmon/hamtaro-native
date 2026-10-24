@@ -459,25 +459,40 @@ stored in photo one. The source profiles stay unchanged. Native source and binar
 hashes are identical to the complete 5,793,256-check HBlank/window boundary, whose
 proof remains applicable to this input/checkpoint extension.
 
-`optional_words.json` continues from the wardrobe save through Snoozer's Zuzuzu
-lesson and Fun Land's Delin-Q, Lost-T and Koochi-Q encounters. Thirteen checkpoints
-cover the original action menus, each learned-word flag, conversation exit and
-family-search progression. Original Save/Continue retains 69 words, four seeds,
-five rocks, eleven loves, Bijou, all six photo slots and the same three clothing
-variants. Trust-T remains unlearned and the missing-child search remains open;
-learning Lost-T does not complete that reconciliation.
+`optional_words.json` continues from the wardrobe save through Zuzuzu, Delin-Q,
+Lost-T and Koochi-Q. Its 22,472 updates and 13 checkpoints remain unchanged and
+retain the verified 69-word save. That chapter removes 45.1% of its exploratory
+inputs; its SDK replay takes 35.87 seconds and 25,097 host checks take 39.16 seconds.
 
-The recorded route has 22,472 updates, removing 45.1% of the exploratory inputs
-while retaining all four lessons and the saved-continuation assertions. Only
-ordinary button inputs and scalar expectations are versioned. This chapter uses
-the same native source and binaries as the complete HBlank/window comparison.
-The SDK replay passes in 35.87 seconds and the host session passes 25,097 checks
-in 39.16 seconds; scout, SDK and host SRAM agree across all 32 KiB. A fresh process
-also verifies the saved word list against all learned flags and reopens Status.
-The other 17 words, later family-search steps, additional Ham-Jams, remaining
-Sunny activities, clothing purchases, gallery/settings branches and full desktop
-activity coverage remain pending. In particular, Boss's GoFor and Lalalala lessons
-require at least three and four Ham-Jams respectively; the current save has two.
+`family_reunions.json` starts a fresh process from that save. Its 59,504 updates
+and 16 checkpoints cover the Haunted House ghost reunion and Fun Land's missing
+child. Hamlift reopens the silver-card lift, Pushie opens the hidden passage, and
+another Hamlift exposes the door game. Finding the ghost leads to the twelfth
+reconciliation and the Dingding lesson.
+
+Dingding moves the child to the ride. The original ride confirmation and complete
+ride advance the search; Lost-T sends the child to the scare scene, where Dingding
+and Hamha send him home. Talking to his parents teaches Trust-T and restores the
+thirteenth love. Checkpoints cover each original action menu and persistent quest
+transition, including the shared temporary flags being cleared after use.
+
+Original Save/Continue retains 71 unique learned words, four seeds, five rocks,
+thirteen loves, Bijou, all six photo slots and the same three clothing variants.
+The new route removes 21.47% of its post-boot exploratory inputs. The SDK replay
+passes in 98.12 seconds and the host session passes 63,449 checks in 102.01 seconds.
+Scout, SDK and host saves match across all 32 KiB. An independent 2,103-update
+reload also checks the unique word list against its flags and reopens Status in
+2.983 seconds. Only ordinary button inputs and scalar expectations are versioned;
+the native source and binaries remain identical to the complete 5,793,256-check
+HBlank/window boundary.
+
+The love-meter level is class 0x0C, with progress in class 0x0D. This save has
+level two and progress 35; the next thresholds are 42 and 56. Boss's GoFor and
+Lalalala lessons require levels three and four. The normal rock-polishing limit
+also uses the level plus one. These gates require further reconciliations.
+Fifteen words, other optional activities,
+remaining Sunny content, clothing/gallery/settings branches and full desktop
+activity coverage remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

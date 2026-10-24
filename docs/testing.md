@@ -487,28 +487,43 @@ coverage remain unverified.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/wardrobe.json --save PATH_TO_PRIVATE_MATERIALS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WARDROBE_PROFILE
 
-`optional_words.json` starts from that final wardrobe save. Its 22,472 updates and
+`optional_words.json` starts from the final wardrobe save. Its 22,472 updates and
 13 checkpoints cover Zuzuzu, Delin-Q, Lost-T and Koochi-Q, increasing the dictionary
-from 65 to 69 words through ordinary input. It checks the original action menus,
-Snoozer's topic-menu cancellation, each learned flag and the family-search control
-changes. The route removes 45.1% of the exploratory inputs without dropping these
-four encounters or the original Save/Continue boundary. Trust-T remains unlearned;
-the missing-child search is not a completed reconciliation.
+from 65 to 69 words. This previously verified chapter remains byte-for-byte unchanged.
+Its SDK replay takes 35.87 seconds and 25,097 host checks take 39.16 seconds;
+scout, SDK and host SRAM agree across all 32 KiB.
 
-The SDK replay passes in 35.87 seconds, followed by 25,097 host-session checks in
-39.16 seconds. Scout, SDK and host saves match all 32 KiB. A fresh process checks
-the learned-word list against its flags, rejects duplicate entries and reopens
-Status. All eleven CTest suites and fifteen scenario-parser tests also pass.
+`family_reunions.json` starts in a fresh process from that 69-word SRAM. Its 59,504
+updates and 16 checkpoints cover the Haunted House ghost reunion and Fun Land's
+missing-child reunion. The 57,582 post-boot updates remove 21.47% of exploratory
+inputs while retaining both reunions and saved progress. A matching scene and
+scalar frame counter after an in-process Continue does not establish identical
+gameplay/RNG history. The original door assertions therefore use this explicit
+fresh-process boundary; no RNG or progression state is injected.
 
-Initial and final checkpoints also retain all six photo slots, clothing ownership
-and count, packed rock quantities and collection counters. Source saves remain
-read-only. Native source, application and probe hashes match the complete
-5,793,256-check HBlank/window boundary, so its function-level proof still applies.
-Only the new input route, save/reload checks and the quick regression suites need
-to run for this test-only extension. Seventeen words and the other documented
-optional/desktop activities remain pending.
+The route checks the silver-card lift and hidden passage, the original door-game
+confirmation and ghost result, Dingding's lesson, the child's ride confirmation,
+completed ride, Lost-T response, scare sequence, Trust-T lesson and thirteenth
+reconciliation. The dictionary advances from 69 to 71 words. The love meter moves
+from progress 30 through 33 to 35, retaining level two; these fields represent
+love-meter strength rather than the number of Ham-Jams.
+
+The SDK replay passes in 98.12 seconds and 63,449 host-session checks pass in
+102.01 seconds. Scout, SDK and host SRAM match byte-for-byte. An independent
+2,103-update fresh-process check takes 2.983 seconds, verifies all 71 unique
+word IDs against learned flags and reopens Status. All eleven CTest suites
+(0.86 seconds) and fifteen scenario-parser tests (0.040 seconds) also pass.
+
+Initial and final checkpoints retain all six photo slots, clothing ownership/count,
+packed rock quantities and collection counters.
+Source saves remain read-only. Native source, application and probe hashes match
+the complete 5,793,256-check HBlank/window boundary, so its function-level proof
+still applies. The extended route, independent save/reload checks and quick
+regression suites cover this input-only change. Fifteen words and the other
+documented optional/desktop activities remain pending.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/optional_words.json --save PATH_TO_PRIVATE_WARDROBE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_OPTIONAL_WORDS_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/family_reunions.json --save PATH_TO_PRIVATE_OPTIONAL_WORDS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_REUNION_PROFILE
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
