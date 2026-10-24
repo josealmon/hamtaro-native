@@ -486,7 +486,7 @@ reload also checks the unique word list against its flags and reopens Status in
 the native source and binaries remain identical to the complete 5,793,256-check
 HBlank/window boundary.
 
-`fun_land_optional.json` continues from the 71-word save through the Ferris wheel
+`fun_land_optional.json` continues from the 71-word save through the Tea Cups
 date. Offdoff, Howdy and Blash-T coach the nervous hamster, with two original
 confirmations. Three No-P answers in the date's conversation lead to Minglie;
 using that lesson completes the reunion and teaches Twirlie. Fifteen checkpoints
@@ -501,11 +501,29 @@ in 88.80 seconds. Both produce the canonical scout's exact 32 KiB SRAM. A separa
 flags, the retained inventory/photos and Status in 2.908 seconds. Native code
 and binaries remain unchanged, preserving the complete reference comparison.
 
-The love-meter level is class 0x0C, with progress in class 0x0D. The Ferris reunion
-raises progress from 35 to 39, retaining level two; the next thresholds are 42
-and 56. Boss's GoFor and Lalalala lessons require levels three and four. The
+The same file contains an independent `ferris` route selected with `--route`.
+It starts from the verified 73-word SRAM and covers Pushie opening the restroom,
+Hamha revealing the stuck date, Tuggie's rescue, and the Ferris wheel responses
+Gossip-P, Koochi-Q and Smoochie. Its 27,236 updates and ten checkpoints retain
+the fifteenth reconciliation, Luck-E, the park announcement and original
+Save/Continue. The final save has 74 words, fifteen loves and the same inventory,
+clothing and photos. Its post-boot route removes 23.31% of exploratory inputs.
+
+Independent routes have separate starting saves and complete input/checkpoint
+lists. All earlier Tea Cups inputs and fifteen semantic checkpoints remain
+unchanged; only their attraction labels were corrected. Selecting the Ferris
+route avoids replaying those 48,913 updates when validating its continuation.
+The parser checks every route definition and rejects an unknown selector.
+The Ferris SDK replay takes 50.40 seconds and 30,152 host checks take 53.30 seconds.
+Their 32 KiB saves match the canonical scout exactly. An independent 2,103-update
+reload checks all 74 unique words, inventory, photos and Status in 2.959 seconds.
+
+The love-meter level is class 0x0C, with progress in class 0x0D. The Tea Cups and
+Ferris reunions raise progress from 35 through 39 to 41, retaining level two;
+the next thresholds are 42 and 56. Boss's GoFor and Lalalala lessons require
+levels three and four. The
 normal rock-polishing limit also uses the level plus one. These gates require
-further reconciliations. Thirteen words, other optional activities, remaining
+further reconciliations. Twelve words, other optional activities, remaining
 Sunny content, clothing/gallery/settings branches and full desktop activity
 coverage remain pending.
 

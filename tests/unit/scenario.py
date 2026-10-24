@@ -7,11 +7,13 @@ import runpy
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 MODULE=runpy.run_path(str(Path(__file__).resolve().parents[2]/"tools/run_scenario.py"))
 parse=MODULE["input_schedule"]
 validate=MODULE["validate_steps"]
 run=MODULE["run_steps"]
+select=MODULE["select_scenario"]
 
 
 class ScenarioTests(unittest.TestCase):
@@ -52,7 +54,49 @@ class ScenarioTests(unittest.TestCase):
         self.assertTrue(paths)
         for path in paths:
             with self.subTest(path=path.name):
-                self.assertGreater(validate(json.loads(path.read_text(encoding="utf-8"))["steps"]),0)
+                document=json.loads(path.read_text(encoding="utf-8"))
+                self.assertGreater(validate(select(document)["steps"]),0)
+                for route in document.get("routes",{}):
+                    self.assertGreater(validate(select(document,route)["steps"]),0)
+
+    def test_routes_keep_independent_inputs_and_checkpoint_boundaries(self):
+        document=dict(name="first",steps=[dict(frames=2,buttons=["A"]),dict(expect={"frame":2})],
+                      routes={"later":dict(name="continuation",steps=[dict(frames=3,buttons=["B"]),dict(expect={"frame":3})])})
+        original=json.dumps(document)
+        class Game:
+            def __init__(self):self.keys=[]
+            def frame(self,keys):self.keys.append(keys)
+            def checkpoint(self,*args,**kwargs):return dict(frame=len(self.keys))
+        for route,keys in ((None,[1,1]),("later",[2,2,2])):
+            game=Game();selected=select(document,route)
+            with self.subTest(route=route),contextlib.redirect_stdout(io.StringIO()):run(game,selected["steps"])
+            self.assertEqual(game.keys,keys)
+        self.assertEqual(json.dumps(document),original)
+
+    def test_unknown_or_malformed_routes_cannot_fall_back_to_a_passing_route(self):
+        base=dict(name="first",steps=[dict(frames=1)])
+        with self.assertRaisesRegex(ValueError,"Unknown scenario route"):select(base,"missing")
+        for routes in (None,[],"later",{"":base},{" later":base},{1:base},{None:base},
+                       {"later":None},{"later":{"steps":[dict(frames=1)]}},
+                       {"later":dict(base,name="")},{"later":dict(base,extra=True)},
+                       {"later":dict(base,steps=[dict(frames=0)])},
+                       {"later":dict(base,steps=[dict(write=1)])}):
+            with self.subTest(routes=routes),self.assertRaises(ValueError):select(dict(base,routes=routes))
+        with self.assertRaisesRegex(ValueError,"Unknown scenario route"):
+            select(dict(base,routes={"later":base}),"missing")
+
+    def test_selected_route_retains_semantic_failures(self):
+        document=dict(name="first",steps=[dict(frames=1)],routes={"later":dict(name="later",steps=[dict(expect={"learned_words":2})])})
+        game=SimpleNamespace(checkpoint=lambda *args,**kwargs:{"learned_words":1})
+        with contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,"expected 2, got 1"):
+            run(game,select(document,"later")["steps"])
+
+    def test_route_cannot_be_combined_with_an_external_schedule(self):
+        arguments=["run_scenario.py","--rom","missing.gba","--input-schedule","missing.txt","--route","later"]
+        with patch("sys.argv",arguments),contextlib.redirect_stderr(io.StringIO()) as error,self.assertRaises(SystemExit) as raised:
+            MODULE["main"]()
+        self.assertEqual(raised.exception.code,2)
+        self.assertIn("--route requires --scenario",error.getvalue())
 
     def test_class_checkpoints_reject_truncation_and_aliases(self):
         self.assertEqual(validate([dict(expect={"classes":{"0":0,"255":65535}})]),0)

@@ -169,6 +169,26 @@ def validate_steps(steps,depth=0):
         if total>MAX_UPDATES:raise ValueError("A scenario must contain at most two million updates.")
     return total
 
+def select_scenario(document,route=None):
+    """Select an independent saved continuation, retaining all route checks."""
+    if not isinstance(document,dict) or set(document)-{"name","steps","routes"} or not {"name","steps"}<=set(document):
+        raise ValueError("Invalid scenario document.")
+    routes=document.get("routes",{})
+    if not isinstance(routes,dict):raise ValueError("Scenario routes must be an object.")
+    for key in routes:
+        if not isinstance(key,str) or not key or key.strip()!=key:
+            raise ValueError("Scenario route IDs must be nonempty strings without surrounding spaces.")
+    for candidate in [{key:document[key] for key in ("name","steps")},*routes.values()]:
+        if (not isinstance(candidate,dict) or set(candidate)!={"name","steps"} or
+                not isinstance(candidate["name"],str) or not candidate["name"].strip()):
+            raise ValueError("Each scenario route requires a name and steps.")
+        validate_steps(candidate["steps"])
+    if route is not None:
+        if route not in routes:raise ValueError(f"Unknown scenario route: {route}.")
+        return routes[route]
+    return {key:document[key] for key in ("name","steps")}
+
+
 def run_steps(game,steps):
     for step in steps:
         if "repeat" in step:
@@ -198,12 +218,14 @@ def main():
     source=parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--scenario",type=Path)
     source.add_argument("--input-schedule",type=Path,help="External frames/hex-key/label text; labels observe state, without asserting reference parity")
+    parser.add_argument("--route",help="Named independent route within a JSON scenario; supply that route's read-only starting save")
     parser.add_argument("--save",type=Path,help="Optional read-only 32 KiB SRAM input")
     parser.add_argument("--until",help="Stop after a uniquely named top-level checkpoint for a focused replay")
     parser.add_argument("--library",type=Path,default=ROOT/"build/Release/hn_reference_probe.dll")
     parser.add_argument("--session-test",type=Path,help="Also replay through the host session executable and verify SRAM-file continuation")
     parser.add_argument("--desktop-profile",type=Path,help="Retain validated ROM and tested SRAM in a new private profile for desktop review")
     args=parser.parse_args()
+    if args.route is not None and not args.scenario:parser.error("--route requires --scenario.")
     if args.desktop_profile:
         if not args.session_test:parser.error("--desktop-profile requires --session-test.")
         args.desktop_profile=args.desktop_profile.resolve()
@@ -222,7 +244,7 @@ def main():
         if len(saved)!=32768:raise ValueError("SRAM input changed while reading.")
     scenario=(input_schedule(args.input_schedule.read_text(encoding="utf-8"),args.input_schedule.stem)
               if args.input_schedule else json.loads(args.scenario.read_text(encoding="utf-8")))
-    if not isinstance(scenario,dict) or set(scenario)!={"name","steps"}:raise ValueError("Invalid scenario document.")
+    scenario=select_scenario(scenario,args.route)
     count=validate_steps(scenario["steps"])
     if args.until:
         matches=[i for i,step in enumerate(scenario["steps"]) if

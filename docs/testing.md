@@ -523,26 +523,53 @@ regression suites cover this input-only change.
 
 `fun_land_optional.json` starts from that 71-word save. Its 48,913 updates and
 15 checkpoints cover Offdoff, Howdy and Blash-T coaching, the two original
-confirmations, three No-P responses, Minglie's lesson, the Ferris reunion and
+confirmations, three No-P responses, Minglie's lesson, the Tea Cups reunion and
 Twirlie's lesson. The 46,991 post-boot updates remove 19.92% of exploratory input.
 Original Save/Continue retains 73 words and fourteen loves; meter progress rises
 from 35 to 39, retaining level two. Initial and final assertions retain all six
 photos, clothing flags/count, collection counters and packed rock quantities.
 The earlier optional-word and family-reunion chapters remain byte-for-byte
 unchanged. Native source and both binaries still match the complete
-5,793,256-check reference boundary. Thirteen words and the other documented
-optional/desktop activities remain pending.
+5,793,256-check reference boundary.
 
-The Ferris SDK replay passes in 86.51 seconds; 52,459 host-session checks pass in
+The Tea Cups SDK replay passes in 86.51 seconds; 52,459 host-session checks pass in
 88.80 seconds. Their 32 KiB SRAM matches the canonical scout byte-for-byte. An
 independent 2,103-update reload takes 2.908 seconds, confirms all 73 unique words
 against learned flags and retains the inventory and photos when reopening Status.
 The eleven CTest suites (1.54 seconds) and fifteen scenario-parser tests
 (0.110 seconds) also pass.
 
+The same file contains `routes.ferris`, an independent saved continuation selected
+with `--route ferris`. Its 27,236 updates and ten checkpoints cover Pushie, the
+stuck date's Hamha conversation, Tuggie, Gossip-P, Koochi-Q, Smoochie, Luck-E,
+the fifteenth reconciliation, the park announcement and original Save/Continue.
+It starts from the verified 73-word Tea Cups save and ends with 74 words, fifteen
+loves and meter progress 41 at level two. It retains all six photos, clothing
+flags/count, collection counters and packed rock quantities. The 25,314 post-boot
+updates remove 23.31% of its exploratory inputs.
+
+Each named route has its own complete input/checkpoint list and requires its
+documented starting SRAM. Selecting one preserves its semantic assertions and
+host save checks. All route definitions are validated, including unselected
+routes; an unknown selector fails rather than falling back to the default route.
+`--route` requires JSON `--scenario`; `--until` applies within the selected route.
+The default Tea Cups route retains all 48,913 updates and fifteen semantic
+checkpoints, with corrected attraction labels. Its prior gameplay proof remains
+applicable because those inputs, expectations and native binaries are unchanged.
+Twelve words and the other documented optional/desktop activities remain pending.
+
+The independent Ferris SDK replay passes in 50.40 seconds and 30,152 host checks
+pass in 53.30 seconds. Both match the canonical scout's full 32 KiB SRAM. A fresh
+2,103-update reload takes 2.959 seconds and checks all 74 unique word IDs against
+learned flags, the retained inventory/photos and Status. The eleven CTest suites
+(1.11 seconds) and all nineteen scenario tests (0.049 seconds) pass, including
+selection isolation, unknown/malformed routes, retained semantic failures and
+rejection of `--route` with external input schedules.
+
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/optional_words.json --save PATH_TO_PRIVATE_WARDROBE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_OPTIONAL_WORDS_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/family_reunions.json --save PATH_TO_PRIVATE_OPTIONAL_WORDS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_REUNION_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land_optional.json --save PATH_TO_PRIVATE_REUNION_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_PARK_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land_optional.json --route ferris --save PATH_TO_PRIVATE_PARK_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_FERRIS_PROFILE
 
 Checkpoints can include `"flags": {"0x77": true, "0x198": false}` and
 `"controls": {"0x83": 3, "0x02": 0, "0x1A6": 12}`. A checkpoint may also assert
@@ -572,7 +599,7 @@ denotes an unused slot; category 255 denotes no selected item. The checker reads
 only the thirteen defined record bytes and excludes its three padding bytes.
 These are read-only scalar metadata assertions, with no resource data or state
 injection. Invalid layouts/types, aliases, truncated lists and color/background
-mismatches are rejected by the fifteen asset-free scenario tests.
+mismatches are rejected by the asset-free scenario tests.
 
 Original Continue checks word flags, ball acquisition/delivery, team progress and
 the final rescue/bottle state. A separate SDK process reloads the host-written
