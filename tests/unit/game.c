@@ -3066,6 +3066,50 @@ static void group4_contract(void)
     hn_write8(&memory,context+4*220,0);
     CHECK(hn_scene_callback(&memory,0x080C86E9,0,&consumed)==HN_SCENE_OK&&!hn_read8(&memory,controls+0x191));
     CHECK(hn_scene_callback(&memory,0x080C85F9,0,&consumed)==HN_SCENE_OK&&consumed==0);
+    /* A composition stores the selected move, including both byte endpoints,
+       without overwriting the record's name/header or neighboring moves. */
+    for(unsigned i=0;i<2;i++){
+        unsigned index=i?255:0;hn_write8(&memory,controls+0x187,(uint8_t)index);
+        hn_write8(&memory,received+16+index,0xA9);hn_write8(&memory,received+18+index,0xB8);
+        hn_write8(&memory,controls+0x191,(uint8_t)(i?255:1));
+        CHECK(hn_scene_callback(&memory,0x080C8349,0,&consumed)==HN_SCENE_OK&&consumed==0);
+        hn_write8(&memory,controls+0x191,0);
+        CHECK(hn_scene_callback(&memory,0x080C83BD,0,&consumed)==HN_SCENE_OK);
+        CHECK(hn_read8(&memory,controls+0x191)==(i?255:1));
+        CHECK(hn_read8(&memory,received+16+index)==0xA9&&hn_read8(&memory,received+18+index)==0xB8);
+    }
+    /* Empty resources use signed count-1 comparisons, rather than wrapping to255. */
+    hn_write8(&memory,args+0x16,0);hn_write16(&memory,args+0x14,0);
+    CHECK(!hn_group4_boundary(&memory,2,args,0,255));
+    CHECK(hn_group4_boundary(&memory,0,args,0,0));
+    CHECK(!hn_group4_boundary(&memory,0,args,65535,0));
+    hn_write8(&memory,args+0x16,3);CHECK(hn_group4_boundary(&memory,0x102,args,0,0x102));
+    /* One beat advances the score, move selection and ring map together. */
+    for(unsigned i=0;i<4;i++)rom[descriptor+4+i]=(uint8_t)(0x02001800u>>(i*8));
+    rom[descriptor+12]=0;rom[descriptor+13]=0;rom[descriptor+14]=0;rom[descriptor+15]=8;
+    rom[descriptor+0x14]=12;rom[descriptor+0x16]=3;
+    hn_write8(&memory,0x02001807,1);hn_write8(&memory,0x02001808,2);
+    hn_write8(&memory,controls+0x187,0);hn_write8(&memory,controls+0x192,31);
+    hn_write8(&memory,0x020046B1,0);hn_write8(&memory,0x020046B2,0);
+    hn_write32(&memory,0x03002BC0,0);hn_write16(&memory,0x0201DDC4,0);hn_write16(&memory,HN_VIDEO_STATE+0x9A,12);
+    CHECK(hn_scene_callback(&memory,0x080C76D5,0,&consumed)==HN_SCENE_OK);
+    CHECK(hn_read16(&memory,0x0201DDC4)==1&&hn_read16(&memory,0x0201DDC6)==1);
+    CHECK(hn_read8(&memory,controls+0x187)==1&&hn_read8(&memory,controls+0x189)==2);
+    CHECK(hn_read16(&memory,HN_VIDEO_STATE+0x9A)==4&&hn_read32(&memory,0x03002BC0)==0);
+    hn_write8(&memory,0x020046B1,1);hn_write8(&memory,0x020046B2,0);hn_write8(&memory,controls+0x187,2);
+    CHECK(hn_scene_callback(&memory,0x080C76D4,0,&consumed)==HN_SCENE_OK);
+    CHECK(hn_read8(&memory,controls+0x189)==10&&hn_read16(&memory,0x0201DDC4)==1);
+    /* Synthetic glyphs exercise unknown-byte skipping, the special symbol and
+       multiline heap cleanup without embedding any game text or graphics. */
+    hn_write32(&memory,0x02000D84,2u|(5u<<8)|(9u<<18));hn_write8(&memory,0x02000D88,0);
+    hn_write8(&memory,args,2);hn_write8(&memory,args+1,4);hn_write8(&memory,args+2,0x37);hn_write8(&memory,args+3,0);
+    CHECK(hn_group4_text_line(&memory,args,0x02010000,5));
+    CHECK(hn_read16(&memory,0x02010000)==0x5005&&hn_read16(&memory,0x02010040)==0x5009);
+    CHECK(hn_read16(&memory,0x02010002)==0x51F5&&hn_read16(&memory,0x02010042)==0x5215);
+    hn_heap_init(&memory);hn_write8(&memory,args+1,0xE2);hn_write8(&memory,args+3,0xE0);
+    CHECK(hn_group4_text_lines(&memory,args,0x02011000,3,4));
+    CHECK(hn_read16(&memory,0x02011000)==0x3005&&hn_read16(&memory,0x02011080)==0x31F5);
+    CHECK(hn_read32(&memory,0x03002C84)==0x030010C8);
     CHECK(!memory.fault);free(rom);reset();
 }
 static void scene_selection_contract(void)

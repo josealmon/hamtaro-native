@@ -103,3 +103,100 @@ def check_group4_records(*,entries,rom,memory,bind,call,both,fresh,equal,compare
         first=rom[0x6E83D8];word(0x03002D98,0x03002D98-first*104-0x60)
         exercise(by_name['ScriptCallbackResetCommunicationRenderSlots'],"hidden-slot store aliases render base")
     print("All 29 local record/music/presentation/selection entries and typed Main/F4 contracts matched, including complete SRAM writes, suffix/depth boundaries, raw resource readers and the credits song. Link transport remains outside this scope.")
+
+
+def check_group4_ui(*,entries,rom,memory,bind,call,both,fresh,equal,compare,native_bytes,command):
+    """Complete local composer UI, including shared text and typed boundaries."""
+    from inventory_reference import body
+    families={'src/scripts/communication_text_callbacks.c', 'src/scripts/communication_text_columns.c',
+              'src/scripts/communication_context_callbacks.c','src/text/communication_text.c'}
+    rows={r['name']:r for r in entries if r['source'] in families and r['name']!='ScriptCallbackClassifyCommunicationPayload'}
+    equal(len(rows),27,'all composer UI and text helper contracts')
+    text=(Path(__file__).resolve().parents[1]/'src/game/save_group4_ui.c').read_text()
+    dispatch={int(v,16) for v in re.findall(r'case (0x[0-9A-Fa-f]+):',body(text,'hn_group4_ui_callback'))}
+    helpers={'RenderCommunicationTextLine','RenderCommunicationTextLines','CheckIndexedCommunicationResourcePosition'}
+    equal(dispatch,{r['address'] for n,r in rows.items() if n not in helpers},'complete composer Main dispatch')
+    u=C.c_uint32;p=C.c_void_p;main=bind('hn_scene_callback',C.c_int,p,u,u,C.POINTER(u))
+    heap=bind('hn_heap_init',None,p);contexts=bind('hn_task_contexts_init',None,p)
+    boundary=bind('hn_group4_boundary',C.c_uint8,p,u,u,u,u)
+    line=bind('hn_group4_text_line',C.c_bool,p,u,u,u);lines=bind('hn_group4_text_lines',C.c_bool,p,u,u,u,u)
+    rng=random.Random(0x48414D4A414D);args=0x0201F801;controls=0x02004520;context=0x02015000;base=0x02008000
+    ranges=((0x02000000,0x40000),(0x03000000,0x7000),(0x04000000,0xD4),(0x040000D8,0x28),(0x06000000,0x18000))
+    def byte(a,v):both(a,bytes([v&255]))
+    def half(a,v):both(a,struct.pack('<H',v&65535))
+    def word(a,v):both(a,struct.pack('<I',v&0xFFFFFFFF))
+    def fixture(case=0,language=0):
+        fresh();both(0x02000000,rom[0x8FE018:0x900EC8]);heap(memory);call('InitializeHeap',0)
+        contexts(memory);call('InitializeTaskContexts');both(controls,rng.randbytes(512));byte(controls+0xEB,language)
+        both(base,rng.randbytes(256*104));word(0x03002D98,base);byte(0x03002DC0,255)
+        both(context,rng.randbytes(0x2C00));word(0x03002BB0,context);both(0x03002180,rng.randbytes(96))
+        both(0x03003500,bytes(rng.choices((0,*range(0x46,0x9C)),k=128)))
+        both(0x03003D30,rng.randbytes(512));both(0x0201DC40,rng.randbytes(512))
+        for i,a in enumerate((0x03002C0C,0x03002274,0x03001F50,0x03002270)):byte(a,i+10);byte(base+(i+10)*104+96,1+(case+i)%8)
+        byte(0x03001F60,case%2);byte(0x03001F90,0);word(0x03002BC0,0)
+        for i in range(10):byte(context+i*1100,case%4)
+        for i in range(7):word(0x03003930+i*4,0x02018000+i*52)
+        for i in range(15):word(0x03003590+i*4,0x02018400+i*52)
+        byte(controls+0x180,case%14);byte(controls+0x181,case%6);byte(controls+0x187,case)
+        byte(controls+0x18A,case%14);byte(controls+0x18B,case%7);byte(controls+0x191,case%14)
+        byte(controls+0x192,case%5);byte(controls+0x193,case%5);byte(controls+0x194,1+case%3)
+        both(args,bytes([case%2,2,1,1])+struct.pack('<I',0x086E4200));half(0x0201DDC4,0);half(0x0201DDC6,case%8)
+    def exercise(name,label='',argument=args,vm=False):
+        if vm:
+            both(argument,struct.pack('<I',rows[name]['address']|1)+native_bytes(argument,12));byte(0x03000010,0x1C)
+            equal(command(memory,0x1C,argument),1,'composer Main VM');call('MainScriptInvokeCallback',argument,limit=4000000)
+        else:
+            consumed=u(99);equal(main(memory,rows[name]['address']|1,argument,C.byref(consumed)),1,name+' native '+str(label))
+            equal(consumed.value,call(name,argument,limit=4000000),name+' consumed '+str(label))
+        compare(name+' '+str(label),ranges)
+    special={'ScriptCallbackPrepareCommunicationRenderContexts','ScriptCallbackRestoreCommunicationRenderContexts',
+             'ScriptCallbackSetCommunicationText','ScriptCallbackPrepareCommunicationTextRow',
+             'ScriptCallbackRenderCommunicationFrameText','ScriptCallbackScrollCommunicationText'}
+    for name in sorted(rows.keys()-helpers-special):
+        for case in range(256):
+            fixture(case,case%5)
+            if name=='ScriptCallbackDrawCommunicationTextFrame':both(args,bytes([case%29,case%16,0,0]))
+            if name=='ConfigureCommunicationTextSelectionMarker':half(args,0x181)
+            if name=='ScriptCallbackConfigureCommunicationFlagTextContext':byte(controls+0x191,case%14);byte(controls+0x192,case%5)
+            exercise(name,case)
+        fixture(1)
+        if name=='ConfigureCommunicationTextSelectionMarker':half(args,0x181)
+        exercise(name,'Main VM',vm=True)
+    for language in range(5):
+        for case in range(16):
+            fixture(case,language);exercise('ScriptCallbackPrepareCommunicationRenderContexts',(case,language))
+            exercise('ScriptCallbackRestoreCommunicationRenderContexts','balanced lifetime')
+    for language in range(5):
+        for row in range(14):
+            for enabled in range(2):
+                fixture(row,language);byte(controls+0x191,row);byte(args,enabled)
+                exercise('ScriptCallbackPrepareCommunicationTextRow',(language,row,enabled))
+        for height in range(1,4):
+            fixture(height,language);byte(controls+0x194,height);word(args,0x086E4200)
+            exercise('ScriptCallbackSetCommunicationText',(language,height))
+        fixture(1,language);exercise('ScriptCallbackRenderCommunicationFrameText',language)
+    for row in range(14):
+        descriptor=0x086E8CCC+row*28
+        length=rom[descriptor-0x08000000+0x16]
+        for mode in range(8):
+            for reverse in (0,1,255):
+                for position,selection,acc in ((0,0,0),(0,0,0x07FFFFFF),(7,1,0),(7,max(0,length-1),0x07FFFFFF),(65535,0,0)):
+                    fixture(row);byte(0x020046B1,mode);byte(0x020046B2,reverse);half(0x0201DDC4,position)
+                    byte(controls+0x187,selection);word(0x03002BC0,acc)
+                    exercise('ScriptCallbackScrollCommunicationText',(row,mode,reverse,position,selection,acc))
+    for mode in range(8):
+        for count in (0,1,2,255):
+            for end in (0,1,2,65535):
+                for position in (0,1,2,65534,65535):
+                    for selected in (0,1,2,254,255):
+                        fixture();half(args+0x14,end);byte(args+0x16,count)
+                        equal(boundary(memory,mode|0x100,args,position|0x10000,selected|0x100),
+                              call('CheckIndexedCommunicationResourcePosition',mode|0x100,args,position|0x10000,selected|0x100),'boundary truncation and endpoints')
+                        compare('boundary pure helper',ranges)
+    for payload in (b'',b'\x37',bytes(range(1,256)),b'\x61\x62\xE2\x63\x37\xE2\x64\xE0'):
+        for palette in (0,1,5,15,16,255,65535):
+            fixture();both(args,payload+b'\0');equal(line(memory,args,0x02010000,palette),True,'composer glyph helper')
+            call('RenderCommunicationTextLine',args,0x02010000,palette,limit=4000000);compare('glyph replacements and unknown characters',ranges)
+            fixture();both(args,payload+b'\0');equal(lines(memory,args,0x02010000,palette,255),True,'composer multiline helper')
+            call('RenderCommunicationTextLines',args,0x02010000,palette,255,limit=4000000);compare('multiline helper and heap cleanup',ranges)
+    print('All 27 local Ham-Jam UI/text functions matched: Main contracts, five languages, task lifetimes, wrapped tile columns, scroll modes and text helpers. Cable Link transport remains excluded.')

@@ -2516,9 +2516,11 @@ def main() -> None:
 
     @timed
     def group4_checks():
-        from reference_group4 import check_group4_records
+        from reference_group4 import check_group4_records,check_group4_ui
         check_group4_records(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
                              fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
+        check_group4_ui(entries=entries,rom=rom,memory=memory,bind=bind,call=call,both=both,
+                        fresh=fresh,equal=equal,compare=compare,native_bytes=native_bytes,command=command)
 
     @timed
     def scene_selection_checks():

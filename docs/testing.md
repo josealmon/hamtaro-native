@@ -82,7 +82,10 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 5,793,256 checks in 662.005 seconds. It retains
+The latest complete suite passes 5,859,158 checks in 655.399 seconds. It retains
+all 45 preceding named phases and their previous assertion counts, adding 65,902
+local Ham-Jam UI/text checks. The preceding HBlank/window boundary passed
+5,793,256 checks in 662.005 seconds. It retains
 all 5,561,200 preceding cases and adds 232,056 HBlank/window comparisons,
 including 46 independently rendered clocked frames. All 204,233 clothing-catalog
 comparisons remain enabled.
@@ -1583,15 +1586,42 @@ The local music/record presentation and selection families have a focused comman
 
     python -B tools/compare_reference.py --group4-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-Its 66,963 comparisons account for all 29 entries in two complete source families,
-28 Main contracts and one void layout task. Checks cover byte selectors, all
+Its 132,865 comparisons account for all 29 record/presentation/selection entries,
+24 composer Main contracts and three text/boundary helpers. Checks cover byte selectors, all
 14 original song descriptors and restart, raw resource readers, affine allocation
 and exhaustion, render/base/control aliases, suffix collisions, depth/number
 boundaries and both SRAM copies. Audio fixtures synchronize VCOUNT after the
 oracle's initialization wait and compare the baseline before calling the selected
-song callback. The focused run takes 12.305 seconds. All previous five local
-group4 dependency comparisons remain in the full suite; link transport and
-complete music-activity progression are separate requirements.
+song callback. Composer checks include all five languages, balanced task creation
+and removal, all tile-ring byte values, fractional scrolling in both directions,
+six scroll modes and unsupported-mode behavior, empty and terminal resource
+boundaries, glyph replacements and multiline heap cleanup. The focused run takes
+18.667 seconds. All previous five local group4 dependency comparisons remain in
+the full suite; link transport and complete music-activity progression are
+separate requirements.
+
+The input-only continuation `sandy_bay_optional.json --route ham_jam` covers the
+unmodified beginner rejection, title-menu composition, a changed Ham-Chat in
+“Dizzy for You”, an empty-slot save, return to the story, custom-slot selection,
+the paid entry and successful beginner result. Ta-dah delivers the prize to the
+captain and triggers the Sandy Bay shop reunion and Hambond. The route contains
+81,168 updates and 34 checkpoints, ending after original Save/Continue with
+79 words, 19 rescued loves, two seeds and progress 51. All 32 collection counters
+and 64 rock counts are asserted at story checkpoints; title/composer screens have
+unloaded story state. Initial/final checkpoints also assert the complete catalog
+and all six photos. Its prerequisite is the saved `haunted_house.json --route music`
+continuation. The existing default Sandy Bay route remains unchanged.
+
+The SDK replay passes in 134.68 seconds; 86,004 host-session checks pass in
+133.82 seconds. Their complete 32 KiB SRAM matches byte for byte, and an
+independent 2,103-update fresh reload passes in 2.967 seconds with all 79 unique
+word IDs matching their flags. The split exploratory scout differs in two retained
+auxiliary render-attribute bytes per SRAM copy and the associated group-one
+checksum; all choreography records match. The uninterrupted canonical SDK/host
+proof compares every byte without normalization. Actual desktop editor inspection
+remains unverified.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay_optional.json --route ham_jam --save PATH_TO_PRIVATE_HAUNTED_MUSIC_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_HAMBOND_PROFILE
 
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:

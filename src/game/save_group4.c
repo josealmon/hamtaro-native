@@ -212,7 +212,7 @@ HNSceneResult hn_group4_callback(HNMemory *m,GameAddr callback,GameAddr argument
             hn_render_set_animation_pointer(m,slot,hn_read32(m,0x020021F8+column*4));hn_write8(m,slot+0x60,1);}
         break;
     }
-    default:return HN_SCENE_UNKNOWN;
+    default:return hn_group4_ui_callback(m,callback,arguments,consumed);
     }
     return m->fault?HN_SCENE_RESOURCE:HN_SCENE_OK;
 }

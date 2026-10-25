@@ -75,7 +75,7 @@ statically. A separate clean-machine validation remains pending.
 | Text counters | Adapted | Three ROM template/palette banks, digit conversion, class aliases, addition/subtraction limits, delayed stepping and sound/yield callbacks compared; resources remain in the private ROM |
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
-| Local music and SaveGroup4 support | Adapted | All 29 functions in communication_record_callbacks.c and communication_record_selection.c compared: 28 Main callbacks and one void layout task, plus the prior payload classifier; resource songs/readers, render layout/aliases, affine selection, record numbering/depth, both SRAM copies and local/ROM selection; complete music activity and Cable Link transport remain outside this evidence |
+| Local music and SaveGroup4 support | Adapted | All 29 record/presentation/selection functions, 24 composer Main callbacks and three text/boundary helpers compared, plus the prior payload classifier; local editing menus, five languages, task lifetime, score scrolling, songs/readers, affine selection, numbering/depth and both SRAM copies; complete music activity and Cable Link transport remain outside this evidence |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; all three worn parts, Corsage sharing rejection, photo replacement/cancellation, Toss confirmation/rejection/empty-category behavior, title photo/Dress Up and original Save/Continue exercised; further gallery/settings and full desktop activity coverage remain pending |
 | Clothing catalog and variations | Adapted | All 40 script_callbacks_pair_list.c functions accounted for and compared: 18 Main, 26 F4 and 13 helper contracts, with overlaps; six ROM-backed lists, five languages, ownership masks, prices, cursors and palettes; Sunny Boutique rejection, cancellation, two Antlers colors, Corsage and Kerchief purchases, sold-out selection and saved continuation run natively; other purchases and complete wardrobe coverage remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; three owned Gems entries and wrap navigation inspected in the SDK; complete Items/Gems and timed raster integration remain pending |
@@ -1490,6 +1490,30 @@ A separate Windows process also restores the photo-room save beside the characte
 and renders the greeting, portrait, actor animations and continuation indicator.
 The complete photo activity and training-seat route remain unverified in the
 actual desktop window.
+The local composer now adapts the complete communication_text_callbacks.c and
+communication_text_columns.c families, the context preparation/restoration pair,
+and all three communication_text.c helpers. These names reflect shared original
+layouts; composing a dance does not start Cable Link. The 27 new contracts retain
+the original text tasks, five-language bundles, available-move list, 32-column
+tilemap wrap, fractional score accumulator and six scroll modes. The exchange
+phase lives at offset 0x11 of its shared storage; it is distinct from the record
+index at offset zero. The composer reads graphics and encoded text from the
+player's ROM. Synthetic regressions check move writes without damaging adjacent
+fields, empty-resource endpoints, beat advancement, unknown glyphs and multiline
+heap cleanup. Function comparisons alone do not establish a saved choreography
+or a contest win through normal input.
+
+The separate Sandy Bay optional route `ham_jam` starts from the saved Moonlight
+and Stead-E continuation. It retains the beginner rejection with an unmodified
+dance, opens Ham-Jam from the title menu, edits the second beat of “Dizzy for You”
+to Bestest and saves into an empty second slot. Returning to the story loads that
+slot for the next entry, charges the original one-seed fee and awards the beginner
+prize. Showing it to the ferry captain with Ta-dah triggers the return to the shop,
+the nineteenth rescued love and Hambond. Original Save/Continue retains 79 words,
+19 loves and level-three progress 51. Gem/rock counts, the clothing catalog and all
+six photos are checked across this continuation. Intermediate/expert contests,
+other composition operations, full desktop progression and physical controllers
+remain separate requirements.
 The current Windows executable separately opens the empty Items and Gems panels
 with keyboard input and returns through Status to the same photo-room scene.
 
