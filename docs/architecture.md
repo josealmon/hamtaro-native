@@ -623,6 +623,22 @@ Five words, other optional activities, minigame variants, manual crafting,
 clothing/gallery/settings branches, physical controllers and complete desktop
 progression remain outside this evidence.
 
+`sunny_optional.json --route full_strength` revisits the temple approach after
+that epilogue. Three Hif-hif pickups add three rocks through the original random
+selection. Each pickup checks all collection counters and remaining-polish
+fields. Searching an already collected spot does not duplicate a rock; an
+in-place original Save/Continue retains the three rocks and hides their sprites.
+These pickup flags apply to the visit and are cleared when leaving the area.
+After returning to Clubhouse, Rubrub consumes a rock with two polishes remaining
+in one action while ending flag 0x191 is set. Separate consumption and reward
+checkpoints check that each of the three actions removes exactly one rock and
+increments only its gem counter. The empty-inventory attempt, Gems panel and
+another original Save/Continue retain the final rewards and unrelated inventory.
+This adds gameplay evidence for the reference's epilogue-strength branch in
+`game_records.c`; native source and executable hashes retain the previous full
+reference proof. Other random pickup outcomes and a complete desktop visit
+remain outside this route.
+
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
 rescued loves. Focused input saves are read-only; all writes use disposable profiles.
@@ -1066,9 +1082,10 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 
 ## Remaining integration order
 
-1. Preserve the input-only story chain through the ten tested story reconciliations, Spat's
-   defeat, complete credits and saved postgame. Keep its actual temple/three-marble
-   prerequisites and semantic battle checkpoints rather than relying on capture labels.
+1. Preserve the input-only story chain, Spat's defeat, complete credits and the
+   optional continuations through all 21 reconciliations and their epilogue.
+   Keep the temple/three-marble prerequisites, semantic battle checkpoints and
+   original saves rather than relying on capture labels.
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.

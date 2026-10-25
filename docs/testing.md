@@ -1653,6 +1653,29 @@ desktop/physical-controller progression remain separate requirements.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/family_reunions.json --route wildwoods_training --save PATH_TO_PRIVATE_HAMBOND_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WILDWOODS_PROFILE
 
+`sunny_optional.json --route full_strength` continues from that saved epilogue.
+Its 72,885 updates and 22 checkpoints cover three temple Hif-hif pickups,
+searching a collected spot, in-place Save/Continue with hidden pickup sprites,
+Rubrub's polisher prompt and three enhanced polishing actions. The first action
+changes the remaining counts from [2, 1, 1] to [0, 1, 1]; the next actions empty
+only their selected rock. Each reward increments only its collection counter.
+The empty-inventory response, Gems panel and second original Save/Continue
+retain all 32 collection counters, 64 rock counts, clothing and six photos.
+The final state has 81 words, 21 loves, two seeds, no unpolished rocks, one new
+gem and two additional Crystals, at Rubrub map 1:4, x=103.5, z=80.0.
+
+The SDK passes in 114.38 seconds; 76,902 host-session checks pass in 117.46
+seconds. Both saves match the scout across all 32 KiB. An independent
+2,103-update reload passes in 2.846 seconds and confirms the 81 unique word
+identifiers against their flags. Eleven serial CTest suites pass in 0.79
+seconds, nineteen scenario tests in 0.055 seconds, and the installed package
+passes its smoke and content checks. All previous Sunny routes are unchanged.
+Identical native-source, executable and probe hashes retain the complete
+5,859,158-check reference proof. Other random outcomes and a complete desktop
+visit remain unverified.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --route full_strength --save PATH_TO_PRIVATE_WILDWOODS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_STRENGTH_PROFILE
+
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:
 
