@@ -14,6 +14,8 @@ epilogue-strength polishing; accessory commissioning, manual crafting failures
 and success, trading and accessory disposal; outfit purchases and saved photos; Haunted House's piano; and
 local Ham-Jam composition followed by beginner, intermediate and expert contest
 wins, the perfect-ending credits and polishing both retained contest prizes.
+Postie's four-answer Ham-Chat contest also delivers all four keys through the
+original letter, departure and return sequence.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 

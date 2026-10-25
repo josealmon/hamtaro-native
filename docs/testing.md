@@ -474,6 +474,23 @@ The native source and binary hashes remain unchanged, retaining the complete
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/haunted_house.json --route music --save PATH_TO_PRIVATE_JAMOUT_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_HAUNTED_MUSIC_PROFILE
 
+`postgame.json --route key_contest` instead starts from the complete dictionary
+and polished contest-prize save. Its 23,578 updates and eighteen checkpoints
+cover all four contest answers, letter acquisition/submission, Rubrub's pending
+delivery response, the world-map postal-phase transition, all four key awards
+and original Save/Continue. Inventory checkpoints retain all 32 gem counters,
+64 empty rock slots, 30 accessory slots, clothing and six photos. Separate SRAM
+checks retain all 51 choreography records and verify both save mirrors. These
+keys do not establish traversal of their caves or special-material refunds.
+
+The SDK replay passes in 34.68 seconds; 26,422 host-session checks pass in 37.83
+seconds. Both complete 32 KiB saves agree with the scout. A separate 2,103-update
+reload passes in 2.921 seconds, retaining all 86 unique word IDs and their flags.
+Twenty scenario tests and eleven serial CTest suites pass. Matching native-source,
+executable and probe hashes retain the full 5,859,158-comparison reference proof.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route key_contest --save PATH_TO_PRIVATE_BOOK_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_KEY_PROFILE
+
 `postgame.json` continues from the final `sunny_optional.json` save. It collects
 the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
 then obtains five seeds on each of two room visits. Rubrub identifies both new

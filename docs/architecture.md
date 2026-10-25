@@ -722,6 +722,20 @@ zero. All other gem counters, accessories, clothing, photos, 86 learned words,
 21 reconciliations and 14 seeds remain intact. Original End Game/Continue,
 byte-identical SDK/host SRAM and a fresh-process reload verify persistence.
 
+`postgame.json --route key_contest` starts with that inventory and the complete
+dictionary. It reads the contest paper, records all four available answers,
+receives the letter and submits it to Postie. The pending answers become posted
+answers without awarding keys early. Entering and leaving Rubrub keeps postal
+phase 0x3C at one; leaving Clubhouse through the world map advances it to two.
+Returning and speaking to Postie awards flags 0xBE through 0xC1, clears all four
+posted answers and resets the postal phase. The route also opens and cancels
+the separate credits poster without selecting a credits sequence. Original
+End Game/Continue, independent SDK/host SRAM comparison and a fresh-process
+reload retain the four keys, 86 words, 21 reconciliations, 14 seeds and the full
+gem, rock, accessory, clothing, photo and choreography inventory. This verifies
+key acquisition; the four corresponding caves and special-material crafting
+remain separate gameplay checks.
+
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
 rescued loves. Focused input saves are read-only; all writes use disposable profiles.
