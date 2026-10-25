@@ -742,6 +742,24 @@ All earlier wardrobe inputs/checkpoints and the native sources, executable and
 probe remain unchanged. The existing full core comparison proof remains applicable;
 this route does not establish interactive Windows or physical-pad behavior.
 
+The same packaged executable also passes an actual-window review with a separate
+private profile. Its controls panel assigns A to C and Select to Left Shift;
+C confirms in the game while the old Z binding does nothing. Status renders
+86 words, 21 loves and four seeds. Original End Game writes a complete 32 KiB file
+and keeps the exact preceding save as its backup. Title Dress Up renders photos
+one, two and six and the three empty slots. F11 switches the game and frontend
+between a 960x720 client window and 1920x1080 fullscreen, with centered integer
+scaling and the original game aspect ratio.
+
+The application closes normally while fullscreen. A new process visibly restores
+fullscreen, both changed keys, deadzone 40, volume 37, mute and disabled
+pause-on-focus-loss. F11 restores the previous window size. After the second normal
+closure, an independent native process reloads the desktop-written SRAM, checks
+the complete gallery/inventory/story checkpoint and reopens Status. Source profiles
+remain unchanged. The test is muted and makes no new audio-listening claim.
+A complete interactive desktop playthrough remains unverified; physical-controller
+testing is left to the user at their request.
+
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/wardrobe.json --route gallery --save PATH_TO_PRIVATE_MOON_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_GALLERY_PROFILE
 
 `optional_words.json` starts from the final wardrobe save. Its 22,472 updates and

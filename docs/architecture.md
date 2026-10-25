@@ -33,7 +33,7 @@ statically. A separate clean-machine validation remains pending.
 | --- | --- | --- |
 | Windows x64 application | Implemented | Native game view, Play/pause/resume/restart/menu, settings and save management; smoke-tested and real-window review |
 | ROM import | Implemented | Identity and full hash, invalid imports preserve existing data |
-| Settings and bindings | Implemented | Bounds, defaults, Unicode paths; two hidden application restarts preserve settings, all ten keyboard/gamepad mappings and SRAM/backup; saved mappings and deadzone exercised in a separate SDL input process; future-version settings retained verbatim |
+| Settings and bindings | Implemented | Bounds, defaults, Unicode paths; hidden restarts preserve all ten keyboard/gamepad mappings and SRAM/backup; separate SDL input process exercises saved mappings/deadzone; actual packaged-window remapping, fullscreen/window restoration and settings relaunch checked; future-version settings retained verbatim |
 | Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, brief taps retained for one game update, deadzone, remapping, disconnect; physical models not tested |
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session retains twenty-one words, ten seeds, Bijou and one rescued love in the Clubhouse; actual-window End Game preserves its previous backup, and closing/relaunching the executable restores the same scene and counters |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
@@ -473,8 +473,22 @@ Original Save/Continue and a fresh host session retain all three photos, the
 three owned outfit variants, four accessories, 86 words, 21 loves and four seeds.
 Scout, SDK and host SRAM agree across all 32 KiB. Both group-three mirrors match;
 all 51 choreography records remain unchanged. The preceding wardrobe inputs and
-checkpoints are unchanged. This is native runtime/host-file evidence, with no new
-interactive Windows, physical-controller or clean-machine claim.
+checkpoints are unchanged. This route supplies native runtime/host-file evidence;
+full desktop activity and clean-machine coverage remain incomplete.
+
+A separate review of the packaged Windows executable uses a private copy of this
+save. Keyboard remapping works in the game: C confirms after replacing Z, and Z
+no longer confirms. Status displays 86 words, 21 loves and four seeds. Original
+End Game writes the save and retains the exact preceding file as its backup.
+Title Dress Up renders all three stored photos and three empty slots. F11 switches
+between the 960x720 client window and 1920x1080 fullscreen; the game keeps its
+aspect ratio and integer scaling. Closing and relaunching restores fullscreen,
+the two reassigned keys, deadzone 40, volume 37, mute and the focus-pause setting.
+Returning to windowed mode restores its previous size. A separate fresh native
+process reloads the actual desktop-written save and verifies the complete gallery,
+inventory and story checkpoint. Both application processes close normally.
+This is a bounded interactive review; a complete desktop playthrough remains
+unverified. The user has chosen to test physical controllers separately.
 
 `optional_words.json` continues from the wardrobe save through Zuzuzu, Delin-Q,
 Lost-T and Koochi-Q. Its 22,472 updates and 13 checkpoints remain unchanged and
