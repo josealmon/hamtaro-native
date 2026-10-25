@@ -80,7 +80,7 @@ statically. A separate clean-machine validation remains pending.
 | Clothing catalog and variations | Adapted | All 40 script_callbacks_pair_list.c functions accounted for and compared: 18 Main, 26 F4 and 13 helper contracts, with overlaps; six ROM-backed lists, five languages, ownership masks, prices, cursors and palettes; Sunny Boutique rejection, cancellation, two Antlers colors, Corsage and Kerchief purchases, sold-out selection and saved continuation run natively; other purchases and complete wardrobe coverage remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; three owned Gems entries and wrap navigation inspected in the SDK; complete Items/Gems and timed raster integration remain pending |
 | Record messages and eligible-item count | Adapted | All 12 game_record_messages.c functions and the save_counter_prefix.s Main51 leaf compared; five-language text, byte-index wrap, live aliases, eleven void animation presets and the excluded final counter byte; the Clubhouse desk's empty-inventory greeting completes in the SDK; populated activity branches remain pending |
-| Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; paid artisan Pooie Earrings and delivery tested; manual crafting, resale and other recipes remain separate |
+| Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; paid artisan Pooie Earrings and delivery, manual material rejection, two failures, a successful accessory and original Save/Continue tested; gameplay refunds, resale and other recipes remain separate |
 | Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; empty entry/return and a one-item training-seat SDK view/save/reload run; multi-item inventories and complete activity integration remain pending |
 | Gameplay record slots and counters | Adapted | Nine allocation/query/consume/counter functions compared, including packed fields, result layouts, wrap/clamp behavior and three allocation callbacks; batches retain zero/full capacity branches and original animation timing; complete inventory UI and save integration remain pending |
 | Rock use, counters and captions | Adapted | All 18 functions in game_record_use.c, script_callbacks_game_record_counter.c and record_display.c compared: 15 Main, 14 F4 contracts and two direct helpers; native SDK Rubrub identifies Banana Stone, Crystal and Ammonite, retains partial rocks and enforces the love-meter strength limit; complete crafting and store branches remain pending |
@@ -628,7 +628,8 @@ that epilogue. Three Hif-hif pickups add three rocks through the original random
 selection. Each pickup checks all collection counters and remaining-polish
 fields. Searching an already collected spot does not duplicate a rock; an
 in-place original Save/Continue retains the three rocks and hides their sprites.
-These pickup flags apply to the visit and are cleared when leaving the area.
+These pickup flags apply to the visit; the cart return save still retains them,
+and they are cleared later on the route back to Clubhouse.
 After returning to Clubhouse, Rubrub consumes a rock with two polishes remaining
 in one action while ending flag 0x191 is set. Separate consumption and reward
 checkpoints check that each of the three actions removes exactly one rock and
@@ -639,6 +640,19 @@ This adds gameplay evidence for the reference's epilogue-strength branch in
 reference proof. Other random pickup outcomes and a complete desktop visit
 remain outside this route.
 
+Two independent `postgame.json` routes extend workshop integration from that
+save. `workshop_funding` uses ordinary Sunny Digdig visits to raise the balance
+from two to 82 seeds, finds the second artisan through normal visits, rejects
+missing recipe materials without charging and retains the workshop in an
+original save. `manual_crafting` follows in a fresh native process. Two failed
+attempts spend twenty seeds each, two Diamonds and one Peridot, while leaving
+all thirty accessory slots empty. A subsequent successful attempt spends another
+twenty seeds and two Diamonds and stores accessory 44 in the first empty slot.
+Original Save/Continue retains that accessory, 22 seeds, one Diamond, no Peridot,
+all unrelated gems and rock counts, clothing, photos, words and reconciliations.
+The replay uses ordinary inputs and the original random outcomes. Special-material
+refunds, resale and other recipes remain separate integration work.
+
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
 rescued loves. Focused input saves are read-only; all writes use disposable profiles.
@@ -647,6 +661,17 @@ save, including visible status counters, keyboard menus, End Game, exact backup
 retention and relaunch/Continue. That bounded desktop evidence does not establish
 the new full desktop story route. Book pages, dialogs and the new story scenes have
 also been inspected through native PPU output. Game captures stay outside Git.
+
+A separate actual Windows visit restores the three-rock temple save, checks
+Status and Crystal's quantity, description and map, and returns from Gems to the
+field. WASD movement retains Bijou's following behavior. An input-only native
+replay prepares an original save beside the cart; the window then selects Gogo,
+completes the return to the cave and saves through the original End Game menu.
+A fresh native process reloads that Windows-written SRAM at map 2:8, x=48.5,
+z=136.5, with all 32 gem counters, 64 rock counts, clothing and six photos intact.
+Long traversal uses continuous input replays; desktop captures verify meaningful
+interactions. This bounded visit does not establish an uninterrupted desktop
+playthrough, physical gamepad behavior or a listening test of audio output.
 
 Two original bus contracts are retained at their reviewed calling sites. Collision
 record-index LDRH reads above 0x0FFFFFFF and at unassigned I/O above 0x040003FF

@@ -78,7 +78,7 @@ class NativeGame:
         self.check();out=C.create_string_buffer(32768)
         if not self.read(self.memory,0x0E000000,out,len(out)):raise RuntimeError("Native SRAM read failed.")
         return out.raw
-    def checkpoint(self,flags=None,controls=None,classes=None,record_counters=None,rock_counts=None,catalog_flags=None,catalog_count=None,photo_records=None,outfit_indices=None):
+    def checkpoint(self,flags=None,controls=None,classes=None,record_counters=None,rock_counts=None,catalog_flags=None,catalog_count=None,photo_records=None,outfit_indices=None,accessory_records=None):
         report=self.check();slot=self.value(0x03002D98)+self.value(0x03002C0C,1)*104
         result=dict(frame=report[4],map_bank=self.value(0x03002C58,1),map_index=self.value(0x03001F68,1),
                     opcode=self.value(0x03000010,1),main_cursor=f"0x{self.value(0x03002C60):08X}",leader_x=self.value(slot+0x18,signed=True)/65536,
@@ -95,6 +95,8 @@ class NativeGame:
             result["record_counters"]={key:self.value(0x0201CC20+int(key,0),1) for key in record_counters}
         if rock_counts is not None:
             result["rock_counts"]={key:(self.value(0x0201CB20+int(key,0)*4,2)>>7)&31 for key in rock_counts}
+        if accessory_records is not None:
+            result["accessory_records"]={key:self.value(0x0201EE40+int(key,0),1) for key in accessory_records}
         if catalog_flags is not None:
             result["catalog_flags"]={key:self.value(0x03003C50+int(key,0)*4,1) for key in catalog_flags}
         if catalog_count is not None:result["catalog_count"]=self.value(0x030035CC,1)
@@ -123,7 +125,7 @@ def validate_steps(steps,depth=0):
                 raise ValueError("An observation requires a nonempty label.")
         elif "expect" in step:
             if set(step)-{"expect","label"} or not isinstance(step["expect"],dict):raise ValueError("Invalid checkpoint.")
-            fields={"frame","map_bank","map_index","opcode","main_cursor","leader_x","leader_z","learned_words","seeds","scene_selection","follower_slot","partner_joined","loves_rescued","flags","controls","classes","record_counters","rock_counts","catalog_flags","catalog_count","photo_records","outfit_indices"}
+            fields={"frame","map_bank","map_index","opcode","main_cursor","leader_x","leader_z","learned_words","seeds","scene_selection","follower_slot","partner_joined","loves_rescued","flags","controls","classes","record_counters","rock_counts","catalog_flags","catalog_count","photo_records","outfit_indices","accessory_records"}
             if not step["expect"] or set(step["expect"])-fields:raise ValueError("Unknown or empty checkpoint fields.")
             if "catalog_count" in step["expect"] and (type(step["expect"]["catalog_count"]) is not int or not 0<=step["expect"]["catalog_count"]<=255):
                 raise ValueError("Checkpoint catalog_count must be an unsigned byte.")
@@ -148,7 +150,7 @@ def validate_steps(steps,depth=0):
                         any(not isinstance(pair,list) or len(pair)!=2 or
                             any(type(value) is not int or not 0<=value<=255 for value in pair) for pair in outfits)):
                         raise ValueError("Photo outfits require six category/variation byte pairs.")
-            for field,limit,maximum in (("flags",768,1),("controls",512,255),("classes",256,65535),("record_counters",32,255),("rock_counts",64,31),("catalog_flags",110,255)):
+            for field,limit,maximum in (("flags",768,1),("controls",512,255),("classes",256,65535),("record_counters",32,255),("rock_counts",64,31),("catalog_flags",110,255),("accessory_records",30,255)):
                 if field not in step["expect"]:continue
                 values=step["expect"][field]
                 if not isinstance(values,dict) or not values:raise ValueError(f"Checkpoint {field} must be a nonempty object.")
@@ -196,7 +198,7 @@ def run_steps(game,steps):
         elif "observe" in step:
             print(f"Observation {step['observe']}: {game.checkpoint()}",flush=True)
         elif "expect" in step:
-            extra={field:step["expect"][field] for field in ("catalog_flags","catalog_count","photo_records","outfit_indices") if field in step["expect"]}
+            extra={field:step["expect"][field] for field in ("catalog_flags","catalog_count","photo_records","outfit_indices","accessory_records") if field in step["expect"]}
             actual=game.checkpoint(*(step["expect"].get(field) for field in ("flags","controls","classes","record_counters","rock_counts")),**extra)
             for key,expected in step["expect"].items():
                 if actual[key]!=expected:raise RuntimeError(f"Checkpoint {step.get('label','')} {key}: expected {expected}, got {actual[key]}.")

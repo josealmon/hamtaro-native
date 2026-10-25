@@ -119,7 +119,7 @@ class ScenarioTests(unittest.TestCase):
             run(game,[dict(label="score",expect={"classes":{"0xE1":600}})])
 
     def test_inventory_checkpoints_reject_truncation_and_aliases(self):
-        for field,limit,maximum in (("record_counters",32,255),("rock_counts",64,31)):
+        for field,limit,maximum in (("record_counters",32,255),("rock_counts",64,31),("accessory_records",30,255)):
             self.assertEqual(validate([dict(expect={field:{"0":0,str(limit-1):maximum}})]),0)
             for values in ({"0":True},{"0":-1},{"0":maximum+1},{str(limit):0},
                            {"-1":0},{"1":1,"0x1":2},{},[]):
@@ -149,6 +149,22 @@ class ScenarioTests(unittest.TestCase):
             with self.subTest(field=message),contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,message):
                 run(game,[dict(label="gems",expect={"record_counters":{"29":2},"rock_counts":{"6":0}})])
 
+
+    def test_accessory_checkpoints_detect_lost_or_unremoved_crafts(self):
+        calls=[]
+        def value(address,size=4,signed=False):
+            calls.append((address,size));return {0x0201EE40:18,0x0201EE5D:0}.get(address,0)
+        game=SimpleNamespace(check=lambda:[0,0,0,0,9],value=value)
+        actual=MODULE["NativeGame"].checkpoint(game,accessory_records={"0":0,"29":18})
+        self.assertEqual(actual["accessory_records"],{"0":18,"29":0})
+        self.assertEqual(calls[-2:],[(0x0201EE40,1),(0x0201EE5D,1)])
+        def checkpoint(*args,**extra):
+            self.assertEqual(extra,{"accessory_records":{"0":18,"29":0}})
+            return {"accessory_records":observed}
+        game.checkpoint=checkpoint
+        for observed in ({"0":0,"29":0},{"0":18,"29":18}):
+            with self.subTest(observed=observed),contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,"accessory_records"):
+                run(game,[dict(label="craft",expect={"accessory_records":{"0":18,"29":0}})])
 
     def test_catalog_checkpoints_reject_truncation_and_aliases(self):
         self.assertEqual(validate([dict(expect={"catalog_flags":{"0":0,"109":255},"catalog_count":255})]),0)

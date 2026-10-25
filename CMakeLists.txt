@@ -97,5 +97,6 @@ install(FILES "${sdl3_SOURCE_DIR}/LICENSE.txt" DESTINATION licenses RENAME SDL.t
 install(FILES "${imgui_SOURCE_DIR}/LICENSE.txt" DESTINATION licenses RENAME Dear-ImGui.txt)
 install(FILES licenses/mGBA-MPL-2.0.txt DESTINATION licenses)
 set(CPACK_GENERATOR ZIP)
+set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}")
 set(CPACK_PACKAGE_FILE_NAME "hamtaro-native-${PROJECT_VERSION}-windows-x64")
 include(CPack)

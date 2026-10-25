@@ -10,8 +10,8 @@ Recorded native input covers Spat's defeat, complete credits, all 21
 reconciliations and their epilogue, and saved postgame control. Optional routes
 reach 81 of 86 Ham-Chats, including the level-four Lalalala lesson. They also
 cover Sunny Peak's bridge, keys, songs, sand bath and temple rock pickups;
-epilogue-strength polishing; accessory commissioning
-and trading; outfit purchases and saved photos; Haunted House's piano; and
+epilogue-strength polishing; accessory commissioning, manual crafting failures
+and success, and trading; outfit purchases and saved photos; Haunted House's piano; and
 local Ham-Jam composition followed by a beginner contest win.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.

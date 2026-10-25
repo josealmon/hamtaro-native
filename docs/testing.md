@@ -735,6 +735,10 @@ stop a text replay at a unique observation after the entire input is validated.
 
 Text labels print native observations, not semantic assertions or original-ROM
 parity. JSON `expect` checkpoints retain strict scalar/flag/control assertions.
+`accessory_records` additionally checks the thirty original accessory byte slots;
+string slot IDs must denote unique integers from zero through twenty-nine, with byte values.
+This can distinguish material rejection, successful storage, failure cleanup and
+saved continuation instead of inferring an accessory from the seed balance.
 Both formats execute every requested update with the same native graphics/audio
 path and stop on faults; no renderer, audio, comparison domain or game update is
 skipped. `--save` and `--session-test` work with either format. Keep external
@@ -1675,6 +1679,52 @@ Identical native-source, executable and probe hashes retain the complete
 visit remain unverified.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --route full_strength --save PATH_TO_PRIVATE_WILDWOODS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_STRENGTH_PROFILE
+
+A separate actual Windows test restores the original temple save with three
+rocks and checks the visible 81 words, 21 loves, two seeds and three rocks.
+It opens Crystal's two-unit entry, description and map, returns through Gems and
+Status, and checks WASD movement with Bijou following. For the cart interaction,
+a continuous input-only replay prepares an original save beside the cart:
+4,697 updates, SDK 6.83 seconds and 6,740 host checks in 9.58 seconds, with exact
+32 KiB SRAM agreement and a fresh reload before opening the window. The actual
+window selects Gogo, returns to the cave and uses original End Game / Yep-P.
+The resulting Windows-written save independently reloads at map 2:8, x=48.5,
+z=136.5 in 2,103 updates / 2.926 seconds. All 32 collection counters, 64 rock
+counts, owned clothing, six photos and word identifiers survive. The temple
+pickup flags still persist in that cave save and clear later on the Clubhouse
+return. The game resets after saving; this observation did not capture the
+brief Save complete text. Audio was muted, and physical gamepad, window resizing
+and a complete uninterrupted desktop playthrough remain unverified.
+
+`postgame.json --route workshop_funding` starts from the full-strength Rubrub
+save. Its 53,599 updates and nine checkpoints collect eighty seeds through normal
+Sunny Digdig visits, find the second workshop artisan through ordinary entries,
+reject missing materials without charging and perform original Save/Continue.
+The SDK passes in 78.06 seconds; 57,154 host checks pass in 82.63 seconds. Scout,
+SDK and host saves match across all 32 KiB. An independent 2,103-update reload
+passes in 2.890 seconds with 82 seeds, 81 words, 21 loves and the manual artisan.
+
+`postgame.json --route manual_crafting` starts from that verified workshop save.
+Its 69,999 updates and ten checkpoints check two original failures and a success:
+the balance changes from 82 to 62, 42 and 22 seeds; the failures consume two
+Diamonds and one Peridot, and the success consumes two more Diamonds. Failed
+attempts leave all thirty accessory slots empty; success stores record 44 only
+in slot zero. Navigation continues after the exhausted Peridot disappears from
+the material list. Original Save/Continue retains the result. Each checkpoint
+checks all 32 gem counters, 64 rock counts, 30 accessory slots, clothing and six
+photos. The normal input trace retains the original random outcomes; no game
+state or RNG is injected. Special-material refunds, resale and other recipes
+remain outside this route.
+
+The SDK passes in 117.42 seconds; 74,568 host-session checks pass in 120.89
+seconds. Scout, SDK and host saves agree across all 32 KiB. An independent
+2,103-update reload passes in 3.026 seconds and retains record 44 in slot zero,
+all other accessory slots empty, 81 words, 21 loves and the remaining inventory.
+Twenty scenario tests and eleven serial CTest suites pass. Identical native
+source, executable and probe hashes retain the full 5,859,158-check comparison.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route workshop_funding --save PATH_TO_PRIVATE_STRENGTH_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_FUNDED_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route manual_crafting --save PATH_TO_PRIVATE_FUNDED_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_CRAFT_PROFILE
 
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:
