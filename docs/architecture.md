@@ -774,9 +774,21 @@ one Ammonite, the other gem counters, all 64 empty rock slots, all three
 accessories, clothing, six photo records and 51 choreography records. SDK and
 host SRAM match, followed by a fresh-process reload. The Sun and Rainbow routes
 remain unchanged.
-Uni-Star, Peace Moon, Ice Stone and special-material refunds remain separate
-gameplay checks. Polished-gem duplicate prevention is verified for the Wave cave;
-that does not establish every cave's corresponding branch.
+`special_stones.json --route remaining_stones` continues from the Wave craft.
+Pushie opens Fun Land's Ice Key passage; Haunted House's original stair scripts
+and Hif-hif reveal the Peace Moon passage. The tower side entrance reaches the
+Star Key cave through its additional antechamber. Ham-lift collects fixed rock
+keys four, one and zero into separate slots with five polishes each. Rubrub
+processes all three in one visit, automatically selecting the next occupied
+slot after each full-strength action. Ice Stone, Peace Moon and Uni-Star each
+change from unseen to one; all 64 rock slots finish empty without a seed charge.
+Original Save/Continue retains the three new gems, Rainbow Stone, four seeds,
+all previous gems and three accessories, clothing, six photo records, all 51
+choreography records, 86 words and 21 reconciliations. SDK and host SRAM match,
+followed by a fresh-process reload. Previous special-stone routes are unchanged.
+Special-material refunds remain a separate gameplay check. Polished-gem duplicate
+prevention is verified for the Wave cave; that does not establish every cave's
+corresponding branch.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

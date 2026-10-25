@@ -508,8 +508,8 @@ SDK and host match across all 32 KiB. A fresh 2,103-update reload passes in
 3.033 seconds, checking the unique word list against its flags. Both save
 mirrors agree and all previous routes are unchanged. Matching native-source
 and executable/probe hashes retain the full 5,859,158-comparison proof. The
-remaining three special stones and crafting refunds remain separate gameplay
-checks. Polished-gem cave reentry is covered by the Wave route below.
+remaining special-stone routes are described below. Crafting refunds remain a
+separate gameplay check. Polished-gem cave reentry is covered by the Wave route.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --route rainbow_cave --save PATH_TO_PRIVATE_KEY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_RAINBOW_PROFILE
 
@@ -556,6 +556,28 @@ save mirrors and all choreography records agree. Identical native-source and
 executable/probe hashes retain the full 5,859,158-comparison reference proof.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --route wave_crafting --save PATH_TO_PRIVATE_SUN_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WAVE_PROFILE
+
+`special_stones.json --route remaining_stones` starts from the verified Wave
+crafting save. Its 50,772 updates and 41 checkpoints collect Ice Stone's raw rock
+through Fun Land's Pushie passage, reveal Peace Moon's Haunted House entrance
+with Hif-hif and follow the tower's Star Key route through its extra antechamber.
+Each Ham-lift adds its fixed rock with five polishes while retaining earlier
+rocks. Intermediate map, position, key, stair and entrance checks distinguish
+the intended activities from merely arriving at the final destination.
+Rubrub's first full-strength action converts Ice Stone; the service automatically
+selects Peace Moon and then Uni-Star. Three actions clear all occupied slots
+and award one of each gem without charging seeds. Original Save/Continue retains
+all gem counters, 64 empty rock slots, three accessories, clothing, six photo
+records, 51 choreography records, 86 unique words, 21 reconciliations and four
+seeds. All earlier routes in the scenario file remain unchanged.
+The SDK passes in 80.52 seconds; 54,000 host-session checks pass in 83.07
+seconds. Scout, SDK and host match across all 32 KiB. A fresh 2,103-update
+reload passes in 2.980 seconds, including the unique word-list/flag audit.
+Both save mirrors agree and all choreography records are unchanged. Identical
+native-source and executable/probe hashes retain the full 5,859,158-comparison
+reference proof. Special-material failure/refunds remain unverified in gameplay.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --route remaining_stones --save PATH_TO_PRIVATE_WAVE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_STONES_PROFILE
 
 `postgame.json` continues from the final `sunny_optional.json` save. It collects
 the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
