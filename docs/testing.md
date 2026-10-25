@@ -718,11 +718,31 @@ and all eleven CTest suites pass, including the actual application smoke test.
 The extension changes only scalar checkpoints and recorded input. Native source,
 application and probe hashes are identical to the complete 5,793,256-check
 HBlank/window boundary, whose function and timed-pixel checks remain applicable.
-Only ordinary buttons and read-only scalar assertions are versioned. Further
-clothing purchases, gallery operations/settings and full desktop activity
-coverage remain unverified.
+Only ordinary buttons and read-only scalar assertions are versioned. Additional
+clothing purchases and full desktop activity coverage remain unverified.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/wardrobe.json --save PATH_TO_PRIVATE_MATERIALS_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WARDROBE_PROFILE
+
+The independent `wardrobe.json --route gallery` continuation uses the completed
+Moon-crafting save. Its 18,461 updates and 19 checkpoints check default-No
+replacement rejection, frame preview with Start, all four forward/backward
+transitions between the two unlocked settings, and cancellation after replacement
+consent. The original "Erase this photo?" prompt guards replacement; accepting it
+keeps the old record until the new photo is committed. A new photo in empty slot
+two keeps slots one and six and the three remaining empty slots unchanged.
+Reopening the new slot also checks its default-No replacement guard.
+
+The final original Save/Continue and fresh host reload retain all six records,
+the three owned outfit variants, four accessories, all gem/rock counters, 86 words,
+21 loves and four seeds. Scout, SDK and host SRAM match all 32 KiB; both group-three
+mirrors and all 51 retained choreography records are checked independently.
+The SDK replay passes in 35.07 seconds, followed by 20,791 host-session checks in
+37.35 seconds and a separate 2,103-update fresh-process/Status check in 3.345 seconds.
+All earlier wardrobe inputs/checkpoints and the native sources, executable and
+probe remain unchanged. The existing full core comparison proof remains applicable;
+this route does not establish interactive Windows or physical-pad behavior.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/wardrobe.json --route gallery --save PATH_TO_PRIVATE_MOON_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_GALLERY_PROFILE
 
 `optional_words.json` starts from the final wardrobe save. Its 22,472 updates and
 13 checkpoints cover Zuzuzu, Delin-Q, Lost-T and Koochi-Q, increasing the dictionary

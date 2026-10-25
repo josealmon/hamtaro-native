@@ -76,7 +76,7 @@ statically. A separate clean-machine validation remains pending.
 | Text tasks and dialog scripts | Adapted | Linked contexts, tiled glyphs, delays/fast advance, line/page scrolling, all 32 text commands, numeric text, icons, language variants and 27 typed animation callbacks compared; other indirect callbacks remain incomplete |
 | Native save records | Adapted | Original payloads/checksum, SRAM identity initialization/repair, primary/backup group loading and grouped writes; private function comparisons |
 | Local music and SaveGroup4 support | Adapted | All 29 record/presentation/selection functions, 24 composer Main callbacks and three text/boundary helpers compared, plus the prior payload classifier; local editing menus, five languages, task lifetime, score scrolling, songs/readers, affine selection, numbering/depth and both SRAM copies; complete music activity and Cable Link transport remain outside this evidence |
-| SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; all three worn parts, Corsage sharing rejection, photo replacement/cancellation, Toss confirmation/rejection/empty-category behavior, title photo/Dress Up and original Save/Continue exercised; further gallery/settings and full desktop activity coverage remain pending |
+| SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; all three worn parts, Corsage sharing rejection, photo replacement/cancellation, Toss confirmation/rejection/empty-category behavior, title photo/Dress Up, frame preview and both unlocked settings exercised; three photos retained across original Save/Continue and a fresh host session; full desktop activity coverage remains pending |
 | Clothing catalog and variations | Adapted | All 40 script_callbacks_pair_list.c functions accounted for and compared: 18 Main, 26 F4 and 13 helper contracts, with overlaps; six ROM-backed lists, five languages, ownership masks, prices, cursors and palettes; Sunny Boutique rejection, cancellation, two Antlers colors, Corsage and Kerchief purchases, sold-out selection and saved continuation run natively; other purchases and complete wardrobe coverage remain pending |
 | Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; three owned Gems entries and wrap navigation inspected in the SDK; complete Items/Gems and timed raster integration remain pending |
 | Record messages and eligible-item count | Adapted | All 12 game_record_messages.c functions and the save_counter_prefix.s Main51 leaf compared; five-language text, byte-index wrap, live aliases, eleven void animation presets and the excluded final counter byte; the Clubhouse desk's empty-inventory greeting completes in the SDK; populated activity branches remain pending |
@@ -458,6 +458,23 @@ The Outfit counter is three; Corsage ownership is cleared while its image remain
 stored in photo one. The source profiles stay unchanged. Native source and binary
 hashes are identical to the complete 5,793,256-check HBlank/window boundary, whose
 proof remains applicable to this input/checkpoint extension.
+
+The independent `wardrobe.json --route gallery` continuation starts from the
+completed Moon-crafting save. Its 18,461 updates and 19 checkpoints retain all six
+photo records through default-No replacement rejection, slot-six replacement
+consent, Start frame preview, both unlocked settings in both directions and
+cancellation before committing the replacement. Accepting the prompt labelled
+"Erase this photo?" starts replacement preparation; it does not immediately erase
+the stored record. Saving a third photo into empty slot two preserves the older
+photos in slots one and six and the other three empty slots. The new photo omits
+the discarded Corsage while photo one still contains it.
+
+Original Save/Continue and a fresh host session retain all three photos, the
+three owned outfit variants, four accessories, 86 words, 21 loves and four seeds.
+Scout, SDK and host SRAM agree across all 32 KiB. Both group-three mirrors match;
+all 51 choreography records remain unchanged. The preceding wardrobe inputs and
+checkpoints are unchanged. This is native runtime/host-file evidence, with no new
+interactive Windows, physical-controller or clean-machine claim.
 
 `optional_words.json` continues from the wardrobe save through Zuzuzu, Delin-Q,
 Lost-T and Koochi-Q. Its 22,472 updates and 13 checkpoints remain unchanged and
