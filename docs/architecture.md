@@ -736,6 +736,21 @@ gem, rock, accessory, clothing, photo and choreography inventory. This verifies
 key acquisition; the four corresponding caves and special-material crafting
 remain separate gameplay checks.
 
+`postgame.json --route rainbow_cave` uses the Rainbow Key at Sunny Peak's cave.
+The normal cave passage tracks its internal chamber index as well as map 2:9;
+these chambers share a map identifier. Behind the key door, Ham-lift collects
+the fixed special rock into slot zero with five polishes remaining. Leaving and
+reentering keeps that single rock and removes its Ham-lift offer. The return
+also closes the cave merchant's conversation without charging seeds. Rubrub's
+right hamster accepts the rock through its original confirmation, and a single
+polish action clears slot zero and changes Rainbow Stone counter six from unseen
+to one. The occupied-rock count updates later in the dialogue. Original
+End Game/Continue retains the gem, all six keys, 86 words, 21 reconciliations,
+14 seeds and the other inventory, clothing, photos and 51 choreography records.
+SDK and host replays compare all SRAM bytes, followed by a fresh-process reload.
+Other special stones, the polished-gem cave-reentry branch and crafting refunds
+remain separate checks.
+
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
 rescued loves. Focused input saves are read-only; all writes use disposable profiles.

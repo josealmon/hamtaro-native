@@ -16,6 +16,8 @@ local Ham-Jam composition followed by beginner, intermediate and expert contest
 wins, the perfect-ending credits and polishing both retained contest prizes.
 Postie's four-answer Ham-Chat contest also delivers all four keys through the
 original letter, departure and return sequence.
+Sunny Peak's locked Rainbow cave, protection against a duplicate special rock
+and polishing that rock into a Rainbow Stone are also covered.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 

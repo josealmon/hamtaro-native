@@ -491,6 +491,28 @@ executable and probe hashes retain the full 5,859,158-comparison reference proof
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route key_contest --save PATH_TO_PRIVATE_BOOK_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_KEY_PROFILE
 
+`postgame.json --route rainbow_cave` starts from the verified contest-key save.
+Its 61,002 updates and 21 checkpoints enter Sunny Peak's key cave and collect
+its fixed rock with Ham-lift. Slot zero has five polishes remaining; cave reentry
+keeps that one rock and removes its Ham-lift offer. The route returns through
+the normal cave chambers and closes the merchant dialogue without spending
+seeds. Rubrub's right hamster opens the service: one ordinary confirmation
+clears the rock and changes Rainbow Stone counter six from unseen to one.
+The occupied-rock count changes later in the dialogue. Original Save/Continue
+retains all six keys, 86 words, 21 loves, 14 seeds, all other gem counters,
+64 empty rock slots, 30 accessory slots, clothing, six photo records and all
+51 choreography records.
+
+The SDK passes in 95.03 seconds; 64,470 host checks pass in 97.74 seconds. Scout,
+SDK and host match across all 32 KiB. A fresh 2,103-update reload passes in
+3.033 seconds, checking the unique word list against its flags. Both save
+mirrors agree and all previous routes are unchanged. Matching native-source
+and executable/probe hashes retain the full 5,859,158-comparison proof. Other
+special stones, polished-gem cave reentry and crafting refunds remain separate
+gameplay checks.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route rainbow_cave --save PATH_TO_PRIVATE_KEY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_RAINBOW_PROFILE
+
 `postgame.json` continues from the final `sunny_optional.json` save. It collects
 the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
 then obtains five seeds on each of two room visits. Rubrub identifies both new
