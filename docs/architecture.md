@@ -653,6 +653,24 @@ all unrelated gems and rock counts, clothing, photos, words and reconciliations.
 The replay uses ordinary inputs and the original random outcomes. Special-material
 refunds, resale and other recipes remain separate integration work.
 
+`postgame.json --route accessory_toss` separately restores the successful craft
+and opens the populated A-Box. It identifies accessory 44 as Heart Earrings,
+checks that B and the default No both cancel disposal, then confirms Toss and
+checks that exactly the selected accessory disappears. Seeds and gems are not
+refunded or paid, and an empty-slot attempt cannot remove another record.
+Original Save/Continue retains the removal and all unrelated inventory. This
+test uses a separate profile; the story continuation keeps the crafted accessory.
+The tested A-Box action is disposal; an original accessory sale flow has not
+been identified or exercised.
+
+`fun_land_optional.json --route goodgo` continues from the successful craft,
+returns to the Fun Land gift counter and uses Hamteam to learn Goodgo. It
+checks learned flag 0x6B, 82 unique words, all 21 reconciliations, 22 seeds and
+the retained Heart Earrings, gem counters, empty rock slots, clothing and photos.
+Original Save/Continue and an independent fresh process restore the central
+plaza with those records. Dazzlie, Bye-Q, Hamcheer and Greatchu remain unlearned;
+this lesson does not establish complete pair-board minigame coverage.
+
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
 rescued loves. Focused input saves are read-only; all writes use disposable profiles.

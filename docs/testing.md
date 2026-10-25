@@ -1726,6 +1726,31 @@ source, executable and probe hashes retain the full 5,859,158-check comparison.
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route workshop_funding --save PATH_TO_PRIVATE_STRENGTH_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_FUNDED_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route manual_crafting --save PATH_TO_PRIVATE_FUNDED_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_CRAFT_PROFILE
 
+`postgame.json --route accessory_toss` starts from that successful craft in a
+separate profile. Its 8,682 updates and nine checkpoints cover the populated
+Heart Earrings entry, default-No confirmation, B cancellation, explicit No,
+confirmed removal, empty-slot rejection and original Save/Continue. All thirty
+accessory slots and all unrelated gems, rocks, clothing and photos are checked;
+the balance remains 22 seeds, and Toss grants no gem refund. The SDK passes in
+15.22 seconds; 10,833 host checks pass in 17.55 seconds. All 32 KiB agree with
+the scout; a fresh 2,103-update reload passes in 2.872 seconds. This disposal
+branch does not replace the story save that retains the accessory or establish
+an original selling flow.
+
+`fun_land_optional.json --route goodgo` instead retains the crafted accessory
+and travels to Fun Land's gift counter. Hamteam triggers the original Goodgo
+lesson, sets flag 0x6B and increases the unique learned count from 81 to 82.
+Its 12,749 updates and eight checkpoints retain 21 loves, 22 seeds, all 32 gem
+counters, 64 empty rock slots, 30 accessory records, clothing and six photos.
+The SDK passes in 19.26 seconds; 15,071 host checks pass in 21.84 seconds. Scout,
+SDK and host saves match across all 32 KiB. A fresh 2,103-update reload passes
+in 3.080 seconds at central plaza map 3:3, x=248.5, z=112.5. The 82 learned IDs
+are unique and match their flags; the missing IDs are 17, 29, 74 and 82. Complete
+pair-board gameplay and full desktop progression remain separate checks.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route accessory_toss --save PATH_TO_PRIVATE_CRAFT_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_TOSS_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land_optional.json --route goodgo --save PATH_TO_PRIVATE_CRAFT_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_GOODGO_PROFILE
+
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:
 
