@@ -8,15 +8,16 @@ configures keyboard/gamepad input and manages compatible saves.
 
 Recorded native input covers Spat's defeat, complete credits, all 21
 reconciliations and their epilogue, and saved postgame control. Optional routes
-reach 82 of 86 Ham-Chats, including the level-four Lalalala and Goodgo lessons. They also
+reach all 86 Ham-Chats, including Lalalala, Goodgo and the expert Ham-Jam reward. They also
 cover Sunny Peak's bridge, keys, songs, sand bath and temple rock pickups;
 epilogue-strength polishing; accessory commissioning, manual crafting failures
 and success, trading and accessory disposal; outfit purchases and saved photos; Haunted House's piano; and
-local Ham-Jam composition followed by a beginner contest win.
+local Ham-Jam composition followed by beginner, intermediate and expert contest
+wins, the perfect-ending credits and polishing both retained contest prizes.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 
-This development build still has unfinished functions. Remaining words, optional
+This development build still has unfinished functions. Further optional
 activities, minigame branches, physical controllers and a full desktop playthrough
 remain unverified.
 See [docs/architecture.md](docs/architecture.md) for the tested routes and their limits.

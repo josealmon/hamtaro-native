@@ -86,7 +86,7 @@ statically. A separate clean-machine validation remains pending.
 | Rock use, counters and captions | Adapted | All 18 functions in game_record_use.c, script_callbacks_game_record_counter.c and record_display.c compared: 15 Main, 14 F4 contracts and two direct helpers; native SDK Rubrub identifies Banana Stone, Crystal and Ammonite, retains partial rocks and enforces the love-meter strength limit; complete crafting and store branches remain pending |
 | Status counters and stage sequence | Adapted | All 13 functions in map10_4_counter_sequence.c compared, including the complete 16-bit counter domain, five tile banks, windows, stage/scroll graphics and sequence phases; nine Main and twelve argument-free task contracts; later-stage live integration remains pending |
 | Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
-| Ham-Chat book | Adapted | Acquisition, learned-word order, five language permutations, category/page selection, paired text contexts, counters, markers and cleanup compared; initial book display and return run natively; manual book navigation remains unverified |
+| Ham-Chat book | Adapted | Acquisition, five language permutations, paired text contexts, counters, markers and cleanup compared; normal inputs play all 86 learned actions, traverse 22 acquired-order pages, 24 English alphabetical pages and nine category tabs, reject a blank slot, enforce boundaries and retain alphabetical order through original Save/Continue; other languages and complete desktop coverage remain separate |
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
@@ -879,7 +879,26 @@ The Ham-Chat book reads page boundaries, language order and animation/text resou
 from the player's ROM. Learned words retain their acquisition order; the sorted
 view uses the original language permutations. Page restoration, paired text contexts,
 reverse cleanup, wrapped marker positions and leading-blank number rendering have
-private reference checks. Story turns preserve unsigned screen-Y comparisons,
+private reference checks. The input-only `menus.json` route starts with the complete
+dictionary and plays each of its 86 distinct actions. It traverses all 22 pages in
+reverse acquisition order, changes to alphabetical order through the original menu,
+visits all nine category tabs and all 24 English pages, and plays one valid entry
+on each sorted page. First/last page and category boundaries retain their cursor;
+an unassigned sorted slot cannot play a word. Closing and reopening the book and
+original End Game/Continue preserve its order setting, all words and the complete
+inventory, clothing, photos and saved choreography. Independent SDK/host replays
+compare complete SRAM, followed by a fresh-process reload.
+
+A separate actual Windows check uses a private profile to remap GBA A to C and
+continue the saved game with that key. The window displays the 86/86 dictionary,
+retains alphabetical order, changes from page 1/24 to 2/24 with WASD and switches
+between windowed presentation and integer-scaled fullscreen without stretching.
+The application menus also exercise Spanish/English switching, volume and mute,
+and the saved-game panel; the changed preferences are written to the test profile.
+Settings persistence after restarting the app, a physical gamepad and an
+uninterrupted desktop playthrough remain separate checks.
+
+Story turns preserve unsigned screen-Y comparisons,
 signed half-height tests, leader/follower aliases and retained opposite-turn state.
 Destination indicators retain the seven areas' flag conjunctions, mode-specific
 visibility and navigation banks, first-direction priority, current/destination
