@@ -711,6 +711,17 @@ records 23 (the fourth slot of row four) and 50 (the last-selection cache) chang
 the beginner and intermediate compositions remain intact. SDK and host replays
 compare the entire SRAM image, followed by an independent fresh-process reload.
 
+`postgame.json --route prize_rocks` returns from the expert lobby through the
+original ferry and Sandy Bay Digdig exit to Clubhouse. Enhanced Rubrub identifies
+the intermediate prize as one Topaz and the expert prize as one Diamond, each
+with a single ordinary confirmation. The first action clears only rock slot zero,
+changes collection counter 17 from unseen to one and sets the discovery flag.
+The second clears only slot one, raises the existing Diamond count from one to
+two and clears that flag. Subsequent text updates the occupied-rock count to
+zero. All other gem counters, accessories, clothing, photos, 86 learned words,
+21 reconciliations and 14 seeds remain intact. Original End Game/Continue,
+byte-identical SDK/host SRAM and a fresh-process reload verify persistence.
+
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
 rescued loves. Focused input saves are read-only; all writes use disposable profiles.
