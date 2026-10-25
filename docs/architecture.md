@@ -63,7 +63,7 @@ statically. A separate clean-machine validation remains pending.
 | Bank-6 chain family | Adapted | All 12 map_bank6_chain_callbacks.c functions compared: three chain transforms, shared position, paired landing, containment/overlap, sine flight, fixed approach, wrapping and a live indicator; five Main, two argument-free task and seven animation contracts; full area/story and timed scene integration remain pending |
 | Shared presentation families | Adapted | All 56 functions across nine bank-7 height/preset, region-motion, background/reset/scroll, window and tilemap-transfer families compared, including two existing modal roots; 28 Main, 40 task, six animation and six helper contracts, with overlaps; complete scene/activity and timed rendering integration remain pending |
 | Bank-7 tile board and scene presets | Adapted | All 32 functions in tile_board_callbacks.c and scene_render_presets.c compared: five Main, 30 argument-free task contracts and one typed helper, with overlaps; complete sliding puzzle solved with normal directional input and retained by original Save/Continue; complete final area remains pending |
-| Six/eight-choice rooms | Adapted | All 13 choice-family entries in scene_selection_callbacks.c compared: ten Main callbacks and three void task presets; shuffled banks, live actor states, weighted outcomes, four-byte record slots and counter availability; complete room/activity progression remains pending |
+| Six/eight-choice rooms | Adapted and exercised | All 13 choice-family entries in scene_selection_callbacks.c compared: ten Main callbacks and three void task presets; shuffled banks, live actor states, weighted outcomes and four-byte records; a normal-input route exhausts all six and eight shared-quarry positions, checks ledge variants and reentry, then retains all nineteen old/new rocks through original save and fresh reload; alternate pillar actions and other region presentations remain separate |
 | Shared actor movement and turning | Partial | 23 related functions compared: wandering initialization/update/bounds/velocity, four animation contracts, coordinate/direction readers, facing, stepped turns and class sequences; 17 Main contracts and four reviewed task targets; optional bounds probes accept the reviewed prospective-region predicate and reject unknown targets; later-area integration remains pending |
 | Shared actor geometry | Adapted | Eleven functions across eight source families compared: leader offsets/velocity, ten-byte projected-target approach, raw direction pairs, screen cells/sides, class coordinates, projected distance and render-pair setup; ten Main contracts and three task targets; full scene integration remains pending |
 | Shared screen and shake effects | Adapted | Eight functions across five complete source families compared: display mode, window/OBJ flags, background anchors, shake setup/reset/update, raw render targets and amplitude decay; eight Main and eight argument-free task contracts; first-reconciliation integration exercised, full-game timing remains pending |
@@ -1775,6 +1775,20 @@ adjustment. Outcome thresholds, special choices, five-bit counts in four-byte
 record slots, duplicate empty records and counter values 0/255 are compared.
 Malformed PRNG state stops after a bounded rejection loop. These function-level
 checks do not establish a complete room, activity or tower playthrough.
+
+The separate `postgame.json --route quarry` continuation starts from the verified
+Star Key cave save, without replaying the preceding story. It collects all four
+visible outer-room rocks, knocks down and collects both hidden rocks, then crosses
+the tower antechamber into the eight-position room. All eight positions are
+collected, including the fixed Ham-lift rock and four pillar drops. Both ledges
+exercise interactions from opposite sides; exhausted drops do not regenerate.
+Leaving and reentering retains the same choices and inventory. Original
+Save/Continue and a fresh process retain all nineteen rocks: five from the source
+save and fourteen new records. Every new record occupies an empty slot, with its
+type and full initial polish count checked; old records, counters, accessories,
+clothing, photos and choreography stay intact. Alternate pillar Ham-lift actions
+are not exercised by this Tack-Q route. The original family comparisons remain
+the evidence for other region banks and weighted outcomes.
 
 A separate private input-only scout completes the initial Ham-Jam conversation,
 No-P response and return to Clubhouse. Photo-room entry (map 1:3), free movement

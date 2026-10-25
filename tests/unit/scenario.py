@@ -119,7 +119,7 @@ class ScenarioTests(unittest.TestCase):
             run(game,[dict(label="score",expect={"classes":{"0xE1":600}})])
 
     def test_inventory_checkpoints_reject_truncation_and_aliases(self):
-        for field,limit,maximum in (("record_counters",32,255),("rock_counts",64,31),("accessory_records",30,255)):
+        for field,limit,maximum in (("record_counters",32,255),("rock_counts",64,31),("rock_keys",64,127),("accessory_records",30,255)):
             self.assertEqual(validate([dict(expect={field:{"0":0,str(limit-1):maximum}})]),0)
             for values in ({"0":True},{"0":-1},{"0":maximum+1},{str(limit):0},
                            {"-1":0},{"1":1,"0x1":2},{},[]):
@@ -148,6 +148,17 @@ class ScenarioTests(unittest.TestCase):
             inventory={"record_counters":{"29":counters},"rock_counts":{"6":rocks}}
             with self.subTest(field=message),contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,message):
                 run(game,[dict(label="gems",expect={"record_counters":{"29":2},"rock_counts":{"6":0}})])
+
+    def test_rock_types_are_independent_of_counts_and_high_flags(self):
+        def value(address,size=4,signed=False):
+            return {0x0201CB20:0xF07C,0x0201CB24:5<<7,0x0201CC1C:0xFFFF}.get(address,0)
+        game=SimpleNamespace(check=lambda:[0,0,0,0,9],value=value)
+        actual=MODULE["NativeGame"].checkpoint(game,rock_counts={"1":5},rock_keys={"0":124,"1":0,"63":127})
+        self.assertEqual(actual["rock_counts"],{"1":5})
+        self.assertEqual(actual["rock_keys"],{"0":124,"1":0,"63":127})
+        game.checkpoint=lambda *args,**kwargs:actual
+        with contextlib.redirect_stdout(io.StringIO()),self.assertRaisesRegex(RuntimeError,"rock_keys"):
+            run(game,[dict(expect={"rock_counts":{"1":5},"rock_keys":{"1":1}})])
 
 
     def test_accessory_checkpoints_detect_lost_or_unremoved_crafts(self):

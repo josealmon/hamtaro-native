@@ -22,6 +22,9 @@ cave adds its fixed rock, Sun Stone polishing, and a successful special-stone
 recipe that spends one Sun Stone and 45 seeds. Sandy Bay's Wave Key cave also
 covers polishing, duplicate prevention while the polished gem is owned, and
 crafting with a special stone plus ordinary gems.
+Shared-quarry routes also collect all six outer-room and eight inner-room rocks,
+including hidden drops, ledge interactions and the fixed Ham-lift rock, then
+retain their types and remaining polishes through original save and reload.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 

@@ -884,7 +884,10 @@ through 511) and require integer bytes (0 through 255). Classes address the firs
 undiscovered and stays distinct from zero. `"rock_counts": {"0": 0, "63": 31}`
 reads the remaining-polish field of the 64 packed rock slots, excluding the key
 and other packed bits. These mappings require unsigned integer bytes and counts
-from 0 through 31 respectively. `"catalog_flags": {"0": 255}` reads the first
+from 0 through 31 respectively. `"rock_keys": {"12": 0}` independently checks
+the seven-bit rock type (0 through 127). Type zero is valid and must be paired
+with a nonzero count when checking the fixed special rock; unrelated high flags
+do not enter either field. `"catalog_flags": {"0": 255}` reads the first
 ownership byte of each SaveGroup3 category (IDs 0 through 109), and
 `"catalog_count": 2` reads the Outfit acquisition counter. Both require unsigned
 bytes; the counter counts acquired variants, not completed categories. All mappings are nonempty
@@ -1794,6 +1797,27 @@ aliases, four-byte record strides, a matching empty record before an occupied
 duplicate in slot 63, and all counter values. The focused run takes 1.939 seconds.
 These checks also run in the full comparison. Complete room/activity progression
 remains a separate integration requirement.
+
+The independent `postgame.json --route quarry` continuation supplies normal-input
+integration for both shared quarry rooms in the Star Key region. It starts from
+the original postgame save with five rocks, collects all six outer positions and
+all eight inner positions, exercises both sides of the ledges, and checks that
+leaving/reentering an exhausted room does not reshuffle or duplicate its records.
+Each pickup checks the result type, remaining polishes, exact destination slot
+and retained old inventory. Original Save/Continue retains all nineteen rocks,
+65 unique words, eleven reconciliations, two seeds and Bijou.
+
+The 26,406-update route has 30 checkpoints. SDK replay passes in 42.03 seconds;
+29,498 host-session checks pass in 44.25 seconds. Scout, SDK and host saves agree
+across all 32 KiB. A separate 2,103-update reload passes in 2.649 seconds and
+reopens Status. Twenty-one parser tests include key-zero handling, packed-field
+separation, rejected truncation/aliases and detection of an incorrect rock type
+with the correct polish count. Previous postgame routes and all native source,
+executable and probe hashes remain unchanged; existing native comparisons are
+reused. Alternate pillar Ham-lift actions and other regional presentations remain
+outside this route.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route quarry --save PATH_TO_PRIVATE_STAR_KEY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_QUARRY_PROFILE
 
 The local music/record presentation and selection families have a focused command:
 
