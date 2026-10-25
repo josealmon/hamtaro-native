@@ -25,9 +25,10 @@ crafting with a special stone plus ordinary gems.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 
-This development build still has unfinished functions. Further optional
-activities, minigame branches, physical controllers and a full desktop playthrough
-remain unverified.
+This development build does not yet have verified coverage of every single-player
+branch. Further optional activities, minigame variants, physical controllers and a
+full desktop playthrough remain unverified. Title language changes, localized
+Status, original saving and Continue are exercised in all five ROM languages.
 See [docs/architecture.md](docs/architecture.md) for the tested routes and their limits.
 
 ## Build

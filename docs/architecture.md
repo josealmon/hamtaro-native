@@ -89,12 +89,12 @@ statically. A separate clean-machine validation remains pending.
 | Ham-Chat book | Adapted | Acquisition, five language permutations, paired text contexts, counters, markers and cleanup compared; normal inputs play all 86 learned actions, traverse 22 acquired-order pages, 24 English alphabetical pages and nine category tabs, reject a blank slot, enforce boundaries and retain alphabetical order through original Save/Continue; other languages and complete desktop coverage remain separate |
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | All 97 valid command slots have handlers: fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; invalid opcodes fail explicitly; callback contracts and unvisited branches require separate review |
-| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
-| Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; existing-save New Game safeguards, all 51 local-record resets and released soft-reset lock verified through normal inputs and fresh host reload; complete boot/title/gameplay parity remains unverified |
+| Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; all 30 Gems positions and all 30 A-Box cells, populated/empty details, Toss cancellation and original End Game verified; localized Status and save/Continue exercised in all five languages; unvisited activity branches remain separate |
+| Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; existing-save New Game safeguards, all 51 local-record resets and released soft-reset lock verified; all five title languages, selector boundaries/cancellation, original saves and fresh host reload checked; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Full optional activities and complete desktop story coverage remain pending |
-| Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding, Sunny Peak's tenth reconciliation, tower puzzle, Spat's defeat, complete credits and postgame control, followed by Panda's bridge and Rainbow Key; original Save/Continue, exact SRAM equality and fresh reload checked at stage boundaries; full desktop progression and optional completion remain pending |
+| Saved story continuations | Native story routes verified | Input-only SDK/host stages cover Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding, Sunny Peak's tenth reconciliation, tower puzzle, both Spat battle phases, complete credits and postgame control; subsequent routes reach all 21 reconciliations and their epilogue, all 86 Ham-Chats and expert Ham-Jam's perfect ending; original Save/Continue, exact SRAM equality and fresh reload checked at stage boundaries; unvisited optional branches remain separate |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
-| Complete single-player playthrough | Pending | Story, secondary activities and minigames |
+| Complete single-player playthrough | Partial | Story ending, all reconciliations, all words and selected secondary activities/minigame wins have native input proof; remaining optional branches and minigame variants still need coverage |
 | Cable Link | Out of first release | No local/network link emulation |
 | Public release | Pending | Native gameplay, complete coverage and source-provenance review |
 
@@ -1021,6 +1021,17 @@ three photos, all 51 choreography records, 86 words, 21 loves and four seeds.
 Scout, SDK and host SRAM agree across all 32 KiB; both group-three payloads are
 unchanged from the starting save. Previous menu and title-reset routes are unchanged.
 
+The separate `menus.json --route languages` continuation changes the existing
+save through all five ROM languages and returns to language zero. It checks the
+selector's clamped boundaries and cancellation, then loads the workshop, opens
+and closes localized Status, and uses original End Game in each language.
+Its 24,237 updates and 32 checkpoints retain 86 unique words, 21 reconciliations,
+four seeds, all counters, clothing, three photos and every saved choreography.
+SDK, host and the exploratory input run agree on all 32 KiB of SRAM; both
+group-three payloads and all group-four records remain unchanged. A fresh process
+reloads and reopens Status. This covers language-menu/save integration, not every
+translated scene or a visual review of all five desktop presentations.
+
 A separate actual Windows check uses a private profile to remap GBA A to C and
 continue the saved game with that key. The window displays the 86/86 dictionary,
 retains alphabetical order, changes from page 1/24 to 2/24 with WASD and switches
@@ -1335,9 +1346,11 @@ group selectors are rejected; the unused group-0 record write/load path is not e
 2. Keep full routes reproducible from erased SRAM. Use focused private SRAM
    continuations while implementing, then verify original saves and fresh host
    sessions at a coherent integration boundary.
-3. Extend actual-window coverage of Sunny Peak and its Items/Gems/photo/Rubrub UI.
-   First-visit story evidence does not establish every optional activity or later visit.
-4. Complete remaining secondary activities, words and minigames. Compare
+3. Reuse the existing actual-window Sunny Peak, Items/Gems, book, photo and
+   settings checks. Inspect affected Windows behavior when it changes; a complete
+   desktop story replay is not a prerequisite for each core or scenario batch.
+4. Complete remaining secondary-activity and minigame branches; all 86 words
+   already have native route proof. Compare
    canonical RGBA, state, SRAM and pre-device PCM alongside timed raster/IRQ/audio.
 5. Verify physical controllers and the packaged app on Windows without development
    tools. Public CI stays ROM-free; private reference checks take user paths.

@@ -1849,6 +1849,26 @@ the complete core comparison proof is retained.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/menus.json --route inventory --save PATH_TO_PRIVATE_GALLERY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_INVENTORY_PROFILE
 
+The independent `menus.json --route languages` continuation starts from that same
+gallery prerequisite. It checks all five language rows, both clamped boundaries
+and cancellation before confirming each language. Every language then runs
+Continue, localized Status entry/exit and original End Game. It returns to
+language zero and reloads the workshop with all 86 words, 21 reconciliations,
+four seeds, all 32 counters, 64 rock slots, 30 accessory slots and six photo
+records checked; the three populated photos and clothing remain intact.
+
+The 24,237-update route has 32 checkpoints. SDK replay passes in 36.53 seconds;
+26,867 host-session checks pass in 39.59 seconds. Exploratory, SDK and host saves
+agree across all 32 KiB. Both group-three payloads and all 51 choreography records
+remain unchanged from the source. A separate 2,103-update fresh process passes
+in 2.985 seconds and reopens Status. Twenty parser tests pass. Previous routes
+and all native source/executable/probe hashes are unchanged from the bank-4
+animation correction; its focused proof is reused. The earlier complete-suite
+count remains historical. No complete story replay or gameplay state/RNG writes
+are used. Translated scene coverage and desktop visual review remain separate.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/menus.json --route languages --save PATH_TO_PRIVATE_GALLERY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_LANGUAGES_PROFILE
+
 The input-only continuation `sandy_bay_optional.json --route ham_jam` covers the
 unmodified beginner rejection, title-menu composition, a changed Ham-Chat in
 “Dizzy for You”, an empty-slot save, return to the story, custom-slot selection,
