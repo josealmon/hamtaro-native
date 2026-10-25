@@ -1618,8 +1618,14 @@ independent 2,103-update fresh reload passes in 2.967 seconds with all 79 unique
 word IDs matching their flags. The split exploratory scout differs in two retained
 auxiliary render-attribute bytes per SRAM copy and the associated group-one
 checksum; all choreography records match. The uninterrupted canonical SDK/host
-proof compares every byte without normalization. Actual desktop editor inspection
-remains unverified.
+proof compares every byte without normalization. A separate actual Windows-window
+check opens Ham-Jam, selects “Dizzy for You”, changes its second beat to Bestest
+and saves it as Hamtaro in an empty second slot, reaching “Save complete”. This
+uses an isolated private profile, mouse input and the default WASD/Z/X/Enter/Escape
+bindings. The controls panel identifies Computer Use's injected `Right` as
+`Keypad 6`; the original Right binding is restored after this diagnostic. Physical
+arrow keys, physical controllers and the complete desktop activity remain outside
+this check. The single test window is closed afterwards.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay_optional.json --route ham_jam --save PATH_TO_PRIVATE_HAUNTED_MUSIC_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_HAMBOND_PROFILE
 
