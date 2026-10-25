@@ -668,8 +668,19 @@ returns to the Fun Land gift counter and uses Hamteam to learn Goodgo. It
 checks learned flag 0x6B, 82 unique words, all 21 reconciliations, 22 seeds and
 the retained Heart Earrings, gem counters, empty rock slots, clothing and photos.
 Original Save/Continue and an independent fresh process restore the central
-plaza with those records. Dazzlie, Bye-Q, Hamcheer and Greatchu remain unlearned;
-this lesson does not establish complete pair-board minigame coverage.
+plaza with those records. This lesson does not establish complete pair-board
+minigame coverage.
+
+`optional_words.json --route byeq` continues from that save through Wildwoods.
+Hamha introduces the pair's exercise and changes phase 0xCA from zero to one;
+Minglie completes it, teaches Bye-Q (word 29, flag 0x63) and advances phase to
+two. Repeating Minglie retains 83 unique words without another learned entry.
+All 32 gem counters, 64 rock counts, 30 accessory slots, clothing, six photos,
+22 seeds and 21 reconciliations are checked at the route checkpoints. Original
+Save/Continue restores the clearing at map 6:8 with the same records; a fresh
+native process independently reloads the resulting SRAM. Dazzlie, Hamcheer and
+Greatchu remain unlearned. These routes use ordinary inputs and read-only
+observations; neither game state nor random outcomes are injected.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
