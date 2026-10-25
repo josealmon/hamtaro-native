@@ -17,7 +17,9 @@ wins, the perfect-ending credits and polishing both retained contest prizes.
 Postie's four-answer Ham-Chat contest also delivers all four keys through the
 original letter, departure and return sequence.
 Sunny Peak's locked Rainbow cave, protection against a duplicate special rock
-and polishing that rock into a Rainbow Stone are also covered.
+and polishing that rock into a Rainbow Stone are also covered. Wildwoods' Sun Key
+cave adds its fixed rock, Sun Stone polishing, and a successful special-stone
+recipe that spends one Sun Stone and 45 seeds.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 

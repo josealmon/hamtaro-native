@@ -736,7 +736,7 @@ gem, rock, accessory, clothing, photo and choreography inventory. This verifies
 key acquisition; the four corresponding caves and special-material crafting
 remain separate gameplay checks.
 
-`postgame.json --route rainbow_cave` uses the Rainbow Key at Sunny Peak's cave.
+`special_stones.json --route rainbow_cave` uses the Rainbow Key at Sunny Peak's cave.
 The normal cave passage tracks its internal chamber index as well as map 2:9;
 these chambers share a map identifier. Behind the key door, Ham-lift collects
 the fixed special rock into slot zero with five polishes remaining. Leaving and
@@ -748,8 +748,22 @@ to one. The occupied-rock count updates later in the dialogue. Original
 End Game/Continue retains the gem, all six keys, 86 words, 21 reconciliations,
 14 seeds and the other inventory, clothing, photos and 51 choreography records.
 SDK and host replays compare all SRAM bytes, followed by a fresh-process reload.
-Other special stones, the polished-gem cave-reentry branch and crafting refunds
-remain separate checks.
+
+The default `special_stones.json` route continues from the saved Rainbow Stone.
+Clingie reaches Wildwoods' north exit, the Sun Key opens its shared cave and
+Ham-lift collects the fixed key-two rock with five polishes remaining. One
+Rubrub confirmation clears that slot and awards Sun Stone counter three. Ordinary
+Sunny Digdig visits earn eighty seeds; normal workshop visits find the manual
+artisan. Recipe nine rejects missing materials without charging. A new conversation
+offers recipe 34: its successful attempt consumes one Sun Stone and 45 seeds,
+then stores accessory 34 in the first empty slot after the retained Heart Earrings.
+Original Save/Continue retains both accessories, 49 seeds, Rainbow Stone, every
+other gem counter, all 64 empty rock slots, clothing, six photo records, all 51
+choreography records, 86 words and 21 reconciliations. SDK and host replays compare
+all SRAM bytes, followed by a fresh-process reload. The unchanged Rainbow route
+shares this scenario file to keep the related cave checks together.
+The remaining four special stones, polished-gem cave reentry and special-material
+refunds remain separate gameplay checks.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

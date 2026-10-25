@@ -491,7 +491,7 @@ executable and probe hashes retain the full 5,859,158-comparison reference proof
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route key_contest --save PATH_TO_PRIVATE_BOOK_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_KEY_PROFILE
 
-`postgame.json --route rainbow_cave` starts from the verified contest-key save.
+`special_stones.json --route rainbow_cave` starts from the verified contest-key save.
 Its 61,002 updates and 21 checkpoints enter Sunny Peak's key cave and collect
 its fixed rock with Ham-lift. Slot zero has five polishes remaining; cave reentry
 keeps that one rock and removes its Ham-lift offer. The route returns through
@@ -507,11 +507,32 @@ The SDK passes in 95.03 seconds; 64,470 host checks pass in 97.74 seconds. Scout
 SDK and host match across all 32 KiB. A fresh 2,103-update reload passes in
 3.033 seconds, checking the unique word list against its flags. Both save
 mirrors agree and all previous routes are unchanged. Matching native-source
-and executable/probe hashes retain the full 5,859,158-comparison proof. Other
-special stones, polished-gem cave reentry and crafting refunds remain separate
-gameplay checks.
+and executable/probe hashes retain the full 5,859,158-comparison proof. The
+remaining four special stones, polished-gem cave reentry and crafting refunds
+remain separate gameplay checks.
 
-    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route rainbow_cave --save PATH_TO_PRIVATE_KEY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_RAINBOW_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --route rainbow_cave --save PATH_TO_PRIVATE_KEY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_RAINBOW_PROFILE
+
+The default `special_stones.json` route starts from the verified Rainbow Stone
+save. Its 76,923 updates and 21 checkpoints cover Wildwoods' Sun Key cave,
+Ham-lift's fixed key-two rock and its five-polish count, Rubrub's single-action
+Sun Stone conversion, eighty seeds earned through ordinary Sunny Digdig visits,
+and finding the manual artisan through normal room entries. Recipe nine rejects
+missing ingredients without charging. Recipe 34 succeeds with the game's normal
+random outcome, consuming one Sun Stone and 45 seeds and storing accessory 34
+in slot one. Heart Earrings remain in slot zero; the other 28 slots stay empty.
+The scenario retains Rainbow Stone and all unrelated gems, 64 empty rock slots,
+clothing, six photo records, all 51 choreography records, 86 unique words and
+21 reconciliations. Original Save/Continue retains 49 seeds and the same collection.
+This verifies the successful special-material transaction; its refund-on-failure
+branch remains pending. The Rainbow route was moved unchanged into the same file.
+The SDK passes in 124.07 seconds and 81,342 host-session checks pass in 126.16
+seconds. Scout, SDK and host saves match byte for byte. A fresh 2,103-update
+reload passes in 3.019 seconds, including the unique word-list/flag audit. Both
+SRAM mirrors agree, and every choreography record remains unchanged. Native-source
+and executable/probe hashes retain the full 5,859,158-comparison reference proof.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --save PATH_TO_PRIVATE_RAINBOW_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUN_PROFILE
 
 `postgame.json` continues from the final `sunny_optional.json` save. It collects
 the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
