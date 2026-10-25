@@ -9,7 +9,7 @@ import struct
 
 def check_record_selection(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compare,native_bytes,command):
     from inventory_reference import body
-    source=(Path(__file__).resolve().parents[1]/"src/game/record_selection.c").read_text()
+    source=(Path(__file__).resolve().parents[1]/"src/game/record_selection.c").read_text(encoding="utf-8")
     addresses=lambda name:{int(v,16) for v in re.findall(r"case (0x[0-9A-Fa-f]+):",body(source,name))}
     mains=addresses("hn_record_selection_callback");tasks=addresses("hn_record_selection_task")
     families={"src/save/game_counter_display.c","src/save/game_record_selection.c","src/save/game_record_transactions.c"}
@@ -136,4 +136,57 @@ def check_record_selection(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,c
             for value in (0,max(0,(requirement&127)-1),requirement&127,255):
                 prepare(row,record);half(classes+224*2,record);byte(0x0201CC20+key,value)
                 main_check(row,('counter requirement boundary',record,field,value))
+    # Isolated function fixtures, not gameplay: choose one initial state for each
+    # outcome using the independent ARM routine, then compare complete payment /
+    # outcome chains. No HNGame or player save is loaded or modified here.
+    roll_seeds={}
+    for candidate in range(1,4097):
+        seeds=struct.pack('<3I',0x3AC2,0x4DF3,candidate);both(0x03000000,seeds)
+        roll=call('RandomRange',1,5);roll_seeds.setdefault(roll,seeds)
+        if len(roll_seeds)==4:break
+    equal(sorted(roll_seeds),[1,2,3,4],'transaction fixtures cover all four original rolls')
+    outcomes={'success':0,'ordinary_failure':0,'special_refund':0};refunded_keys=set()
+    payment=by_name['ScriptCallbackStoreGameRecordWithCounterCosts']
+    outcome=by_name['ScriptCallbackResolveGameRecordCounterOutcome']
+    for record in range(1,81):
+        requirements=[half_rom(0x0858D34E+record*24+field*2) for field in range(3)]
+        costs={}
+        for requirement in requirements:
+            key=(requirement>>7)&127;costs[key]=costs.get(key,0)+(requirement&127)
+        equal(all(key<32 for key in costs),True,'retail transaction counter bounds')
+        special={key for key in costs if rom[0x58D0D8+key*20+4]==5}
+        initial=bytearray([255]*32)
+        for key,cost in costs.items():
+            if key:initial[key]=cost if key in special else cost+3
+        paid=bytearray(initial)
+        for requirement in requirements:
+            key=(requirement>>7)&127;paid[key]=(paid[key]-(requirement&127))&255
+        threshold=rom[0x58D344+record*24+8]//25
+        for roll,seeds in sorted(roll_seeds.items()):
+            prepare(payment,record);half(classes+224*2,record);byte(controls+0x1A0,record)
+            selected=record%30;byte(controls+0x1A6,selected);byte(0x0201EE40+selected,0)
+            byte(controls+0x60,0xA5);byte(controls+0x61,0x71)
+            both(0x0201CC20,bytes(initial));both(0x03000000,seeds)
+            slots=bytearray(native_bytes(0x0201EE40,30));slots[selected]=record
+            main_check(payment,('all-recipe payment',record,roll))
+            equal(native_bytes(0x0201CC20,32),bytes(paid),'recipe charges each material exactly once')
+            equal(native_bytes(0x0201EE40,30),bytes(slots),'payment stores only the selected accessory')
+            main_check(outcome,('all-recipe outcome',record,roll))
+            expected=bytearray(paid)
+            if roll>=threshold:
+                outcomes['success']+=1;status,detail=1,0
+            else:
+                slots[selected]=0;status,detail=3,0x71
+                for requirement in requirements:
+                    key=(requirement>>7)&127
+                    if key in special:
+                        expected[key]=(expected[key]+(requirement&127))&255
+                        status,detail=2,key;refunded_keys.add(key)
+                outcomes['special_refund' if special else 'ordinary_failure']+=1
+            equal(native_bytes(0x0201CC20,32),bytes(expected),'failure returns special materials and retains ordinary charges')
+            equal(native_bytes(0x0201EE40,30),bytes(slots),'outcome preserves unrelated accessory slots')
+            equal(native_bytes(controls+0x60,2),bytes([status,detail]),'success/failure/refund result contract')
+    equal(all(outcomes.values()),True,'all three retail transaction outcomes exercised')
+    equal(refunded_keys,{1,2,3,4,5,6},'all six special material refunds compared')
+    print(f'All 80 retail recipes / four original rolls matched payment and outcome chains: {outcomes}.')
     print('Packed palettes, cached/random candidates, raw selectors, five-language graphics and counter-source aliases passed; full activity integration remains pending.')

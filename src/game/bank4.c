@@ -211,6 +211,7 @@ HNSceneResult hn_bank4_animation(HNMemory *m,GameAddr callback,GameAddr slot,Gam
         if(signed_word(m,leader+0x20)>0x7FFFFF)hn_audio_track_parameter(m,0x03004E90,255,256,0);*yield=1;break;
     }
     case 0x0806A29C:REQUIRE(hn_audio_song(m,44,HN_SONG_CHANGE));hn_audio_track_parameter(m,0x03004E90,255,128,0);*yield=1;break;
+    case 0x0806BAD4:break;
     case 0x0806BAD8:*yield=1;break;
     case 0x0806BAE0:case 0x0806BB60:{
         uint8_t index=hn_read8(m,arguments),player=hn_read8(m,arguments+1);uint16_t song=hn_read16(m,arguments+2);

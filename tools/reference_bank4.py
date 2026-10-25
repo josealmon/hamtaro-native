@@ -27,7 +27,7 @@ def check_bank4(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compare,nati
     equal(len(rows),483,"complete bank-4 source inventory")
     shared=[r for r in entries if r["source"]=="src/graphics/screen_indicator_only.c"]
     equal(len(shared),1,"complete shared indicator dependency family");rows+=shared
-    equal((len(presets),len(main_addresses),len(task_addresses),len(animation_addresses)),(428,220,445,16),"bank-4 and dependency typed dispatch census")
+    equal((len(presets),len(main_addresses),len(task_addresses),len(animation_addresses)),(428,220,445,17),"bank-4 and dependency typed dispatch census")
     equal({r["name"] for r in rows if r["address"] not in main_addresses|task_addresses|animation_addresses},helpers,"all bank-4 helper contracts accounted for")
     main=bind("hn_scene_callback",C.c_int,C.c_void_p,C.c_uint32,C.c_uint32,C.POINTER(C.c_uint32))
     apply=bind("hn_bank4_task",C.c_int,C.c_void_p,C.c_uint32)

@@ -91,22 +91,27 @@ explicit profile; use only disposable test profiles. Without `--data-dir`, smoke
 testing creates and removes its own profile as before. These checks establish
 hidden startup/shutdown persistence and saved input behavior; they do not establish
 interactive settings-menu use, actual fullscreen transitions or physical-pad support.
-The twelve serial CTest suites pass in 2.21 seconds on the development machine,
+The twelve serial CTest suites pass in 3.29 seconds on the development machine,
 including 65,844 core and 66,503 game checks. Timing is not a portable guarantee.
 
 Use CTest for each functional batch and the existing focused `--...-only` reference
-checks during implementation. At a coherent batch boundary, run the complete
+checks during implementation. For broad native changes, run the complete
 reference comparison with all available independent oracles. Keep functional sources
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
-are removed to shorten the run.
+are removed to shorten the run. A narrow callback correction uses the affected
+family comparison and CTest. Reuse existing story proofs rather than repeating the
+entire story through desktop automation; inspect the window when a change affects
+desktop integration or presentation.
 
-The latest complete suite passes 5,861,660 checks in 668.028 seconds. It retains
+The last complete suite passed 5,861,660 checks in 668.028 seconds. It retains
 all 45 preceding named phases and their previous assertion counts, adding 2,502
 title record-reset and soft-reset callback checks. The subsequent application
 preferences batch changes only smoke-test profile handling and test harnesses;
 the native game/GBA sources and reference-probe binary are unchanged. Its separate
 CTest and packaged-application checks retain this core proof without claiming
-that the frontend executable is byte-identical. The preceding boundary passed
+that the frontend executable is byte-identical. The subsequent bank-4 animation
+binding correction changes the native core and probe: the full count is historical,
+with current focused bank-4 and CTest evidence recorded below. The preceding boundary passed
 5,859,158 checks in 655.399 seconds, adding 65,902 local Ham-Jam UI/text checks. The preceding HBlank/window boundary passed
 5,793,256 checks in 662.005 seconds. It retains
 all 5,561,200 preceding cases and adds 232,056 HBlank/window comparisons,
@@ -644,8 +649,8 @@ Keep the preceding
 177,048-update scenario unchanged: when native functional sources have not changed,
 its verified save can start this chapter without replaying the completed prefix
 for every extension. This reduces repeated integration work without dropping any
-prior scenario, assertion or reference-comparison domain. Functional changes still
-require the relevant regressions and a full comparison at a coherent batch boundary.
+prior scenario, assertion or reference-comparison domain. Functional changes require
+the affected regressions; broad native batches also require the full comparison.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --save PATH_TO_PRIVATE_SUNNY_OPTIONAL_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_MATERIALS_PROFILE
 
@@ -1050,7 +1055,7 @@ can also run separately:
     python -B tools/compare_reference.py --record-selection-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP --bios-oracle PATH_TO_HN_BIOS_ORACLE
 
 All 23 functions across game_counter_display.c, game_record_selection.c and
-game_record_transactions.c have explicit entry/helper coverage. The 42,501 focused
+game_record_transactions.c have explicit entry/helper coverage. The 49,944 focused
 comparisons include 18 Main contracts, 14 argument-free F4 contracts, five helpers,
 actual Main/F4 command calls, all three candidate graphics rows and five languages,
 raw selectors, cache/PRNG behavior and counter requirement boundaries. Synthetic
@@ -1061,6 +1066,12 @@ velocity writes that change live selectors, overlapping glyph copies and a count
 list overlapping its own selection/count controls. The original source's local
 array capacities and non-returning impossible draws have explicit host guards;
 those malformed states are not treated as matching original stack behavior.
+The added 7,443 checks execute all 80 retail recipes with all four original random
+outcomes, comparing payment and resolution against ARM and checking material and
+accessory conservation explicitly. The 320 chains produce 172 successes,
+136 ordinary failures and 12 refunds spanning all six special materials. Fixture
+PRNG states are selected with the original isolated ARM routine; no game session
+or player save is loaded or modified. This focused run passed in 22.178 seconds.
 Complete workshop/activity progression remains a separate integration requirement.
 
 The complete clothing-catalog family can run separately:
@@ -1662,8 +1673,19 @@ arbitrary original register/stack history.
 ROM-free public regressions separately check stage clamping, timer wrapping,
 packed writes with aliased destinations, projected-bound side effects, final
 counter reset, byte-wrapped actor clearing, accumulator carry, bounds aliases and
-the early-wait SL distinction. Full bank-4 story/activity and timed desktop
-integration remain pending.
+the early-wait SL distinction. The recovered 0x8D call at 0x088DC6D4 also requires
+the argument-free MapBank4ReturnZero6BAD4 animation binding. The family verifier
+compares its consumed count, all 32 yield bits and complete memory across 128
+fixtures against ARM; public regressions reproduce the former callback fault,
+check both address forms and continue at exactly the next command after five
+bytes. The typed census now includes 17 animation contracts. Full bank-4
+story/activity and timed desktop integration remain pending.
+
+After this binding correction, the focused dynamic family passes 263,508 checks
+in 48.853 seconds, retaining its previous domains and adding 1,280 animation
+comparisons. All twelve CTest suites pass, including 847 renderer checks. This is
+current focused evidence; the historical complete-suite count above was not rerun
+or relabeled as a new full run.
 
 The complete 207-function bank-5 family and its stairs/idle dependencies use:
 

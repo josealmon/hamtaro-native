@@ -2,6 +2,7 @@
 #include "game/background.h"
 #include "game/state.h"
 #include "game/script.h"
+#include "game/scene.h"
 #include "game/transfer.h"
 #include "gba/bios.h"
 #include "gba/video.h"
@@ -99,6 +100,22 @@ static void callbacks_and_motion(void)
     hn_write32(&memory,cursor+1,0x08001001);hn_write8(&memory,cursor+5,0xA0);
     CHECK(hn_animation_command(&render,slot,0x8D,&cursor,&yield));
     CHECK(yield==1&&cursor==0x02020006&&hn_read8(&memory,slot+0x67)==0xA0);
+    for(unsigned thumb=0;thumb<2;thumb++){
+        const uint32_t yields[]={0,1,0x80000000,0xA5C37E91};
+        for(unsigned i=0;i<sizeof(yields)/sizeof(yields[0]);i++){
+            uint32_t consumed=99;yield=yields[i];
+            CHECK(hn_scene_animation_callback(&memory,0x0806BAD4|thumb,0xFFFFFFFF,0xFFFFFFFF,&consumed,&yield)==HN_SCENE_OK);
+            CHECK(consumed==0&&yield==yields[i]&&!memory.fault);
+        }
+        hn_render_init(&render,&memory,NULL,0);cursor=0x02020100;
+        hn_write32(&memory,slot+4,cursor);hn_write16(&memory,slot+0x4C,0);
+        hn_write8(&memory,slot+0x60,1);hn_write8(&memory,cursor,0x8D);
+        hn_write32(&memory,cursor+1,0x0806BAD4|thumb);hn_write8(&memory,cursor+5,0x80);
+        CHECK(hn_animation_command(&render,slot,0x8D,&cursor,&yield));
+        CHECK(cursor==0x02020105&&hn_read16(&memory,slot+0x4C)==5&&yield==0);
+        CHECK(hn_animation_command(&render,slot,0x80,&cursor,&yield));
+        CHECK(yield==1&&hn_read8(&memory,slot+0x60)==0&&!memory.fault);
+    }
     hn_write32(&memory,slot+0x18,0x7FFFFFFF);hn_write32(&memory,slot+0x24,1);hn_write32(&memory,slot+0x30,0xFFFFFFFF);
     hn_write16(&memory,slot+0x3C,510);hn_write16(&memory,slot+0x44,10);
     hn_write16(&memory,slot+0x40,65535);hn_write16(&memory,slot+0x48,1);

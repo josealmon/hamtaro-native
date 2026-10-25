@@ -88,7 +88,7 @@ statically. A separate clean-machine validation remains pending.
 | Word-choice dialogs | Adapted | Nine visible text contexts after filtering up to 255 candidates, grid navigation/highlights, disabled rows, confirmation/cancellation, requested selection, delayed close, display reset and Main result preservation compared; full-game integration remains pending |
 | Ham-Chat book | Adapted | Acquisition, five language permutations, paired text contexts, counters, markers and cleanup compared; normal inputs play all 86 learned actions, traverse 22 acquired-order pages, 24 English alphabetical pages and nine category tabs, reject a blank slot, enforce boundaries and retain alphabetical order through original Save/Continue; other languages and complete desktop coverage remain separate |
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
-| Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
+| Main script control/resources | Partial | All 97 valid command slots have handlers: fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; invalid opcodes fail explicitly; callback contracts and unvisited branches require separate review |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
 | Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; existing-save New Game safeguards, all 51 local-record resets and released soft-reset lock verified through normal inputs and fresh host reload; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Full optional activities and complete desktop story coverage remain pending |
@@ -899,9 +899,15 @@ reuse. Transactions keep the separate requirements check and cost writes: key ze
 is skipped by the former but charged by the latter, repeated keys are not summed
 before checking, and byte-sized costs/refunds wrap in the original order.
 
-The 42,501 focused comparisons cover every source entry and reviewed calling
+The 49,944 focused comparisons cover every source entry and reviewed calling
 contract, all raw byte selectors, five-language record graphics, palette marker
-bits, overlapping counter/list/selection writes and forward glyph copies. The
+bits, overlapping counter/list/selection writes and forward glyph copies. All
+80 retail recipes also execute payment followed by each of the four original
+random outcomes: 172 successes, 136 ordinary failures and 12 special-material
+refunds covering all six special materials. These isolated function fixtures
+compare full memory and explicitly check charges, refunds, result fields and
+unrelated inventory slots. They do not alter a gameplay session or player save,
+and do not establish a live-game refund encounter. The
 graphics helper's original three-pointer local array and candidate buffer's
 80-entry capacity have explicit failure guards; a non-terminating random selection
 also fails after its budget. Those invalid-state guards do not establish original
@@ -1568,9 +1574,17 @@ bank4_presets.c contains 428 presentation presets; bank4.c covers jump preparati
 counter display/progression, audio, projected bounds and other scene state;
 bank4_path.c contains the three path followers and their eight helpers. A separate
 shared indicator dependency changes only the original indicator fields. Together
-they expose 220 reviewed Main contracts, 445 argument-free task targets and 16
+they expose 220 reviewed Main contracts, 445 argument-free task targets and 17
 animation contracts, with 16 typed helpers. These counts overlap by calling
 contract and are not a completion percentage.
+
+The animation at 0x088DC6D4 also invokes the argument-free
+MapBank4ReturnZero6BAD4 through command 0x8D. Its animation binding consumes zero
+argument bytes and preserves yield and memory, matching the original leaf.
+Previously only its Main/task calling forms were connected; that animation could
+stop with a callback fault. Tests cover both address forms, arbitrary yield words
+and continuation into the next command. Declaration membership or a binding for
+another calling form would not have detected this missing animation contract.
 
 Jump staging preserves the clamped stage, rejection-based PRNG choice, mask
 updates and original double-precision acceleration calculation. Counter drawing
