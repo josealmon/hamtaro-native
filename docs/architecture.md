@@ -678,9 +678,25 @@ two. Repeating Minglie retains 83 unique words without another learned entry.
 All 32 gem counters, 64 rock counts, 30 accessory slots, clothing, six photos,
 22 seeds and 21 reconciliations are checked at the route checkpoints. Original
 Save/Continue restores the clearing at map 6:8 with the same records; a fresh
-native process independently reloads the resulting SRAM. Dazzlie, Hamcheer and
-Greatchu remain unlearned. These routes use ordinary inputs and read-only
-observations; neither game state nor random outcomes are injected.
+native process independently reloads the resulting SRAM. These routes use
+ordinary inputs and read-only observations; neither game state nor random
+outcomes are injected.
+
+`sandy_bay_optional.json --route intermediate_words` continues from the Bye-Q
+save. Bestest at the captain's cove teaches Dazzlie; a repeated reply retains one
+learned entry, and original Save/Continue retains the word. Hamha establishes
+flag 0x134 with the moving Treasure Island character before the next contest.
+The original title-menu composer assigns Hulahula to the second beat of Dizzy
+for You and saves the dance into the third slot. The intermediate entry loads
+that slot, charges three seeds and awards rock key 16 with three polishes,
+advancing phase 0x8D to five. Returning to the same character sets flag 0x135
+and teaches Greatchu. The route
+then declines the expert entry without a fee and saves through original End
+Game/Continue. It retains 85 unique words, all 21 reconciliations, 19 seeds,
+Heart Earrings, all 32 gem counters, 64 rock counts, 30 accessory slots, clothing
+and six photos. The full input stream runs through the native SDK and host;
+their complete SRAM images agree and a fresh process independently reloads it.
+Hamcheer and the expert contest remain pending.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -1596,9 +1612,10 @@ slot for the next entry, charges the original one-seed fee and awards the beginn
 prize. Showing it to the ferry captain with Ta-dah triggers the return to the shop,
 the nineteenth rescued love and Hambond. Original Save/Continue retains 79 words,
 19 loves and level-three progress 51. Gem/rock counts, the clothing catalog and all
-six photos are checked across this continuation. Intermediate/expert contests,
-other composition operations, full desktop progression and physical controllers
-remain separate requirements.
+six photos are checked across this continuation. The later `intermediate_words`
+route above covers the intermediate entry and another saved composition. The
+expert contest, other composition operations, full desktop progression and
+physical controllers remain separate requirements.
 The current Windows executable separately opens the empty Items and Gems panels
 with keyboard input and returns through Status to the same photo-room scene.
 
