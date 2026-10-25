@@ -696,7 +696,20 @@ Game/Continue. It retains 85 unique words, all 21 reconciliations, 19 seeds,
 Heart Earrings, all 32 gem counters, 64 rock counts, 30 accessory slots, clothing
 and six photos. The full input stream runs through the native SDK and host;
 their complete SRAM images agree and a fresh process independently reloads it.
-Hamcheer and the expert contest remain pending.
+
+`sandy_bay_optional.json --route expert` continues from that saved lobby. Normal
+title-menu inputs assign Dazzlie, Delin-Q, Bye-Q, Zuzuzu, Goodgo, Blushie, Bloat-T,
+Hamtast, Greatchu and Lalalala to the first ten beats of Dizzy for You, then save
+the composition into the fourth slot. The expert entry charges five seeds and
+awards rock key 9 with four polishes. Returning to the lobby teaches Hamcheer,
+completes all 86 unique dictionary entries and starts the original perfect-ending
+credits in map 10:17. Ordinary dialogue inputs finish the credits and return
+control to the lobby, setting flag 0x192 and advancing phase 0x8D to eight.
+Original End Game/Continue retains 86 words, all 21 reconciliations, 14 seeds,
+both contest rocks and the prior inventory, clothing and six photos. Only song
+records 23 (the fourth slot of row four) and 50 (the last-selection cache) change;
+the beginner and intermediate compositions remain intact. SDK and host replays
+compare the entire SRAM image, followed by an independent fresh-process reload.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
@@ -1614,8 +1627,9 @@ the nineteenth rescued love and Hambond. Original Save/Continue retains 79 words
 19 loves and level-three progress 51. Gem/rock counts, the clothing catalog and all
 six photos are checked across this continuation. The later `intermediate_words`
 route above covers the intermediate entry and another saved composition. The
-expert contest, other composition operations, full desktop progression and
-physical controllers remain separate requirements.
+`expert` route covers the expert win, all ten required moves, Hamcheer and the
+perfect-ending credits. Other composition operations, full desktop progression
+and physical controllers remain separate requirements.
 The current Windows executable separately opens the empty Items and Gems panels
 with keyboard input and returns through Status to the same photo-room scene.
 
