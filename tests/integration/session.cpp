@@ -84,7 +84,9 @@ int main(int argc,char **argv)
                         hn_read32(memory,slot+0x18),hn_read32(memory,slot+0x20),hn_read8(memory,0x03003E30),hn_read16(memory,0x0201DC52),
                         hn_read8(memory,0x03001F50),hn_read8(memory,0x03002182)&1u,hn_read16(memory,0x0201DC5C)};
                 };
-                const auto expected=snapshot(playing.game());CHECK(expected[4]>10);
+                // A confirmed data reset legitimately resumes at the title with
+                // no learned words; the scenario supplies progress assertions.
+                const auto expected=snapshot(playing.game());
                 const auto saved=hn::load_save(replay.paths);
                 CHECK(std::equal(saved.begin(),saved.end(),playing.game()->memory.sram));
                 CHECK(std::filesystem::file_size(replay.paths.save())==hn::save_size);

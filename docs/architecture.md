@@ -90,7 +90,7 @@ statically. A separate clean-machine validation remains pending.
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
-| Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; title data-initialization/reset Main callbacks remain unadapted; complete boot/title/gameplay parity remains unverified |
+| Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; existing-save New Game safeguards, all 51 local-record resets and released soft-reset lock verified through normal inputs and fresh host reload; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Full optional activities and complete desktop story coverage remain pending |
 | Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding, Sunny Peak's tenth reconciliation, tower puzzle, Spat's defeat, complete credits and postgame control, followed by Panda's bridge and Rainbow Key; original Save/Continue, exact SRAM equality and fresh reload checked at stage boundaries; full desktop progression and optional completion remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
@@ -1729,6 +1729,20 @@ player's ROM. Synthetic regressions check move writes without damaging adjacent
 fields, empty-resource endpoints, beat advancement, unknown glyphs and multiline
 heap cleanup. Function comparisons alone do not establish a saved choreography
 or a contest win through normal input.
+
+The title-data callbacks share this local record family. Confirmed New Game
+initializes and saves all 51 indexed records in the original order, using the
+existing SRAM adapter and both save copies. The shared initializer is also used
+at first boot. The reset-disable callback widens its argument byte to the original
+32-bit word and consumes one byte; record reset consumes none. Function-level
+comparisons cover five languages, repeat resets, retained record padding, all
+256 reset-byte values, argument/destination aliases and actual Main invocations.
+The `menus.json --route title_reset` continuation cancels New Game with the
+default No, checks the second safeguard, then confirms both prompts. It observes
+the reset lock during the 51 writes, its later release and the original four-button
+soft reset. A fresh host session reaches the same naming screen with reset data.
+Scout, SDK and host SRAM match across all 32 KiB. This route intentionally resets
+only a disposable test profile; the authoritative story save remains unchanged.
 
 The separate Sandy Bay optional route `ham_jam` starts from the saved Moonlight
 and Stead-E continuation. It retains the beginner rejection with an unmodified

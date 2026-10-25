@@ -82,9 +82,10 @@ reference comparison with all available independent oracles. Keep functional sou
 unchanged until that run ends. No exhaustive domains, memory regions or comparisons
 are removed to shorten the run.
 
-The latest complete suite passes 5,859,158 checks in 655.399 seconds. It retains
-all 45 preceding named phases and their previous assertion counts, adding 65,902
-local Ham-Jam UI/text checks. The preceding HBlank/window boundary passed
+The latest complete suite passes 5,861,660 checks in 668.028 seconds. It retains
+all 45 preceding named phases and their previous assertion counts, adding 2,502
+title record-reset and soft-reset callback checks. The preceding boundary passed
+5,859,158 checks in 655.399 seconds, adding 65,902 local Ham-Jam UI/text checks. The preceding HBlank/window boundary passed
 5,793,256 checks in 662.005 seconds. It retains
 all 5,561,200 preceding cases and adds 232,056 HBlank/window comparisons,
 including 46 independently rendered clocked frames. All 204,233 clothing-catalog
@@ -1716,7 +1717,7 @@ The local music/record presentation and selection families have a focused comman
 
     python -B tools/compare_reference.py --group4-only --rom PATH_TO_YOUR_AH3P_ROM --reference PATH_TO_READ_ONLY_DECOMP
 
-Its 132,865 comparisons account for all 29 record/presentation/selection entries,
+Its 135,367 comparisons account for all 31 record/presentation/selection/title entries,
 24 composer Main contracts and three text/boundary helpers. Checks cover byte selectors, all
 14 original song descriptors and restart, raw resource readers, affine allocation
 and exhaustion, render/base/control aliases, suffix collisions, depth/number
@@ -1726,9 +1727,26 @@ song callback. Composer checks include all five languages, balanced task creatio
 and removal, all tile-ring byte values, fractional scrolling in both directions,
 six scroll modes and unsupported-mode behavior, empty and terminal resource
 boundaries, glyph replacements and multiline heap cleanup. The focused run takes
-18.667 seconds. All previous five local group4 dependency comparisons remain in
+31.125 seconds. Title checks also reset all 51 records in five languages, retain
+untouched SRAM regions and record padding, repeat the reset, test every reset-disable
+byte and aliased argument, and invoke both callbacks through Main. All previous
+five local group4 dependency comparisons remain in
 the full suite; link transport and complete music-activity progression are
 separate requirements.
+
+`menus.json --route title_reset` starts from the verified Peace Moon crafting
+save. Its 10,113 updates and 12 checkpoints retain the original menu route and
+check New Game's default No, both overwrite safeguards, reset-time locking,
+all 51 initialized local records and the original A+B+Start+Select soft reset.
+The final saved state legitimately resumes at naming with zero learned words;
+host-session verification compares the complete restored snapshot rather than
+requiring an arbitrary minimum word count. Original progress assertions remain
+in the versioned scenarios. Scout, SDK and host match across all 32 KiB. The SDK
+passes in 18.18 seconds; 13,841 host checks pass in 21.06 seconds. A separate
+1,922-update fresh process passes in 2.581 seconds without opening field-only
+Status from the naming screen. The starting story profile stays unchanged.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/menus.json --route title_reset --save PATH_TO_PRIVATE_MOON_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_TITLE_PROFILE
 
 The input-only continuation `sandy_bay_optional.json --route ham_jam` covers the
 unmodified beginner rejection, title-menu composition, a changed Ham-Chat in

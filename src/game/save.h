@@ -16,6 +16,7 @@ bool hn_save_write_groups(HNMemory *);
 bool hn_save_load_group(HNMemory *,unsigned group);
 bool hn_save_load_groups(HNMemory *);
 void hn_save_default_fields(HNMemory *);
+bool hn_save_reset_group4(HNMemory *);
 bool hn_save_initialize(HNMemory *);
 #ifdef __cplusplus
 }

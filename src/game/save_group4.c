@@ -85,6 +85,8 @@ HNSceneResult hn_group4_callback(HNMemory *m,GameAddr callback,GameAddr argument
 {
     *consumed=0;
     switch(callback&~1u){
+    case 0x080202BC:if(!hn_save_reset_group4(m))return HN_SCENE_RESOURCE;break;
+    case 0x080202E0:hn_write32(m,0x03001F98,hn_read8(m,arguments));*consumed=1;break;
     case 0x080C846C:{
         GameAddr slot=hn_render_slot(m,26);
         if(hn_read8(m,slot+0x64)==255){hn_write8(m,slot+0x64,hn_render_find_affine(m));hn_write8(m,HN_AFFINE_USAGE+hn_read8(m,slot+0x64),1);}

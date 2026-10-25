@@ -196,6 +196,12 @@ static bool indexed_record(HNMemory *m,unsigned index)
     }
     return !m->fault;
 }
+bool hn_save_reset_group4(HNMemory *m)
+{
+    for(unsigned index=0;index<=50;index++)
+        if(!indexed_record(m,index)||!hn_save_write_record(m,4,index))return false;
+    return !m->fault;
+}
 bool hn_save_initialize(HNMemory *m)
 {
     uint32_t primary=hn_sram_verify(m,IDENTITY,0x0E000000,16);
@@ -215,7 +221,7 @@ bool hn_save_initialize(HNMemory *m)
     }
     if(!write_verified(m,SAVE_BUFFER,0x0E000000,0x8000))return false;
     for(unsigned group=1;group<=3;group++)if(!hn_save_write_record(m,group,0))return false;
-    for(unsigned index=0;index<=50;index++)if(!indexed_record(m,index)||!hn_save_write_record(m,4,index))return false;
+    if(!hn_save_reset_group4(m))return false;
     hn_write8(m,0x03002BF4,0);
     for(unsigned i=0;i<0x2000;i++)hn_write32(m,SAVE_BUFFER+i*4,0);
     if(!write_verified(m,SAVE_BUFFER+9,0x0E000009,3)||

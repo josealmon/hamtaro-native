@@ -12,9 +12,10 @@ def check_group4_records(*,entries,rom,memory,bind,call,both,fresh,equal,compare
     text=(Path(__file__).resolve().parents[1]/"src/game/save_group4.c").read_text()
     def addresses(name):return {int(v,16) for v in re.findall(r"case (0x[0-9A-Fa-f]+):",body(text,name))}
     mains=addresses("hn_group4_callback");tasks={0x080C9000}
-    families={"src/scripts/communication_record_callbacks.c","src/scripts/communication_record_selection.c"}
+    families={"src/scripts/communication_record_callbacks.c","src/scripts/communication_record_selection.c",
+              "src/scripts/main_script_communication_callbacks.c"}
     rows=[r for r in entries if r["source"] in families]
-    equal(len(rows),29,"complete local record/presentation/selection source families")
+    equal(len(rows),31,"complete local record/presentation/selection/title source families")
     equal({r['address'] for r in rows},(mains-{0x080C6EDC})|tasks,"all local record entries and typed ABIs")
     u=C.c_uint32;main=bind("hn_scene_callback",C.c_int,C.c_void_p,u,u,C.POINTER(u))
     task=bind("hn_group4_task",C.c_int,C.c_void_p,u);task_command=bind("hn_probe_task_command",C.c_int,C.c_void_p,u,C.c_uint,C.POINTER(u))
@@ -47,7 +48,8 @@ def check_group4_records(*,entries,rom,memory,bind,call,both,fresh,equal,compare
         fixture(case);heap(memory);call("InitializeHeap",0);equal(sram(memory),True,"group4 SRAM adapters");call("InitializeSram")
         byte(controls+0x180,case%10);byte(controls+0x181,case%4);byte(received,3);byte(received+2,case%10)
     by_name={r['name']:r for r in rows}
-    special={"ScriptCallbackUpdateSelectedCommunicationRecord","ScriptCallbackStartCommunicationResourceSong"}
+    special={"ScriptCallbackUpdateSelectedCommunicationRecord","ScriptCallbackStartCommunicationResourceSong",
+             "ScriptCallbackInitializeAndSaveCommunicationRecords","ScriptCallbackSetSoftResetDisabled"}
     for row in rows:
         if row['name'] in special:continue
         for case in range(256):
@@ -61,6 +63,25 @@ def check_group4_records(*,entries,rom,memory,bind,call,both,fresh,equal,compare
             both(0x0201F000,rng.randbytes(52));word(0x0201F010,args);both(args,b'\x01\xE1');word(0x03001FC4,row['address']|1)
             report=(u*4)();equal(task_command(memory,0x0201F000,0xF4,report),1,"local layout actual F4 command")
             equal(report[3],call("TaskCommandF4",0x0201F000),"layout F4 continuation");compare("layout F4",ranges)
+    row=by_name['ScriptCallbackSetSoftResetDisabled']
+    for value in range(256):
+        fixture(value);word(0x03001F98,0xA5B6C7D8);byte(args,value)
+        exercise(row,("raw byte widened to reset-disable word",value))
+    for offset in range(4):
+        fixture(offset);word(0x03001F98,0xA5B6C7D8)
+        exercise(row,("argument aliases destination word",offset),arguments=0x03001F98+offset)
+    fixture(255);exercise(row,"reset-disable Main VM",vm=True)
+    row=by_name['ScriptCallbackInitializeAndSaveCommunicationRecords']
+    for language in range(5):
+        for repeated in (False,True):
+            fixture(language);heap(memory);call("InitializeHeap",0)
+            equal(sram(memory),True,"title reset SRAM adapters");call("InitializeSram")
+            byte(0x0200460B,language);both(0x0E000000,rng.randbytes(0x8000))
+            exercise(row,("all 51 indexed records, mirrors and retained padding",language),arguments=0)
+            if repeated:exercise(row,("repeated title record reset",language),arguments=0)
+    fixture(0);heap(memory);call("InitializeHeap",0)
+    equal(sram(memory),True,"title reset Main VM SRAM");call("InitializeSram");byte(0x0200460B,0)
+    exercise(row,"all-record reset Main VM",vm=True)
     row=by_name['ScriptCallbackUpdateSelectedCommunicationRecord']
     for case in range(256):
         prepare_saved_record(case);exercise(row,("record numbering/depth and both SRAM copies",case))
@@ -102,7 +123,7 @@ def check_group4_records(*,entries,rom,memory,bind,call,both,fresh,equal,compare
         fixture(flags);byte(0x03002180+(0x281>>3),1 if flags&1 else 0);byte(0x03002180+(0x1E9>>3),2 if flags&2 else 0)
         first=rom[0x6E83D8];word(0x03002D98,0x03002D98-first*104-0x60)
         exercise(by_name['ScriptCallbackResetCommunicationRenderSlots'],"hidden-slot store aliases render base")
-    print("All 29 local record/music/presentation/selection entries and typed Main/F4 contracts matched, including complete SRAM writes, suffix/depth boundaries, raw resource readers and the credits song. Link transport remains outside this scope.")
+    print("All 31 local record/music/presentation/selection/title entries and typed Main/F4 contracts matched, including all-record reset, complete SRAM writes, suffix/depth boundaries, raw resource readers and the credits song. Link transport remains outside this scope.")
 
 
 def check_group4_ui(*,entries,rom,memory,bind,call,both,fresh,equal,compare,native_bytes,command):
