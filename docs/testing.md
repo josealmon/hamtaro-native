@@ -579,6 +579,27 @@ reference proof. Special-material failure/refunds remain unverified in gameplay.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --route remaining_stones --save PATH_TO_PRIVATE_WAVE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_STONES_PROFILE
 
+`special_stones.json --route moon_crafting` starts from the saved three-stone
+collection. Its 57,954 updates and 27 checkpoints collect Sandy Bay's fixed
+Tack-Q rock, checking pickup flag 0x2BD, slot zero's four-polish count and the
+other inventory. Rubrub converts it to one Sapphire. Nine ordinary Digdig
+collections earn 45 seeds; every repeated visit checks its five-seed increase.
+The manual artisan's original offer selects recipe 67 with all ingredients
+available. The successful random outcome consumes one Peace Moon, one Sapphire
+and 45 seeds, places accessory 67 in slot three and retains the three earlier
+accessories. The route declines another order before original Save/Continue.
+Final inventory checks retain all other gems, 64 empty rock slots, clothing,
+six photo records, 51 choreography records, four seeds, 86 unique words and
+21 reconciliations. Existing routes remain unchanged. This success leaves the
+special-material refund branch pending.
+The SDK passes in 92.87 seconds; 61,596 host-session checks pass in 97.03
+seconds. Scout, SDK and host match across all 32 KiB. A fresh 2,103-update
+reload passes in 2.898 seconds, including the word-list/flag audit. Both
+SRAM mirrors agree and all choreography records are unchanged. Identical native
+source and executable/probe hashes retain the full 5,859,158-comparison proof.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --route moon_crafting --save PATH_TO_PRIVATE_STONES_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_MOON_PROFILE
+
 `postgame.json` continues from the final `sunny_optional.json` save. It collects
 the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
 then obtains five seeds on each of two room visits. Rubrub identifies both new

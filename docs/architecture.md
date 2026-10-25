@@ -90,7 +90,7 @@ statically. A separate clean-machine validation remains pending.
 | Destination map | Adapted | Completion/visibility flags, current/destination markers, backgrounds, direction priority and sequential unlocks compared; native input selects Clubhouse/Sunny Peak in both directions and enters Sunny Peak |
 | Main script control/resources | Partial | Fetch/yield/wait, branches, memory/decompression, forward byte/halfword pointer copies, maps, saves, task/actor/indirect setup, word-choice dialogs, collision scenes/routes, random values, core reset, choice flags, fades and typed callbacks; unsupported opcodes fail explicitly |
 | Scene menus | Partial | Menu/record selection, name editing, glyph blitting, keyboard banks, panel entry/exit/depth, language snapshots and input dialogs compared; Select status, Items/Gems entry/return, one-item read/navigation and End Game confirmation connected; multi-item inventories and later activity panels remain incomplete |
-| Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; complete boot/title/gameplay parity remains unverified |
+| Native boot/title | Partial | Real SDL window reaches the language selector with music; 9,000 clocked native updates completed; 88 Main-only, 180 idle and 9,000 component-schedule updates compared; title data-initialization/reset Main callbacks remain unadapted; complete boot/title/gameplay parity remains unverified |
 | New game, movement, in-game save/load | Partial | Versioned 281,135-update route from erased SRAM through the first Sunny Peak story, Lovedove and three loves, Boss's announcement, Clubhouse return and original save/Continue; focused reunion and optional Rubrub continuations retained. Full optional activities and complete desktop story coverage remain pending |
 | Saved story continuations | Partial | Input-only SDK/host stages continue through Sandy Bay, Treasure Island, Fun Land, Haunted House, jungle wedding, Sunny Peak's tenth reconciliation, tower puzzle, Spat's defeat, complete credits and postgame control, followed by Panda's bridge and Rainbow Key; original Save/Continue, exact SRAM equality and fresh reload checked at stage boundaries; full desktop progression and optional completion remain pending |
 | Music and effects | Partial | Native sequencer/mixer/PSG/FIFO/PWM connected to SDL; 600 real-time updates with no device sample shortages and user-confirmed clear menu music; complete game-output parity, filtering and trigger quirks remain pending |
@@ -789,6 +789,21 @@ followed by a fresh-process reload. Previous special-stone routes are unchanged.
 Special-material refunds remain a separate gameplay check. Polished-gem duplicate
 prevention is verified for the Wave cave; that does not establish every cave's
 corresponding branch.
+
+`special_stones.json --route moon_crafting` continues from the three polished
+stones. Tack-Q collects the previously unclaimed fixed rock in Sandy Bay's
+captain cove, sets its pickup flag and adds key 14 with four polishes. One
+full-strength Rubrub action converts it to Sapphire counter 15. Nine ordinary
+Sunny Digdig collections earn 45 seeds, with a five-seed increase checked on
+each visit. The manual artisan offers recipe 67 for Peace Moon and Sapphire.
+Its original random outcome succeeds: both gems decrease by one, the 45-seed
+fee leaves four seeds and accessory 67 occupies slot three after the earlier
+three accessories. Declining another commission spends nothing further.
+Original Save/Continue and a fresh-process reload retain the result, all other
+gem counters, 64 empty rock slots, clothing, six photo records, 51 choreography
+records, 86 words and 21 reconciliations. SDK and host SRAM match. Earlier
+special-stone routes remain unchanged; this successful craft does not verify
+the failure/refund branch.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and
