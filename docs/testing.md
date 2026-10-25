@@ -410,6 +410,28 @@ remain pending.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --route level_three --save PATH_TO_PRIVATE_PERFORMER_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_LEVEL_THREE_PROFILE
 
+The independent `sand_bath` route starts from the verified 76-word
+`level_three` save. Six normal searches cover all three sand-bath rewards and
+an empty search. It then polishes five rocks with six normal Rubrub actions,
+including the Peridot's intermediate one-polish state and identification,
+opens its Gems description and uses original Save/Continue. Every checkpoint
+checks all 32 collection counters and all 64 packed rock counts. Initial/final
+checks retain the clothing catalog and all six photo records. The final save
+has five Diamonds, one Peridot, three Ammonites, two Crystals and zero rocks;
+words, loves and seeds remain 76, sixteen and four. The Peridot descriptor
+requires two polishes, so level three is not a prerequisite for this reward.
+The default and `level_three` routes retain every previous input and assertion.
+The canonical route has 36,678 updates and 23 checkpoints, removing 2,792
+exploratory updates (7.44 percent of the postboot inputs). The SDK passes in
+58.07 seconds; 39,666 host-session checks pass in 61.03 seconds. Their 32 KiB
+SRAM files match exactly. A fresh 2,103-update reload passes in 2.914 seconds,
+including all 76 unique word IDs, all collection/rock counts, retained clothing,
+photos and Status. Eleven CTest suites pass serially in 1.93 seconds and the
+nineteen scenario tests pass in 0.118 seconds. The unchanged native sources and
+binaries retain the full 5,793,256-check reference comparison.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --route sand_bath --save PATH_TO_PRIVATE_LEVEL_THREE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SAND_BATH_PROFILE
+
 `postgame.json` continues from the final `sunny_optional.json` save. It collects
 the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
 then obtains five seeds on each of two room visits. Rubrub identifies both new

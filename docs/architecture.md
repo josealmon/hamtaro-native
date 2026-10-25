@@ -549,6 +549,25 @@ and canonical scout produce identical 32 KiB SRAM. A fresh 2,103-update reload
 verifies all 76 unique words, five Diamonds, empty slots, retained inventory and
 photos in 2.938 seconds. Native code and binaries remain unchanged.
 
+The independent `sand_bath` route starts from the 76-word saved continuation.
+Six ordinary Digdig searches in Seedric's bath cover an empty search and all
+three original rewards: Crystal, Ammonite and Peridot rocks. Five allocated
+rocks require six ordinary polishes. The Peridot descriptor has two polishes;
+this reward does not require level three. Its intermediate one-polish state,
+identification, Gems description and empty-selector return are checked.
+All 32 collection counters and 64 rock counts are asserted at every checkpoint.
+Original Save/Continue retains five Diamonds, one Peridot, three Ammonites,
+two Crystals, 76 words, sixteen loves, clothing and all six photo records.
+The default and `level_three` Sunny routes retain their previous inputs and
+assertions. No native functional code or binaries changed.
+The canonical 36,678-update route has 23 checkpoints and removes 2,792
+unnecessary exploratory updates. The SDK passes in 58.07 seconds and the host
+passes 39,666 checks in 61.03 seconds, producing identical 32 KiB SRAM.
+A fresh 2,103-update reload checks all 76 unique words against their flags,
+the collection, clothing, photos and Status in 2.914 seconds. The existing
+5,793,256-check reference proof is retained for the unchanged native sources
+and binaries.
+
 The normal rock-polishing limit uses the level plus one. Lalalala still requires
 level four at 56. Ten words, other optional activities, remaining Sunny content,
 clothing/gallery/settings branches and full desktop activity coverage remain
