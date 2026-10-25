@@ -19,7 +19,9 @@ original letter, departure and return sequence.
 Sunny Peak's locked Rainbow cave, protection against a duplicate special rock
 and polishing that rock into a Rainbow Stone are also covered. Wildwoods' Sun Key
 cave adds its fixed rock, Sun Stone polishing, and a successful special-stone
-recipe that spends one Sun Stone and 45 seeds.
+recipe that spends one Sun Stone and 45 seeds. Sandy Bay's Wave Key cave also
+covers polishing, duplicate prevention while the polished gem is owned, and
+crafting with a special stone plus ordinary gems.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 

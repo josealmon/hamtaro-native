@@ -762,8 +762,21 @@ other gem counter, all 64 empty rock slots, clothing, six photo records, all 51
 choreography records, 86 words and 21 reconciliations. SDK and host replays compare
 all SRAM bytes, followed by a fresh-process reload. The unchanged Rainbow route
 shares this scenario file to keep the related cave checks together.
-The remaining four special stones, polished-gem cave reentry and special-material
-refunds remain separate gameplay checks.
+`special_stones.json --route wave_crafting` continues from that saved craft.
+Sandy Bay's captain cove leads to the Wave Key cave. Ham-lift collects fixed rock
+key three with five polishes, and one Rubrub confirmation converts it to Wave
+Stone counter four. Reentering while the polished stone is owned keeps all rock
+slots empty, marks the fixed pickup unavailable and removes Ham-lift from its
+original four-word action menu. The manual artisan's recipe 55 succeeds using
+one Wave Stone, two Ammonites and 45 seeds. Accessory 55 occupies slot two after
+Heart Earrings and accessory 34. Original Save/Continue retains four seeds,
+one Ammonite, the other gem counters, all 64 empty rock slots, all three
+accessories, clothing, six photo records and 51 choreography records. SDK and
+host SRAM match, followed by a fresh-process reload. The Sun and Rainbow routes
+remain unchanged.
+Uni-Star, Peace Moon, Ice Stone and special-material refunds remain separate
+gameplay checks. Polished-gem duplicate prevention is verified for the Wave cave;
+that does not establish every cave's corresponding branch.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

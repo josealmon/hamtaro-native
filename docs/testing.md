@@ -508,8 +508,8 @@ SDK and host match across all 32 KiB. A fresh 2,103-update reload passes in
 3.033 seconds, checking the unique word list against its flags. Both save
 mirrors agree and all previous routes are unchanged. Matching native-source
 and executable/probe hashes retain the full 5,859,158-comparison proof. The
-remaining four special stones, polished-gem cave reentry and crafting refunds
-remain separate gameplay checks.
+remaining three special stones and crafting refunds remain separate gameplay
+checks. Polished-gem cave reentry is covered by the Wave route below.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --route rainbow_cave --save PATH_TO_PRIVATE_KEY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_RAINBOW_PROFILE
 
@@ -533,6 +533,29 @@ SRAM mirrors agree, and every choreography record remains unchanged. Native-sour
 and executable/probe hashes retain the full 5,859,158-comparison reference proof.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --save PATH_TO_PRIVATE_RAINBOW_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SUN_PROFILE
+
+`special_stones.json --route wave_crafting` starts from the verified Sun crafting
+save. Its 35,139 updates and 23 checkpoints reach the Wave Key cave through Sandy
+Bay's captain cove. Ham-lift obtains fixed rock key three with five polishes;
+one Rubrub action clears it and awards Wave Stone counter four. Returning to the
+unique-rock room while that polished gem is owned leaves all 64 slots empty,
+sets the pickup's unavailable state and opens only the four ordinary Ham-Chats.
+The route cancels this menu and returns normally to the manual workshop.
+Recipe 55 succeeds with the original RNG outcome. It consumes one Wave Stone,
+two Ammonites and 45 seeds, stores accessory 55 in slot two and retains the two
+earlier accessories. Original Save/Continue retains four seeds, one Ammonite,
+all unrelated gems, 64 empty rock slots, the remaining accessory slots, clothing,
+six photo records, all 51 choreography records, 86 unique words and 21 loves.
+This verifies polished-gem duplicate prevention and a successful transaction
+using both special and ordinary materials; the failure/refund branch remains pending.
+The previous Sun and Rainbow routes are unchanged.
+The SDK passes in 59.66 seconds; 38,301 host-session checks pass in 62.70 seconds.
+All 32 KiB match between scout, SDK and host. A fresh 2,103-update reload passes
+in 3.024 seconds and verifies the unique word list against its flags. Both
+save mirrors and all choreography records agree. Identical native-source and
+executable/probe hashes retain the full 5,859,158-comparison reference proof.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/special_stones.json --route wave_crafting --save PATH_TO_PRIVATE_SUN_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WAVE_PROFILE
 
 `postgame.json` continues from the final `sunny_optional.json` save. It collects
 the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
