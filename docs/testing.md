@@ -75,6 +75,24 @@ builds and use explicit checks rather than assertions removed by NDEBUG.
 - app-smoke: creates an isolated temporary profile, initializes the actual
   SDL renderer and menus for six frames, closes cleanly and removes that profile.
   No graphics, settings, ROM or save files are written in the checkout.
+- app-preferences: starts the actual hidden application twice against a disposable
+  Unicode profile. Both processes retain nondefault settings, window dimensions and
+  all ten keyboard/gamepad mappings; SRAM and its previous backup stay byte-identical,
+  and the profile lock is released after each shutdown. A separate input process
+  exercises every saved mapping, short taps and the saved deadzone with synthetic
+  keyboard events and its own SDL virtual gamepad. A third application process
+  preserves an unsupported future settings file verbatim. The parent verifies
+  removal of the complete temporary profile after closing all child processes.
+
+Run this integration test alone with
+`ctest --preset release --parallel 1 -R app-preferences`. It needs no ROM and runs
+its child processes sequentially. `--smoke-test --data-dir PATH` preserves the
+explicit profile; use only disposable test profiles. Without `--data-dir`, smoke
+testing creates and removes its own profile as before. These checks establish
+hidden startup/shutdown persistence and saved input behavior; they do not establish
+interactive settings-menu use, actual fullscreen transitions or physical-pad support.
+The twelve serial CTest suites pass in 2.21 seconds on the development machine,
+including 65,844 core and 66,503 game checks. Timing is not a portable guarantee.
 
 Use CTest for each functional batch and the existing focused `--...-only` reference
 checks during implementation. At a coherent batch boundary, run the complete
@@ -84,7 +102,11 @@ are removed to shorten the run.
 
 The latest complete suite passes 5,861,660 checks in 668.028 seconds. It retains
 all 45 preceding named phases and their previous assertion counts, adding 2,502
-title record-reset and soft-reset callback checks. The preceding boundary passed
+title record-reset and soft-reset callback checks. The subsequent application
+preferences batch changes only smoke-test profile handling and test harnesses;
+the native game/GBA sources and reference-probe binary are unchanged. Its separate
+CTest and packaged-application checks retain this core proof without claiming
+that the frontend executable is byte-identical. The preceding boundary passed
 5,859,158 checks in 655.399 seconds, adding 65,902 local Ham-Jam UI/text checks. The preceding HBlank/window boundary passed
 5,793,256 checks in 662.005 seconds. It retains
 all 5,561,200 preceding cases and adds 232,056 HBlank/window comparisons,

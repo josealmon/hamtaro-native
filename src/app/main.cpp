@@ -431,11 +431,11 @@ struct App {
 };
 int run(int argc,char **argv)
 {
-    bool smoke=false;hn::Paths paths=hn::default_paths();std::filesystem::path verification;
+    bool smoke=false,explicit_profile=false;hn::Paths paths=hn::default_paths();std::filesystem::path verification;
     for(int i=1;i<argc;i++) {
         std::string arg=argv[i];
         if(arg=="--smoke-test")smoke=true;
-        else if(arg=="--data-dir"&&i+1<argc) paths.root=hn::from_utf8(argv[++i]);
+        else if(arg=="--data-dir"&&i+1<argc) {paths.root=hn::from_utf8(argv[++i]);explicit_profile=true;}
         else if(arg=="--verify-rom"&&i+1<argc)verification=hn::from_utf8(argv[++i]);
         else throw std::runtime_error("Unknown or incomplete command-line option.");
     }
@@ -444,7 +444,7 @@ int run(int argc,char **argv)
         if(hn::validate_rom(bytes)!=hn::RomStatus::valid) return 2;
         std::cout<<"AH3P revision 0: SHA-256 verified\n";return 0;
     }
-    if(smoke) {
+    if(smoke&&!explicit_profile) {
         paths.root=std::filesystem::temp_directory_path()/("hamtaro-native-smoke-"+std::to_string(GetCurrentProcessId())+"-"+std::to_string(GetTickCount64()));
         if(!std::filesystem::create_directory(paths.root)) throw std::runtime_error("Smoke-test directory already exists.");
     }
@@ -500,7 +500,10 @@ int run(int argc,char **argv)
         }
         app.save_preferences();
     }
-    if(smoke) { std::filesystem::remove_all(paths.root); std::cout<<"Application smoke test passed.\n"; }
+    if(smoke) {
+        if(!explicit_profile)std::filesystem::remove_all(paths.root);
+        std::cout<<"Application smoke test passed.\n";
+    }
     return 0;
 }
 }

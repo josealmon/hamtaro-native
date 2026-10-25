@@ -33,7 +33,7 @@ statically. A separate clean-machine validation remains pending.
 | --- | --- | --- |
 | Windows x64 application | Implemented | Native game view, Play/pause/resume/restart/menu, settings and save management; smoke-tested and real-window review |
 | ROM import | Implemented | Identity and full hash, invalid imports preserve existing data |
-| Settings and bindings | Implemented | Persistence, bounds, defaults, Unicode paths |
+| Settings and bindings | Implemented | Bounds, defaults, Unicode paths; two hidden application restarts preserve settings, all ten keyboard/gamepad mappings and SRAM/backup; saved mappings and deadzone exercised in a separate SDL input process; future-version settings retained verbatim |
 | Keyboard/gamepad | Implemented | Synthetic keyboard, virtual-pad input, brief taps retained for one game update, deadzone, remapping, disconnect; physical models not tested |
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session retains twenty-one words, ten seeds, Bijou and one rescued love in the Clubhouse; actual-window End Game preserves its previous backup, and closing/relaunching the executable restores the same scene and counters |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
