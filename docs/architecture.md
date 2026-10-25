@@ -78,7 +78,7 @@ statically. A separate clean-machine validation remains pending.
 | Local music and SaveGroup4 support | Adapted | All 29 record/presentation/selection functions, 24 composer Main callbacks and three text/boundary helpers compared, plus the prior payload classifier; local editing menus, five languages, task lifetime, score scrolling, songs/readers, affine selection, numbering/depth and both SRAM copies; complete music activity and Cable Link transport remain outside this evidence |
 | SaveGroup3 pairs and lists | Adapted | All 67 functions across seven field/catalog/pair/graphics/list/selection families compared, including 51 Main callbacks and reviewed task contracts; all three worn parts, Corsage sharing rejection, photo replacement/cancellation, Toss confirmation/rejection/empty-category behavior, title photo/Dress Up, frame preview and both unlocked settings exercised; three photos retained across original Save/Continue and a fresh host session; full desktop activity coverage remains pending |
 | Clothing catalog and variations | Adapted | All 40 script_callbacks_pair_list.c functions accounted for and compared: 18 Main, 26 F4 and 13 helper contracts, with overlaps; six ROM-backed lists, five languages, ownership masks, prices, cursors and palettes; Sunny Boutique rejection, cancellation, two Antlers colors, Corsage and Kerchief purchases, sold-out selection and saved continuation run natively; other purchases and complete wardrobe coverage remain pending |
-| Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; three owned Gems entries and wrap navigation inspected in the SDK; complete Items/Gems and timed raster integration remain pending |
+| Record selection menus | Adapted | All 18 record_selection.c functions compared, with two shared strided-transfer helpers; record rows, scrolling, text contexts, counters, markers and window registers preserved; all 30 Gems positions, 15 encountered descriptions including depleted quantities, 15 unseen Read rejections and both wraps exercised; complete Items and timed raster integration remain pending |
 | Record messages and eligible-item count | Adapted | All 12 game_record_messages.c functions and the save_counter_prefix.s Main51 leaf compared; five-language text, byte-index wrap, live aliases, eleven void animation presets and the excluded final counter byte; the Clubhouse desk's empty-inventory greeting completes in the SDK; populated activity branches remain pending |
 | Counter displays and crafting selection | Adapted | All 23 functions across game_counter_display.c, game_record_selection.c and game_record_transactions.c compared; 18 Main, 14 argument-free task contracts and five typed helpers; cached/random candidates, five-language graphics, palette channels, raw selectors and counter costs/refunds; paid artisan Pooie Earrings and delivery, manual material rejection, two failures, a successful accessory and original Save/Continue tested; gameplay refunds, resale and other recipes remain separate |
 | Shared Items/Gems selection | Adapted | All 14 script_callback_actor_map10_5.c functions and three complete key-mark/list/panel dependency families compared; modal actor snapshots, byte cursors, scrolling, five-language text pages, empty task allocations and debug-key priority preserved; empty entry/return and a one-item training-seat SDK view/save/reload run; multi-item inventories and complete activity integration remain pending |
@@ -1003,14 +1003,27 @@ original End Game/Continue preserve its order setting, all words and the complet
 inventory, clothing, photos and saved choreography. Independent SDK/host replays
 compare complete SRAM, followed by a fresh-process reload.
 
+The independent `menus.json --route inventory` continuation starts from the saved
+three-photo gallery. Its 29,171 updates and 97 checkpoints visit all 30 Gems
+positions, read all 15 encountered descriptions, reject Read on the other 15 and
+wrap in both directions. All 30 A-Box cells are visited with four owned accessories,
+including the three special-stone crafts. Empty details, column wraps and the
+lower Toss control retain their original boundaries. Cancelling each populated
+Toss prompt and selecting an empty slot keep all four accessories and materials.
+Original Save/Continue and a fresh process retain the complete inventory, clothing,
+three photos, all 51 choreography records, 86 words, 21 loves and four seeds.
+Scout, SDK and host SRAM agree across all 32 KiB; both group-three payloads are
+unchanged from the starting save. Previous menu and title-reset routes are unchanged.
+
 A separate actual Windows check uses a private profile to remap GBA A to C and
 continue the saved game with that key. The window displays the 86/86 dictionary,
 retains alphabetical order, changes from page 1/24 to 2/24 with WASD and switches
 between windowed presentation and integer-scaled fullscreen without stretching.
 The application menus also exercise Spanish/English switching, volume and mute,
 and the saved-game panel; the changed preferences are written to the test profile.
-Settings persistence after restarting the app, a physical gamepad and an
-uninterrupted desktop playthrough remain separate checks.
+The subsequent packaged-window review verifies settings after restarting the app.
+Physical gamepad testing is left to the user; an uninterrupted desktop playthrough
+remains a separate check.
 
 Story turns preserve unsigned screen-Y comparisons,
 signed half-height tests, leader/follower aliases and retained opposite-turn state.
@@ -1336,6 +1349,12 @@ native dispatch entries. Names miss some indirect targets; a dispatch entry alon
 does not establish correctness, ABI compatibility or execution coverage. Helpers
 can be consolidated in native functions, so unmatched helpers are not automatically
 missing implementations. The coverage matrix above remains the behavioral record.
+
+The expanded declaration census covers all 275 recovered graphics/script sources:
+2,914 unique declared functions, with 40 lacking explicit dispatch. Thirty-six
+declarations come from shared_main_scripts.c; four come from link-related sources,
+including the communication render-copy animation. This extends the map-bank-only
+census and does not establish callback reachability or gameplay completion.
 
 | Batch order | Source families and purpose | Completion evidence |
 | --- | --- | --- |

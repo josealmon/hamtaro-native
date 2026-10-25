@@ -1808,6 +1808,25 @@ Status from the naming screen. The starting story profile stays unchanged.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/menus.json --route title_reset --save PATH_TO_PRIVATE_MOON_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_TITLE_PROFILE
 
+The independent `menus.json --route inventory` continuation uses the three-photo
+gallery save. Its 29,171 updates and 97 checkpoints cover all 30 Gems positions,
+15 encountered descriptions including zero quantities, 15 rejected unseen Read
+actions and both list wraps. It visits every A-Box cell, including the four crafted
+accessories and all empty slots, both column wraps, the lower Toss control and
+its inactive horizontal navigation. Cancelling Toss for each occupied slot and
+retrying an empty slot retain the entire collection. Original Save/Continue
+restores the workshop actors and all inventory, clothing and photos.
+
+The SDK passes in 56.15 seconds; 32,035 host-session checks pass in 59.13 seconds.
+Scout, SDK and host SRAM match all 32 KiB. Both group-three payloads and all 51
+choreography records remain identical to the starting save. A separate 2,103-update
+reload passes in 2.915 seconds, checks all 86 unique words against flags and
+reopens Status. Twenty scenario-parser tests pass. Previous menu/title-reset
+inputs and checkpoints, native sources, executable and probe remain unchanged;
+the complete core comparison proof is retained.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/menus.json --route inventory --save PATH_TO_PRIVATE_GALLERY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_INVENTORY_PROFILE
+
 The input-only continuation `sandy_bay_optional.json --route ham_jam` covers the
 unmodified beginner rejection, title-menu composition, a changed Ham-Chat in
 “Dizzy for You”, an empty-slot save, return to the story, custom-slot selection,
