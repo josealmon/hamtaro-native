@@ -568,8 +568,44 @@ the collection, clothing, photos and Status in 2.914 seconds. The existing
 5,793,256-check reference proof is retained for the unchanged native sources
 and binaries.
 
+`sandy_bay_optional.json` continues from that sand-bath save through the matching
+dance. Tinglie changes the trio's reaction, but Hamspar with the girl produces
+the unsuccessful result: no new word or love. After returning to the court,
+Thump-P assigns a partner and Hamspar with the matching dancer completes the
+reunion. The route learns Jamout, raises progress from 43 to 45 and retains
+77 words, seventeen loves and four seeds through original Save/Continue.
+All 32 collection counters and 64 packed rock counts are asserted at each of
+eight checkpoints; the initial/final checks also retain clothing and all six
+photo records. The canonical route contains 24,913 updates, removing 4,003
+exploratory updates while retaining both outcomes. The SDK passes in 40.37 seconds
+and 27,901 host checks pass in 41.74 seconds; both and the canonical scout produce
+identical 32 KiB SRAM. A fresh 2,103-update reload verifies all 77 unique words
+against their flags, retained inventory/photos and Status in 2.935 seconds.
+Existing area routes and all native sources and binaries remain unchanged.
+Jamout is a prerequisite for the Haunted House composer/piano chain.
+
+The independent `haunted_house.json` route `music` starts from the saved Jamout
+reunion. Playing without Moonlight leaves the piano couple unreconciled. The
+route clears the frog costumes through their original conversation, opens the
+repaired upper lift and reveals the attic with Pushie. Three distinct musical
+questions award Moonlight after the correct-answer counter advances from zero
+to three. The record survives the return through the upper lift, a corridor encounter
+and the descending stairs. Playing again reconciles the piano couple and teaches
+Stead-E. Original Save/Continue retains 78 words, eighteen loves, level three /
+progress 49, four seeds, all collection counters, empty rock slots, clothing and
+all six photo records. The 61,645-update route has 24 checkpoints, including
+blocked movement at the attic piano and movement paused by the corridor dialogue.
+The preceding Haunted House route is unchanged; other quiz question orders and
+the complete desktop activity remain unverified.
+The SDK passes in 88.10 seconds and 65,611 host checks pass in 93.40 seconds.
+Both and the canonical scout produce identical 32 KiB SRAM. A fresh 2,103-update
+reload verifies all 78 unique words against their flags, inventory, clothing,
+photos and Status in 2.934 seconds. Eleven CTest suites pass serially in 0.80
+seconds and nineteen scenario tests pass in 0.051 seconds. Native source/binary
+hashes are unchanged, retaining the full 5,793,256-check reference proof.
+
 The normal rock-polishing limit uses the level plus one. Lalalala still requires
-level four at 56. Ten words, other optional activities, remaining Sunny content,
+level four at 56. Eight words, other optional activities, remaining Sunny content,
 clothing/gallery/settings branches and full desktop activity coverage remain
 pending.
 

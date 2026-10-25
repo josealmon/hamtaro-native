@@ -432,6 +432,45 @@ binaries retain the full 5,793,256-check reference comparison.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sunny_optional.json --route sand_bath --save PATH_TO_PRIVATE_LEVEL_THREE_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_SAND_BATH_PROFILE
 
+`sandy_bay_optional.json` continues from the sand-bath save. Its eight checkpoints
+cover Tinglie, an unsuccessful Hamspar attempt with no reward, Thump-P's partner
+assignment, the matching dancer's successful Hamspar, the reunion and Jamout.
+It ends with 77 words, seventeen loves, level three/progress 45 and four seeds
+after original Save/Continue. Every checkpoint asserts all 32 collection counters
+and all 64 packed rock counts. Initial/final checks also retain the clothing
+catalog and all six photo records. The route has 24,913 updates, removing 4,003
+exploratory postboot updates (14.83 percent) while retaining both outcomes.
+The SDK passes in 40.37 seconds and 27,901 host checks pass in 41.74 seconds.
+Both and the canonical scout produce identical 32 KiB SRAM. A fresh 2,103-update
+reload checks all 77 unique word IDs against their flags, inventory, photos and
+Status in 2.935 seconds. Existing routes and native sources/binaries are unchanged.
+This does not establish every partner assignment or the complete desktop activity.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay_optional.json --save PATH_TO_PRIVATE_SAND_BATH_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_JAMOUT_PROFILE
+
+The independent `haunted_house.json` route `music` starts from that Jamout save.
+It checks the piano's missing-record rejection, the frog-costume conversation,
+both sides of the repaired upper lift, Pushie's attic access and three distinct
+composer questions. Moonlight is awarded only after three correct answers.
+The return retains the record through the corridor encounter and descending
+stairs. The successful piano performance learns Stead-E and reconciles the couple.
+The 61,645-update route has 24 checkpoints and ends with 78 words, eighteen loves,
+level three/progress 49 and four seeds after original Save/Continue. Every
+checkpoint checks all 32 collection counters and 64 packed rock counts;
+initial/final checks also retain clothing and all six photo records. Collision
+at the attic piano and traversal paused by dialogue are retained boundary cases.
+The previous Haunted House route is unchanged. Other question orders and full
+desktop activity coverage remain separate checks.
+The SDK passes in 88.10 seconds and 65,611 host checks pass in 93.40 seconds.
+Both and the canonical scout produce identical 32 KiB SRAM. A fresh 2,103-update
+reload passes in 2.934 seconds, checking all 78 unique words against their flags,
+the retained inventory, clothing, photos and Status. Eleven CTest suites pass
+serially in 0.80 seconds and nineteen scenario tests pass in 0.051 seconds.
+The native source and binary hashes remain unchanged, retaining the complete
+5,793,256-check reference proof.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/haunted_house.json --route music --save PATH_TO_PRIVATE_JAMOUT_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_HAUNTED_MUSIC_PROFILE
+
 `postgame.json` continues from the final `sunny_optional.json` save. It collects
 the cave's hidden rock with Hif-hif, drops another with Tack-Q and collects it,
 then obtains five seeds on each of two room visits. Rubrub identifies both new
