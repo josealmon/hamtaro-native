@@ -6,24 +6,18 @@ You must provide your own compatible .gba file. No game assets or ROM are includ
 The application imports and validates a ROM, runs adapted native game logic,
 configures keyboard/gamepad input and manages compatible saves.
 
-Recorded native input covers the main story through ten reconciliations, Spat's
-defeat, the complete credits and saved postgame control. An additional Sunny Peak
-route learns Blushie, Bestest, Bloat-T and Hamtast, completes Panda's bridge and
-collects the Rainbow Key. With Tran-Q from Clubhouse, the dictionary reaches
-64 words. The extension also collects Condor's Wings and Great Springs, identifies
-Banana Stone, Crystal and Ammonite, and opens their Gems entries. A separate
-continuation collects and polishes two Glass Beads, commissions Pooie Earrings,
-trades them for the Star Key and completes its rescue. Swellie increases the
-dictionary to 65 words and the rescued-love count to eleven.
-The Sunny Boutique continuation buys both Antlers colors, checks insufficient
-funds and sold-out selections, and retains both purchases after saving.
-It also dresses both characters, stores two photos and reloads their outfits
-through the title menu's Dress Up option.
+Recorded native input covers Spat's defeat, complete credits, all 21
+reconciliations and their epilogue, and saved postgame control. Optional routes
+reach 81 of 86 Ham-Chats, including the level-four Lalalala lesson. They also
+cover Sunny Peak's bridge, keys, songs and sand bath; accessory commissioning
+and trading; outfit purchases and saved photos; Haunted House's piano; and
+local Ham-Jam composition followed by a beginner contest win.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 
 This development build still has unfinished functions. Remaining words, optional
-activities, minigames and a full desktop playthrough remain unverified.
+activities, minigame branches, physical controllers and a full desktop playthrough
+remain unverified.
 See [docs/architecture.md](docs/architecture.md) for the tested routes and their limits.
 
 ## Build

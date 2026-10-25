@@ -604,10 +604,24 @@ photos and Status in 2.934 seconds. Eleven CTest suites pass serially in 0.80
 seconds and nineteen scenario tests pass in 0.051 seconds. Native source/binary
 hashes are unchanged, retaining the full 5,793,256-check reference proof.
 
-The normal rock-polishing limit uses the level plus one. Lalalala still requires
-level four at 56. Eight words, other optional activities, remaining Sunny content,
-clothing/gallery/settings branches and full desktop activity coverage remain
-pending.
+The normal rock-polishing limit uses the level plus one. At that saved boundary,
+Lalalala still required level four at 56, and eight words remained unlearned.
+
+`family_reunions.json --route wildwoods_training` continues from the verified
+79-word Sandy Bay Hambond save. A palace visit retains its already completed
+reunion; its source guards rule it out as an unfinished couple. The remaining
+training event advances through Hamha and Tack-Q, temporarily replaces Bijou
+with the recruited partner, and enters the medicine-fruit slingshot challenge.
+A failed attempt retains the unfinished event. A successful retry obtains the
+fruit and changes the partner; returning to the clearing teaches Might-T and
+rescues the twentieth love. The original epilogue visits the reconciled couples,
+completes the twenty-first reconciliation and returns to Clubhouse with ending
+flag 0x191 set. Level four / progress 56 then enables Boss's Lalalala lesson.
+Original Save/Continue retains 81 unique words, 21 rescued loves, two seeds,
+Bijou, the complete collection counters, empty rock slots, clothing and six photos.
+Five words, other optional activities, minigame variants, manual crafting,
+clothing/gallery/settings branches, physical controllers and complete desktop
+progression remain outside this evidence.
 
 Host-session replays write private 32 KiB SRAM files, verify their bytes, stop the
 session and start a new one to compare map, position, words, seeds, partner and

@@ -1629,6 +1629,30 @@ this check. The single test window is closed afterwards.
 
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/sandy_bay_optional.json --route ham_jam --save PATH_TO_PRIVATE_HAUNTED_MUSIC_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_HAMBOND_PROFILE
 
+The independent `family_reunions.json --route wildwoods_training` continuation
+starts from the saved Hambond reunion. Its 76,746 updates and 17 checkpoints cover
+the already completed palace reunion, training-partner recruitment, both failed
+and successful medicine-fruit slingshot outcomes, Might-T, the twentieth
+reconciliation, the full reconciliation epilogue, the twenty-first love and the
+level-four Lalalala lesson. The final original Save/Continue retains 81 words,
+21 loves, level four / progress 56, two seeds and Bijou at Clubhouse map 1:1,
+x=144.5, z=136.5. Every checkpoint asserts all 32 collection counters and 64 packed
+rock counts; initial/final checkpoints also retain clothing and all six photos.
+All preceding family-reunion route inputs and expectations remain identical.
+
+The SDK replay passes in 118.57 seconds; 80,787 host-session checks pass in
+121.16 seconds. Scout, SDK and host produce identical complete 32 KiB SRAM. A
+separate 2,103-update fresh reload passes in 2.901 seconds, verifies all 81 unique
+word identifiers against their flags and reopens Status. The five remaining words
+are Dazzlie, Bye-Q, Goodgo, Hamcheer and Greatchu; no Sunny Peak destination-indicator
+word is missing. All eleven CTest suites (1.85 seconds) and nineteen scenario
+tests (0.106 seconds) pass. Native source, executable and probe hashes still match
+the complete 5,859,158-check reference boundary, retaining its proof without an
+identical full rerun. Other minigame variants, optional operations and full
+desktop/physical-controller progression remain separate requirements.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/family_reunions.json --route wildwoods_training --save PATH_TO_PRIVATE_HAMBOND_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_WILDWOODS_PROFILE
+
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:
 
