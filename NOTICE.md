@@ -6,8 +6,7 @@ Players supply their own compatible ROM. No ROM or extracted gameplay resources
 are distributed. The launcher logo, cover, animated character and Windows icon
 are included in assets/ at the user's request and are separate from the code
 licenses below. Hamtaro names, characters and artwork belong to their respective
-rights holders. The animated GIF source is
-https://i.pinimg.com/originals/30/29/e0/3029e081d7064945c3ad85cc00b39b19.gif.
+rights holders.
 
 SDL 3.4.18 is Copyright (C) 1997-2026 Sam Lantinga and contributors, under the zlib license.
 Dear ImGui 1.93.0 is Copyright (c) 2014-2026 Omar Cornut and contributors, under the MIT license.
@@ -20,4 +19,5 @@ the application does not link mGBA or load a BIOS image.
 
 No blanket license is assigned to reconstructed game logic. Public distribution
 requires reviewing the provenance and licensing of that code separately.
-See docs/architecture.md for the reference revision and the actual supported scope.
+See docs/architecture.md in the source repository for the reference revision
+and the actual supported scope.
