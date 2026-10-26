@@ -55,6 +55,11 @@ Dependencies are pinned with SHA-256 hashes and stored outside this checkout,
 under HAMTARO_NATIVE_WORK (default: the user profile's .hamtaro-native-dev folder).
 An Internet connection is needed for the first dependency download, not for normal use.
 
+Optional personal executable artwork can be supplied with
+`-DHAMTARO_NATIVE_ICON=PATH_TO_YOUR_PRIVATE_ICON.ico` when configuring CMake.
+Windows Explorer, the title bar and the taskbar use the embedded icon. Keep that
+artwork outside the repository; builds without it remain asset-free.
+
 Run build/Release/hamtaro-native.exe. Import a compatible ROM through the application.
 Choose Play to start; Escape or right-stick click opens the pause/settings menu.
 ROM, settings and saves live in the profile's .hamtaro-native directory, independently

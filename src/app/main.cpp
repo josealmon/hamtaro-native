@@ -23,6 +23,7 @@
 #include <shellapi.h>
 
 namespace {
+constexpr const char *game_title="Hamtaro: Ham-Ham Heartbreak";
 enum class FileAction { rom, import_save, export_save };
 struct Selection { FileAction action; std::filesystem::path path; std::string error; };
 struct DialogState { std::mutex mutex; bool pending=false; std::optional<Selection> result; };
@@ -404,7 +405,7 @@ struct App {
         if(session.playable()&&!paused)return;
         auto *viewport=ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);ImGui::SetNextWindowSize(viewport->WorkSize);
-        ImGui::Begin("Hamtaro Native",nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoMove|
+        ImGui::Begin(game_title,nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoMove|
                                               ImGuiWindowFlags_NoSavedSettings);
         ImGui::TextColored(ImVec4(1,0.73f,0.39f,1),"HAMTARO NATIVE");
         ImGui::TextDisabled("Ham-Ham Heartbreak");
@@ -457,7 +458,7 @@ int run(int argc,char **argv)
         std::string startup_error;
         try{settings=hn::load_settings(paths);}catch(const std::exception&e){startup_error=e.what();}
         SDL_PropertiesID properties=SDL_CreateProperties();
-        SDL_SetStringProperty(properties,SDL_PROP_WINDOW_CREATE_TITLE_STRING,"Hamtaro Native");
+        SDL_SetStringProperty(properties,SDL_PROP_WINDOW_CREATE_TITLE_STRING,game_title);
         SDL_SetNumberProperty(properties,SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,settings.window_width);
         SDL_SetNumberProperty(properties,SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,settings.window_height);
         SDL_SetBooleanProperty(properties,SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,true);
@@ -512,7 +513,7 @@ int main(int argc,char **argv)
     try{return run(argc,argv);}
     catch(const std::exception &e) {
         std::cerr<<e.what()<<'\n';
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,"Hamtaro Native",e.what(),nullptr);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,game_title,e.what(),nullptr);
         return 1;
     }
 }
