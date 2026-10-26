@@ -265,12 +265,13 @@ struct App {
         try{session.persist(paths);running=false;}
         catch(const std::exception&e){pause_game();notice(e.what(),true);}
     }
-    void advance() {
-        if(!running||paused||!session.playable()){last_tick=0;elapsed=0;return;}
+    bool advance() {
+        if(!running||paused||!session.playable()){last_tick=0;elapsed=0;return false;}
         const Uint64 now=SDL_GetTicksNS();
-        if(!last_tick){last_tick=now;return;}
+        if(!last_tick){last_tick=now;return false;}
         constexpr double interval=static_cast<double>(HN_CYCLES_PER_FRAME)/static_cast<double>(HN_CLOCK_HZ);
         elapsed=std::min(elapsed+(now-last_tick)/1e9,interval*4);last_tick=now;
+        bool updated=false;
         try{
             for(unsigned catchup=0;elapsed>=interval&&catchup<4;catchup++) {
                 if(audio_pending) {
@@ -283,13 +284,14 @@ struct App {
                 if(!session.frame(paths,keys)){game_fault();break;}
                 if(!SDL_UpdateTexture(texture,nullptr,session.pixels().data(),HN_WIDTH*sizeof(std::uint32_t)))
                     throw std::runtime_error(SDL_GetError());
-                frame_ready=true;audio_pending=audio.available();elapsed-=interval;
+                frame_ready=true;updated=true;audio_pending=audio.available();elapsed-=interval;
             }
             if(audio_pending&&audio.queued_frames()<=32768/8) {
                 if(!audio.submit(session.samples()))throw std::runtime_error(SDL_GetError());
                 audio_pending=false;
             }
         }catch(const std::exception&e){pause_game();notice(e.what(),true);}
+        return updated;
     }
     void draw_game(SDL_Renderer *renderer) {
         if(!frame_ready)return;
@@ -463,7 +465,8 @@ struct App {
         bool changed=ImGui::Checkbox(tr(settings,"WASD movement alternative"),&settings.wasd);
         ImGui::TextUnformatted(tr(settings,"Stick deadzone"));
         ImGui::SetNextItemWidth(std::min(360.f,ImGui::GetContentRegionAvail().x));
-        changed|=ImGui::SliderInt("##stick_deadzone",&settings.deadzone,5,80,"%d%%");
+        ImGui::SliderInt("##stick_deadzone",&settings.deadzone,5,80,"%d%%");
+        changed|=ImGui::IsItemDeactivatedAfterEdit();
         ImGui::TextDisabled("%s",tr(settings,"Select a binding to change it. Escape cancels."));
         float table_height=std::max(130.0f,ImGui::GetContentRegionAvail().y-110.0f);
         if(ImGui::BeginTable("bindings",3,ImGuiTableFlags_BordersInnerH|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY,ImVec2(0,table_height))) {
@@ -516,10 +519,11 @@ struct App {
         changed|=ImGui::Checkbox(tr(settings,"Integer scaling"),&settings.integer_scale);
         changed|=ImGui::Checkbox(tr(settings,"Pause when switching applications"),&settings.pause_unfocused);
         ImGui::Spacing();ImGui::Separator();ImGui::Spacing();
-        changed|=ImGui::SliderInt(tr(settings,"Volume"),&settings.volume,0,100,"%d%%");
+        const bool volume_changed=ImGui::SliderInt(tr(settings,"Volume"),&settings.volume,0,100,"%d%%");
+        changed|=ImGui::IsItemDeactivatedAfterEdit();
         changed|=ImGui::Checkbox(tr(settings,"Mute"),&settings.mute);
         if(!audio.available()) ImGui::TextWrapped("%s",tr(settings,"No audio device is available."));
-        audio.gain(settings.volume,settings.mute);
+        if(changed||volume_changed)audio.gain(settings.volume,settings.mute);
         if(changed)save_preferences();
     }
     void draw(SDL_Window *window) {
@@ -622,22 +626,43 @@ int run(int argc,char **argv)
         if(!startup_error.empty()){app.notice(startup_error,true);app.settings_writable=false;}
         app.check_rom();
         if(!smoke)SDL_ShowWindow(window.value);
+        Uint64 next_ui_frame=0;
+        bool redraw=true;
+        auto dispatch=[&](const SDL_Event &e) {
+            ImGui_ImplSDL3_ProcessEvent(&e);app.event(e,window.value);
+            if(e.type==SDL_EVENT_WINDOW_EXPOSED||e.type==SDL_EVENT_WINDOW_RESIZED||e.type==SDL_EVENT_WINDOW_RESTORED)
+                redraw=true;
+        };
         while(app.running) {
             SDL_Event e;
-            while(SDL_PollEvent(&e)) {
-                ImGui_ImplSDL3_ProcessEvent(&e);app.event(e,window.value);
-            }
+            while(SDL_PollEvent(&e))dispatch(e);
             app.poll_dialog();
-            app.advance();
-            ImGui_ImplSDLRenderer3_NewFrame();ImGui_ImplSDL3_NewFrame();ImGui::NewFrame();
-            app.draw(window.value);
-            ImGui::Render();
-            SDL_SetRenderDrawColor(renderer.value,0,0,0,255);SDL_RenderClear(renderer.value);
-            app.draw_game(renderer.value);
-            ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),renderer.value);
-            SDL_RenderPresent(renderer.value);
-            if(smoke&&++frames>=6)app.running=false;
-            SDL_Delay(app.session.playable()&&!app.paused?1:8);
+            const bool updated=app.advance();
+            const bool minimized=(SDL_GetWindowFlags(window.value)&SDL_WINDOW_MINIMIZED)!=0;
+            const bool playing=app.session.playable()&&!app.paused;
+            const Uint64 now=SDL_GetTicksNS();
+            if(!minimized&&(updated||redraw||(!playing&&now>=next_ui_frame))) {
+                ImGui_ImplSDLRenderer3_NewFrame();ImGui_ImplSDL3_NewFrame();ImGui::NewFrame();
+                app.draw(window.value);
+                ImGui::Render();
+                SDL_SetRenderDrawColor(renderer.value,0,0,0,255);SDL_RenderClear(renderer.value);
+                app.draw_game(renderer.value);
+                ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),renderer.value);
+                SDL_RenderPresent(renderer.value);
+                redraw=false;next_ui_frame=now+1000000000/60;
+                if(smoke&&++frames>=6)app.running=false;
+            }
+            if(!app.running)break;
+            // Wait until the next useful frame, without tying the GBA
+            // clock to monitor refresh or presenting the same texture repeatedly.
+            Uint64 deadline=minimized?now+100000000:next_ui_frame;
+            if(app.session.playable()&&!app.paused) {
+                constexpr double interval=static_cast<double>(HN_CYCLES_PER_FRAME)/static_cast<double>(HN_CLOCK_HZ);
+                deadline=app.last_tick+static_cast<Uint64>(std::max(0.0,interval-app.elapsed)*1e9);
+            }
+            const Uint64 after=SDL_GetTicksNS();
+            const int wait=deadline>after?static_cast<int>(std::clamp<Uint64>((deadline-after)/1000000,1,100)):1;
+            SDL_Delay(wait);
         }
         if(!(SDL_GetWindowFlags(window.value)&SDL_WINDOW_FULLSCREEN)) {
             SDL_GetWindowSize(window.value,&app.settings.window_width,&app.settings.window_height);

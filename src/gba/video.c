@@ -154,7 +154,8 @@ static bool above(Pixel a,Pixel b)
 /* Keep OAM order, including transparent priority effects, but reject objects
    outside this scanline before the per-pixel loop. Registers are stable while
    a line is rendered; raster effects are applied between lines by the clock. */
-static unsigned line_objects(const HNMemory *m,unsigned y,unsigned indices[128])
+typedef struct { unsigned index,left,right; } LineObject;
+static unsigned line_objects(const HNMemory *m,unsigned y,LineObject objects[128])
 {
     static const uint8_t widths[3][4]={{8,16,32,64},{16,32,32,64},{8,8,16,32}};
     static const uint8_t heights[3][4]={{8,16,32,64},{8,8,16,32},{16,32,32,64}};
@@ -169,7 +170,7 @@ static unsigned line_objects(const HNMemory *m,unsigned y,unsigned indices[128])
         int right=ox+w;
         if((a&0x1000)&&right%(int)mh)right+=(int)mh-right%(int)mh;
         if((int)y<oy||(int)y>=oy+h||ox>=HN_WIDTH||right<=0)continue;
-        indices[count++]=n;
+        objects[count++]=(LineObject){n,ox<0?0u:(unsigned)ox,right>HN_WIDTH?HN_WIDTH:(unsigned)right};
     }
     return count;
 }
@@ -189,11 +190,12 @@ void hn_video_render_line(const HNMemory *m,unsigned y,uint32_t *out)
     if(y>=HN_HEIGHT) return;
     unsigned display=reg16(m,0),mode=display&7;
     if(display&0x80){for(unsigned x=0;x<HN_WIDTH;x++)out[x]=0xFFFFFFFFu;return;}
-    unsigned indices[128],object_count=(display&0x1000)?line_objects(m,y,indices):0;
+    LineObject objects[128];unsigned object_count=(display&0x1000)?line_objects(m,y,objects):0;
     for(unsigned x=0;x<HN_WIDTH;x++) {
         Pixel obj=empty(); bool objwindow=false;
         for(unsigned index=0;index<object_count;index++) {
-            unsigned n=indices[index];
+            if(x<objects[index].left||x>=objects[index].right)continue;
+            unsigned n=objects[index].index;
             Pixel p=object(m,n,(int)x,(int)y,display,mode);
             if(p.layer!=4)continue;
             if(((u16(m->oam+n*8)>>10)&3)==2){if(p.opaque)objwindow=true;continue;}
@@ -227,7 +229,8 @@ void hn_video_render_line(const HNMemory *m,unsigned y,uint32_t *out)
         }
         uint16_t color=top.color;
         unsigned ctl=reg16(m,0x50),effect=(ctl>>6)&3;
-        bool first=(ctl&(1u<<top.layer))!=0,second=(ctl&(0x100u<<next.layer))!=0;
+        /* Backdrop is the bottom layer; it cannot blend with itself. */
+        bool first=(ctl&(1u<<top.layer))!=0,second=top.layer!=5&&(ctl&(0x100u<<next.layer))!=0;
         if(mask&32) {
             if((top.semi || (first&&effect==1))&&second)
                 color=blend(color,next.color,reg16(m,0x52)&31,(reg16(m,0x52)>>8)&31);

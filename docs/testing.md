@@ -13,7 +13,9 @@ layouts, corrupt or mismatched ROM/source data and incorrect calling contracts.
   partial faults and pre-existing faults. The fast path is test-only.
 - core: synthetic guest-memory behavior, DMA, BIOS/LZ77, video, timing/IRQ,
   angular axes/quadrants/monotonicity, original button transitions/repeat, PRNG
-  arithmetic, heap and Main script control.
+  arithmetic, heap and Main script control. Wide RAM/ROM reads are checked against
+  byte reads at unaligned addresses, mirrors, region ends and faulting boundaries.
+  Video regressions include backdrop alpha and one-/three-pixel text windows.
 - game: repeated DMA working addresses, byte register writes, transfer queue wrap,
   video shadows, synthetic ROM map changes, preserved render fields, expression
   cursor/recursion boundaries, SRAM checksum/backup recovery, guest input caching
@@ -45,8 +47,8 @@ layouts, corrupt or mismatched ROM/source data and incorrect calling contracts.
 - render: animation repeat/call/delay flow, typed callback guards, physics,
   affine matrices, OAM drawing/order, background motion/repeats/calls/stacks and
   PPU regressions for tile mapping, transparency, mosaic/window phase and effects,
-  including analytically known 4bpp colors for every sub-tile window width and
-  scroll phase with both horizontal flip states;
+  including analytically known 4bpp/8bpp colors for every sub-tile window width and
+  scroll phase, both screen edges and both horizontal flip states;
   word-choice slot setup, coordinate truncation, class gates and priority flags.
 - graphics: palette interpolation/source wrapping, scripted repeat/call/delay
   flow, alpha/mosaic transitions, compressed palette frames, paused states and
@@ -76,7 +78,8 @@ layouts, corrupt or mismatched ROM/source data and incorrect calling contracts.
   a separate validation requirement.
 - session: invalid-ROM rejection without file writes. With a private ROM argument,
   verifies initialization persistence, failed-write retry, retained backups and
-  rejection of partially modified SRAM after a native runtime fault.
+  rejection of partially modified SRAM after a native runtime fault. Shared ROM
+  identity, caller release, final-owner release and repeated restarts are checked.
 - app-smoke: creates an isolated temporary profile, initializes the actual
   SDL renderer and menus for six frames, closes cleanly and removes that profile.
   No graphics, settings, ROM or save files are written in the checkout.
@@ -1262,9 +1265,13 @@ dependency. For example, with Ninja and the compiler on PATH:
 Set HAMTARO_NATIVE_WORK explicitly for these commands. MGBA_SOURCE points to the
 caller-provided source checkout. If the compiler needs runtime DLLs outside PATH,
 pass --runtime-dir PATH_TO_COMPILER_RUNTIME to compare_video.py. The suite compares
-64 synthetic static frames (2,457,600 pixels) without a ROM or output captures.
+128 synthetic static frames (4,915,200 pixels) without a ROM or output captures.
 The RGB555/channel normalization and mosaic/window isolation are described in
 architecture.md; this is not a claim of complete hardware conformance.
+An extended 512-case scan exposes 16 narrow text-window differences with this
+oracle version. Its partial-tile routines can sample the wrong nibble/byte;
+native analytical regressions cover those boundaries independently. Do not
+change the game renderer merely to reproduce these oracle discrepancies.
 
 Add --video-oracle PATH_TO_ORACLE and, if needed,
 --oracle-runtime-dir PATH_TO_COMPILER_RUNTIME to compare_reference.py to compare

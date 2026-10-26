@@ -136,7 +136,7 @@ def main():
     parser.add_argument("--oracle", required=True, type=Path)
     parser.add_argument("--runtime-dir", type=Path, help="Optional directory containing the oracle's runtime DLLs")
     parser.add_argument("--library", type=Path, default=ROOT / "build/Release/hn_reference_probe.dll")
-    parser.add_argument("--cases", type=int, default=64)
+    parser.add_argument("--cases", type=int, default=128)
     args = parser.parse_args()
     if not 2 <= args.cases <= 10000:
         parser.error("--cases must be between 2 and 10000")

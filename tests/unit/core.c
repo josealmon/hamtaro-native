@@ -40,6 +40,28 @@ static void memory_contract(void)
     reset();memory.io[0x202]=0xFF;hn_write16(&memory,0x04000202,3);
     CHECK(memory.io[0x202]==0xFC);
     CHECK(!hn_memory_copy(&memory,0xFFFFFFFE,0x02000000,4));
+    /* Wide reads must agree with individual bytes at unaligned addresses,
+       mirrors, region boundaries and the last readable ROM bytes. */
+    for(unsigned i=0;i<sizeof(rom);i++)rom[i]=(uint8_t)(i*37+11);
+    reset();
+    for(unsigned i=0;i<sizeof(memory.ewram);i++)memory.ewram[i]=(uint8_t)(i*13+3);
+    for(unsigned i=0;i<sizeof(memory.iwram);i++)memory.iwram[i]=(uint8_t)(i*7+5);
+    const GameAddr boundaries[]={0x02000000,0x0203FFFC,0x0207FFFC,0x02FFFFFC,
+        0x03000000,0x03007FFC,0x0300FFFC,0x03FFFFFC,0x04000000,
+        0x08000000,0x080001FC,0x09FFFFFC,0x0A000000,0x0C000000,0x0DFFFFFC,0xFFFFFFFC};
+    for(unsigned i=0;i<sizeof(boundaries)/sizeof(boundaries[0]);i++)for(unsigned offset=0;offset<8;offset++) {
+        GameAddr address=boundaries[i]+offset;
+        for(unsigned width=2;width<=4;width+=2) {
+            memory.fault=false;memory.fault_address=0;uint32_t expected=0;
+            for(unsigned byte=0;byte<width;byte++)expected|=(uint32_t)hn_read8(&memory,address+byte)<<(byte*8);
+            bool fault=memory.fault;GameAddr fault_address=memory.fault_address;
+            memory.fault=false;memory.fault_address=0;
+            CHECK((width==2?hn_read16(&memory,address):hn_read32(&memory,address))==expected);
+            CHECK(memory.fault==fault);
+            if(fault)CHECK(memory.fault_address==fault_address);
+        }
+    }
+    memset(rom,0,sizeof(rom));
 }
 static void dma_and_bios(void)
 {
@@ -87,6 +109,12 @@ static void video_contract(void)
 {
     reset();hn_write16(&memory,0x04000000,0x80);hn_video_render(&memory,frame);
     CHECK(frame[0]==0xFFFFFFFFu && frame[HN_WIDTH*HN_HEIGHT-1]==0xFFFFFFFFu);
+    /* Selecting backdrop as both alpha targets must not brighten empty pixels. */
+    reset();hn_write16(&memory,0x05000000,7|(3<<5)|(9<<10));
+    hn_write16(&memory,0x04000050,0x2060);hn_write16(&memory,0x04000052,0x0B07);
+    hn_video_render(&memory,frame);CHECK(frame[0]==0xFF4A1839u);
+    hn_write16(&memory,0x04000000,0x0100); /* Transparent BG0 still exposes backdrop. */
+    hn_video_render(&memory,frame);CHECK(frame[0]==0xFF4A1839u);
     /* Mode 3 identity affine transform; actual RGB15 conversion. */
     reset();hn_write16(&memory,0x04000000,0x0403);
     hn_write16(&memory,0x04000020,256);hn_write16(&memory,0x04000026,256);

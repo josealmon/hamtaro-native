@@ -30,6 +30,16 @@ clock runs at 16777216/280896 Hz independently of the display refresh.
 The release PE imports only Windows system DLLs and links the MSVC runtime
 statically. A separate clean-machine validation remains pending.
 
+Presentation follows newly produced game frames; launcher updates are capped at
+60 Hz and minimized windows skip presentation. Input polling and waits preserve
+the original game clock and audio backpressure. Sliders update immediately but
+persist preferences when editing finishes, instead of flushing disk on each step.
+Plain RAM/ROM halfword and word reads resolve contiguous bytes once, retaining
+the byte path at boundaries and for device registers. Sprite scanlines retain
+horizontal bounds to reject pixels outside each object without decoding it again.
+Alpha blending requires a layer below the first target; backdrop never blends
+with itself. These changes add no persistent gameplay cache or worker threads.
+
 ## Current coverage
 
 | Area | Status | Evidence or remaining work |
@@ -41,7 +51,7 @@ statically. A separate clean-machine validation remains pending.
 | SRAM file management | Implemented | 32 KiB import/export, atomic writes, previous-copy recovery, exclusive profile lock; End Game trace persists to disk and a fresh host session retains twenty-one words, ten seeds, Bijou and one rescued love in the Clubhouse; actual-window End Game preserves its previous backup, and closing/relaunching the executable restores the same scene and counters |
 | GBA memory and DMA | Foundation | Region/mirroring, read-only IO masks and repeated DMA with working addresses separate from programmed registers; not full hardware conformance |
 | BIOS helpers | Foundation | CpuSet, CpuFastSet, bounded LZ77, division, integer square root, ObjAffine and native angular math; 37,009 angular cases compared with mGBA; square root checked throughout the 16-bit domain and at 32-bit boundaries; hardware conformance remains unverified |
-| Software video | Foundation | 64 synthetic static frames compared with an independent PPU; 30 private ROM snapshots compared, including directional movement; nine clocked VCOUNT frames match independent PPU bands; remaining raster timing pending |
+| Software video | Foundation | 128 synthetic static frames compared with an independent PPU; explicit backdrop-alpha and narrow-window regressions; 30 historical private ROM snapshots compared, including directional movement; nine historical clocked VCOUNT frames match independent PPU bands; remaining raster timing pending |
 | Video timing and IRQ | Foundation | Scanline/VBlank/HBlank/VCOUNT, timers, IRQ flags, FIFO DMA and native IRQ services connected; 9,000 clocked native updates completed; coincident VBlank/HBlank/VCOUNT priority checked; full-machine cadence and DMA bus contention remain unverified |
 | Native game helpers | Adapted | Original guest input layout, directions/repeat/query semantics and integer PRNG/ranges compared; host controls and per-frame PRNG connected |
 | Native heap | Adapted | Original 12-byte nodes and 32-bit links; private ROM function comparisons |

@@ -42,13 +42,39 @@ uint8_t hn_read8(HNMemory *m, GameAddr a)
     const uint8_t *p = resolve(m, a, false);
     return p ? *p : 0;
 }
+/* Plain RAM/ROM reads need one address lookup. Boundary-crossing reads and
+   device registers retain the byte path, including mirrors and side effects. */
+static const uint8_t *plain_read(const HNMemory *m,GameAddr a,unsigned width)
+{
+    unsigned offset;
+    switch(a>>24){
+    case 2:
+        offset=a&0x3FFFF;
+        return offset<=sizeof(m->ewram)-width?m->ewram+offset:NULL;
+    case 3:
+        offset=a&0x7FFF;
+        return offset<=sizeof(m->iwram)-width?m->iwram+offset:NULL;
+    case 8:case 9:case 10:case 11:case 12:case 13:
+        offset=(a-HN_ROM_BASE)&0x1FFFFFF;
+        if(offset<=0x2000000u-width&&offset<=m->rom_size&&width<=m->rom_size-offset)
+            return m->rom+offset;
+        return NULL;
+    default:return NULL;
+    }
+}
 uint16_t hn_read16(HNMemory *m, GameAddr a)
 {
-    return (uint16_t)(hn_read8(m,a) | ((uint16_t)hn_read8(m,a+1) << 8));
+    const uint8_t *p=plain_read(m,a,2);
+    if(p)return (uint16_t)(p[0]|(uint16_t)p[1]<<8);
+    uint16_t low=hn_read8(m,a),high=hn_read8(m,a+1);
+    return (uint16_t)(low|(high<<8));
 }
 uint32_t hn_read32(HNMemory *m, GameAddr a)
 {
-    return (uint32_t)hn_read16(m,a) | ((uint32_t)hn_read16(m,a+2) << 16);
+    const uint8_t *p=plain_read(m,a,4);
+    if(p)return (uint32_t)p[0]|(uint32_t)p[1]<<8|(uint32_t)p[2]<<16|(uint32_t)p[3]<<24;
+    uint32_t low=hn_read16(m,a),high=hn_read16(m,a+2);
+    return low|(high<<16);
 }
 static void raw8(HNMemory *m, GameAddr a, uint8_t v)
 {

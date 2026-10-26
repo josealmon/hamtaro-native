@@ -210,21 +210,24 @@ static void pixel_contracts(void)
 }
 static void clipped_text_tiles(void)
 {
-    /* Analytical 4bpp colors retain sub-tile window/flip coverage where
-       mGBA 0.10.5's flipped suffix optimization reads the wrong nibble. */
+    /* Analytical colors retain sub-tile window/flip coverage where
+       mGBA 0.10.5's partial-tile optimizations read the wrong nibble/byte. */
     reset();hn_write16(&memory,0x04000000,0x2100);hn_write16(&memory,0x04000008,0x1000);
     hn_write16(&memory,0x04000044,160);hn_write16(&memory,0x04000048,1);
     for(unsigned i=1;i<=8;i++)hn_write16(&memory,0x05000000+i*2,(uint16_t)i);
     for(unsigned row=0;row<8;row++){
         hn_write16(&memory,0x06000020+row*4,0x4321);hn_write16(&memory,0x06000022+row*4,0x8765);
+        for(unsigned x=0;x<8;x++)memory.vram[64+row*8+x]=(uint8_t)(x+1);
     }
-    for(unsigned flip=0;flip<2;flip++){
+    for(unsigned eight=0;eight<2;eight++)for(unsigned flip=0;flip<2;flip++){
+        hn_write16(&memory,0x04000008,(uint16_t)(0x1000|(eight?0x80:0)));
         for(unsigned entry=0;entry<1024;entry++)hn_write16(&memory,0x06008000+entry*2,(uint16_t)(1|(flip<<10)));
-        for(unsigned scroll=0;scroll<8;scroll++)for(unsigned width=1;width<=8;width++){
-            unsigned left=240-width;hn_write16(&memory,0x04000010,(uint16_t)scroll);
-            hn_write16(&memory,0x04000040,(uint16_t)((left<<8)|240));hn_video_render_line(&memory,0,pixels);
-            CHECK(pixels[left-1]==0xFF000000u);
-            for(unsigned x=left;x<240;x++){
+        for(unsigned scroll=0;scroll<8;scroll++)for(unsigned width=1;width<=8;width++)for(unsigned edge=0;edge<2;edge++){
+            unsigned left=edge?240-width:0,right=left+width;hn_write16(&memory,0x04000010,(uint16_t)scroll);
+            hn_write16(&memory,0x04000040,(uint16_t)((left<<8)|right));hn_video_render_line(&memory,0,pixels);
+            if(left)CHECK(pixels[left-1]==0xFF000000u);
+            if(right<240)CHECK(pixels[right]==0xFF000000u);
+            for(unsigned x=left;x<right;x++){
                 unsigned index=(x+scroll)&7;index=1+(flip?7-index:index);
                 CHECK(pixels[x]==(0xFF000000u|(index<<3)|(index>>2)));
             }
