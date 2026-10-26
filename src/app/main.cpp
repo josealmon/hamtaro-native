@@ -174,21 +174,38 @@ struct ImGuiSession {
         auto &io=ImGui::GetIO();
         io.ConfigFlags|=ImGuiConfigFlags_NavEnableKeyboard|ImGuiConfigFlags_NavEnableGamepad;
         io.IniFilename=nullptr; io.LogFilename=nullptr;
-        ImGui::StyleColorsDark();
+        wchar_t windows_directory[MAX_PATH]{};
+        const auto length=GetWindowsDirectoryW(windows_directory,MAX_PATH);
+        if(length&&length<MAX_PATH) {
+            const auto font=std::filesystem::path(windows_directory)/L"Fonts"/L"segoeui.ttf";
+            if(std::filesystem::exists(font))io.Fonts->AddFontFromFileTTF(hn::utf8(font).c_str(),18.f);
+        }
+        ImGui::StyleColorsLight();
         auto &s=ImGui::GetStyle();
-        s.FontSizeBase=18; s.WindowRounding=0; s.FrameRounding=5; s.GrabRounding=5;
-        s.WindowPadding=ImVec2(28,24); s.FramePadding=ImVec2(12,8); s.ItemSpacing=ImVec2(12,12);
-        s.Colors[ImGuiCol_WindowBg]=ImVec4(0.075f,0.085f,0.105f,1);
-        s.Colors[ImGuiCol_FrameBg]=ImVec4(0.14f,0.16f,0.19f,1);
-        s.Colors[ImGuiCol_Button]=ImVec4(0.25f,0.20f,0.14f,1);
-        s.Colors[ImGuiCol_ButtonHovered]=ImVec4(0.47f,0.31f,0.14f,1);
-        s.Colors[ImGuiCol_ButtonActive]=ImVec4(0.58f,0.36f,0.12f,1);
-        s.Colors[ImGuiCol_CheckMark]=ImVec4(1,0.70f,0.31f,1);
-        s.Colors[ImGuiCol_SliderGrab]=ImVec4(0.95f,0.62f,0.27f,1);
-        s.Colors[ImGuiCol_Tab]=ImVec4(0.14f,0.16f,0.19f,1);
-        s.Colors[ImGuiCol_TabHovered]=ImVec4(0.40f,0.29f,0.16f,1);
-        s.Colors[ImGuiCol_TabSelected]=ImVec4(0.30f,0.24f,0.16f,1);
-        s.Colors[ImGuiCol_NavCursor]=ImVec4(1,0.70f,0.31f,1);
+        s.FontSizeBase=18; s.WindowRounding=0; s.ChildRounding=20; s.FrameRounding=10; s.GrabRounding=8;
+        s.WindowPadding=ImVec2(24,20); s.FramePadding=ImVec2(16,9); s.ItemSpacing=ImVec2(12,10);
+        s.FrameBorderSize=1; s.ChildBorderSize=1; s.ScrollbarRounding=8;
+        s.Colors[ImGuiCol_Text]=ImVec4(0.28f,0.19f,0.12f,1);
+        s.Colors[ImGuiCol_TextDisabled]=ImVec4(0.51f,0.43f,0.34f,1);
+        s.Colors[ImGuiCol_WindowBg]=ImVec4(0.98f,0.95f,0.88f,1);
+        s.Colors[ImGuiCol_ChildBg]=ImVec4(1.f,0.99f,0.95f,1);
+        s.Colors[ImGuiCol_PopupBg]=ImVec4(1.f,0.99f,0.95f,1);
+        s.Colors[ImGuiCol_Border]=ImVec4(0.85f,0.76f,0.61f,0.65f);
+        s.Colors[ImGuiCol_Separator]=ImVec4(0.85f,0.76f,0.61f,0.55f);
+        s.Colors[ImGuiCol_FrameBg]=ImVec4(0.96f,0.91f,0.81f,1);
+        s.Colors[ImGuiCol_FrameBgHovered]=ImVec4(1.f,0.88f,0.67f,1);
+        s.Colors[ImGuiCol_FrameBgActive]=ImVec4(1.f,0.81f,0.52f,1);
+        s.Colors[ImGuiCol_Button]=ImVec4(0.97f,0.92f,0.82f,1);
+        s.Colors[ImGuiCol_ButtonHovered]=ImVec4(1.f,0.85f,0.61f,1);
+        s.Colors[ImGuiCol_ButtonActive]=ImVec4(0.98f,0.76f,0.43f,1);
+        s.Colors[ImGuiCol_Header]=ImVec4(0.98f,0.85f,0.64f,1);
+        s.Colors[ImGuiCol_HeaderHovered]=s.Colors[ImGuiCol_ButtonHovered];
+        s.Colors[ImGuiCol_HeaderActive]=s.Colors[ImGuiCol_ButtonActive];
+        s.Colors[ImGuiCol_TableHeaderBg]=ImVec4(0.94f,0.87f,0.74f,1);
+        s.Colors[ImGuiCol_CheckMark]=ImVec4(0.76f,0.34f,0.06f,1);
+        s.Colors[ImGuiCol_SliderGrab]=ImVec4(0.92f,0.52f,0.14f,1);
+        s.Colors[ImGuiCol_SliderGrabActive]=ImVec4(0.79f,0.36f,0.07f,1);
+        s.Colors[ImGuiCol_NavCursor]=ImVec4(0.76f,0.34f,0.06f,1);
         ImGui_ImplSDL3_InitForSDLRenderer(window,renderer);
         ImGui_ImplSDLRenderer3_Init(renderer);
     }
@@ -210,7 +227,7 @@ struct App {
     std::vector<std::uint8_t> rom;
     std::string message;
     bool error=false,paused=false,running=true,settings_writable=true;
-    int remap_key=-1,remap_button=-1;
+    int remap_key=-1,remap_button=-1,page=0;
     bool waiting_release=true,audio_pending=false,frame_ready=false;
     Uint64 last_tick=0;
     double elapsed=0;
@@ -352,47 +369,89 @@ struct App {
         }
     }
     void home(SDL_Window *window) {
-        ImGui::Spacing();
-        const float available=ImGui::GetContentRegionAvail().x;
-        const float cover_width=std::min({220.f,available*0.32f,std::max(100.f,(ImGui::GetContentRegionAvail().y-28.f)/1.6f)});
-        if(ImGui::BeginTable("home_layout",2,ImGuiTableFlags_SizingStretchProp)) {
-            ImGui::TableSetupColumn("art",ImGuiTableColumnFlags_WidthFixed,cover_width);
-            ImGui::TableSetupColumn("actions",ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableNextRow();ImGui::TableSetColumnIndex(0);
-            draw_artwork(cover.value,cover_width,cover_width);
-            ImGui::Spacing();
-            draw_artwork(mascot.current(),cover_width,cover_width*0.60f);
-            ImGui::TableSetColumnIndex(1);
+        const auto available=ImGui::GetContentRegionAvail();
+        const float card_width=std::min(760.f,available.x);
+        const float reserve=message.empty()?0.f:52.f;
+        const float card_height=std::clamp(available.y-reserve-8.f,240.f,400.f);
+        const float padding=card_width<650.f?20.f:26.f;
+        const float footer_height=40.f;
+        const float hero_height=card_height-padding*2-footer_height-22.f;
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX()+(available.x-card_width)/2);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY()+std::max(0.f,(available.y-reserve-card_height)/2)-4.f);
+        const auto origin=ImGui::GetCursorScreenPos();
+        ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(origin.x+2,origin.y+5),ImVec2(origin.x+card_width+2,origin.y+card_height+5),IM_COL32(108,73,29,15),20.f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,ImVec2(padding,padding));
+        if(ImGui::BeginChild("home_card",ImVec2(card_width,card_height),ImGuiChildFlags_Borders,ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse)) {
+            const float inner=card_width-padding*2;
+            const float left_width=std::min(260.f,inner*0.42f);
+            const float gap=card_width<650.f?20.f:32.f;
+            const float cover_size=std::min({220.f,left_width-16.f,hero_height-12.f});
+            const ImVec2 cover_pos(padding+(left_width-cover_size)/2,padding+(hero_height-cover_size)/2);
+            ImGui::SetCursorPos(cover_pos);
+            const auto image_pos=ImGui::GetCursorScreenPos();
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(image_pos.x-7,image_pos.y-7),ImVec2(image_pos.x+cover_size+7,image_pos.y+cover_size+7),IM_COL32(231,215,183,255),12.f);
+            ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(image_pos.x-5,image_pos.y-5),ImVec2(image_pos.x+cover_size+5,image_pos.y+cover_size+5),IM_COL32(255,255,250,255),10.f);
+            draw_artwork(cover.value,cover_size,cover_size);
+
+            const float right_x=padding+left_width+gap;
+            const float right_width=inner-left_width-gap;
+            const float button_width=std::min(320.f,right_width);
+            const float button_x=right_x+(right_width-button_width)/2;
+            const float play_height=card_height<320.f?46.f:54.f;
+            const float fixed_height=play_height+44.f+(session.present()?42.f:0.f);
+            float gif_height=std::min(124.f,hero_height-fixed_height-12.f);
+            if(gif_height<44.f)gif_height=0;
+            float y=padding+std::max(0.f,(hero_height-fixed_height-gif_height-(gif_height?12.f:0.f))/2);
+            if(gif_height) {
+                ImGui::SetCursorPos(ImVec2(right_x,y));
+                draw_artwork(mascot.current(),std::min(250.f,right_width),gif_height,true);
+                y+=gif_height+12.f;
+            }
+            ImGui::SetCursorPos(ImVec2(button_x,y));
             ImGui::BeginDisabled(session.present()?!session.playable():rom.empty());
-            ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.88f,0.46f,0.10f,1));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(1.f,0.59f,0.18f,1));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.76f,0.35f,0.06f,1));
-            ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.10f,0.07f,0.03f,1));
-            if(ImGui::Button(tr(settings,session.present()?"Continuar":"Jugar",session.present()?"Resume":"Play"),ImVec2(-1,52))) {
+            ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(1.f,0.64f,0.24f,1));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(1.f,0.72f,0.36f,1));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.96f,0.52f,0.13f,1));
+            ImGui::PushFont(nullptr,21.f);
+            if(ImGui::Button(tr(settings,session.present()?"Continuar":"Jugar",session.present()?"Resume":"Play"),ImVec2(button_width,play_height))) {
                 if(session.present())resume_game();else start_game();
             }
-            ImGui::PopStyleColor(4);ImGui::EndDisabled();
+            ImGui::PopFont();ImGui::PopStyleColor(3);ImGui::EndDisabled();
+            y+=play_height+10.f;
             if(session.present()) {
-                if(ImGui::Button(tr(settings,"Reiniciar juego","Restart game"),ImVec2(-1,0)))start_game();
-                if(ImGui::Button(tr(settings,"Volver al menú","Back to menu"),ImVec2(-1,0))) {
+                ImGui::SetCursorPos(ImVec2(button_x,y));
+                const float half=(button_width-8.f)/2;
+                if(ImGui::Button(tr(settings,"Reiniciar","Restart"),ImVec2(half,32)))start_game();
+                ImGui::SameLine(0,8);
+                if(ImGui::Button(tr(settings,"Volver al menú","Back to menu"),ImVec2(half,32))) {
                     try{stop_game();message.clear();}catch(const std::exception&e){notice(e.what(),true);}
                 }
+                y+=42.f;
             }
-            ImGui::Spacing();
+            const char *rom_label=tr(settings,rom.empty()?"Seleccionar ROM":"Cambiar ROM",rom.empty()?"Select ROM":"Change ROM");
+            const char *status=tr(settings,rom.empty()?"Europa (.gba)":"ROM lista",rom.empty()?"Europe (.gba)":"ROM ready");
+            const float rom_width=ImGui::CalcTextSize(rom_label).x+24.f;
+            const float row_width=rom_width+12.f+ImGui::CalcTextSize(status).x;
+            ImGui::SetCursorPos(ImVec2(right_x+(right_width-row_width)/2,y));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
+            ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0,0,0,0));
             ImGui::BeginDisabled(session.present());
-            if(ImGui::Button(tr(settings,rom.empty()?"Seleccionar ROM":"Cambiar ROM",rom.empty()?"Select ROM":"Change ROM"),ImVec2(-1,0)))
-                choose_file(window,dialog,FileAction::rom);
-            ImGui::EndDisabled();
-            ImGui::TextDisabled("%s",tr(settings,rom.empty()?"ROM europea (.gba)":"ROM lista",rom.empty()?"European ROM (.gba)":"ROM ready"));
-            ImGui::Separator();
+            if(ImGui::Button(rom_label,ImVec2(rom_width,34)))choose_file(window,dialog,FileAction::rom);
+            ImGui::EndDisabled();ImGui::PopStyleColor();ImGui::PopStyleVar();
+            ImGui::SameLine(0,12);ImGui::AlignTextToFramePadding();
+            ImGui::TextColored(rom.empty()?ImVec4(0.51f,0.43f,0.34f,1):ImVec4(0.32f,0.45f,0.21f,1),"%s",status);
+
+            const float footer_y=card_height-padding-footer_height;
+            ImGui::SetCursorPos(ImVec2(padding,footer_y-12.f));ImGui::Separator();
+            ImGui::SetCursorPos(ImVec2(padding,footer_y));
+            const float half=(inner-12.f)/2;
             ImGui::BeginDisabled(session.present());
-            if(ImGui::Button(tr(settings,"Importar partida","Import save"),ImVec2(-1,0)))
-                choose_file(window,dialog,FileAction::import_save);
-            ImGui::EndDisabled();
-            if(ImGui::Button(tr(settings,"Abrir carpeta de la partida","Open save folder"),ImVec2(-1,0)))
+            if(ImGui::Button(tr(settings,"Importar partida","Import save"),ImVec2(half,footer_height)))choose_file(window,dialog,FileAction::import_save);
+            ImGui::EndDisabled();ImGui::SameLine(0,12);
+            if(ImGui::Button(tr(settings,"Abrir carpeta","Open save folder"),ImVec2(half,footer_height)))
                 ShellExecuteW(nullptr,L"open",paths.save().parent_path().c_str(),nullptr,nullptr,SW_SHOWNORMAL);
-            ImGui::EndTable();
         }
+        ImGui::EndChild();ImGui::PopStyleVar();
     }
     void controls() {
         ImGui::Spacing();
@@ -466,19 +525,28 @@ struct App {
         ImGui::SetNextWindowPos(viewport->WorkPos);ImGui::SetNextWindowSize(viewport->WorkSize);
         ImGui::Begin(game_title,nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoMove|
                                               ImGuiWindowFlags_NoSavedSettings);
-        if(logo.value)draw_artwork(logo.value,320.f,viewport->WorkSize.y*0.16f,true);
-        else ImGui::TextColored(ImVec4(1,0.73f,0.39f,1),"%s",game_title);
-        if(session.present())ImGui::TextUnformatted(tr(settings,"PAUSA","PAUSED"));
+        if(logo.value)draw_artwork(logo.value,300.f,std::clamp(viewport->WorkSize.y*0.14f,60.f,100.f),true);
+        else ImGui::TextUnformatted(game_title);
         ImGui::Spacing();
-        if(ImGui::BeginTabBar("pages")) {
-            if(ImGui::BeginTabItem(tr(settings,"Inicio","Home"))){home(window);ImGui::EndTabItem();}
-            if(ImGui::BeginTabItem(tr(settings,"Controles","Controls"))){controls();ImGui::EndTabItem();}
-            if(ImGui::BeginTabItem(tr(settings,"Pantalla y sonido","Video and audio"))){presentation(window);ImGui::EndTabItem();}
-            ImGui::EndTabBar();
+        const char *pages[]={tr(settings,"Inicio","Home"),tr(settings,"Controles","Controls"),tr(settings,"Pantalla y sonido","Video and audio")};
+        float navigation_width=16.f;
+        for(const auto *label:pages)navigation_width+=ImGui::CalcTextSize(label).x+36.f;
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.f,(ImGui::GetContentRegionAvail().x-navigation_width)/2));
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,18.f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
+        for(int i=0;i<3;i++) {
+            if(i)ImGui::SameLine(0,8);
+            ImGui::PushStyleColor(ImGuiCol_Button,page==i?ImVec4(0.98f,0.85f,0.64f,1):ImVec4(0,0,0,0));
+            if(ImGui::Button(pages[i],ImVec2(ImGui::CalcTextSize(pages[i]).x+36.f,36.f)))page=i;
+            ImGui::PopStyleColor();
         }
+        ImGui::PopStyleVar(2);ImGui::Spacing();
+        if(page==0)home(window);
+        else if(page==1)controls();
+        else presentation(window);
         if(!message.empty()) {
             ImGui::Spacing();ImGui::Separator();
-            ImGui::PushStyleColor(ImGuiCol_Text,error?ImVec4(1,0.57f,0.53f,1):ImVec4(0.63f,0.85f,0.65f,1));
+            ImGui::PushStyleColor(ImGuiCol_Text,error?ImVec4(0.68f,0.19f,0.13f,1):ImVec4(0.29f,0.43f,0.19f,1));
             ImGui::TextWrapped("%s",message.c_str());ImGui::PopStyleColor();
         }
         if(!settings_writable) ImGui::TextWrapped("%s",tr(settings,
