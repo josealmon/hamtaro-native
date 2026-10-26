@@ -93,6 +93,19 @@ static void dma(void)
     CHECK(apu.fifo[0].sample==2&&memory.dma_source[1]==0x02000020);
     CHECK(hn_read32(&memory,0x040000BC)==0x02000000);advance(64*23);
     CHECK(apu.fifo[0].sample==25&&memory.dma_source[1]==0x02000030);
+    /* The driver's stop/restart sequence changes an already enabled DMA to
+       immediate mode before disabling it. That write must not enqueue data. */
+    HNAudioFifo queued=apu.fifo[0];
+    hn_write32(&memory,0x040000C4,0x84400004);
+    CHECK(memcmp(&queued,&apu.fifo[0],sizeof(queued))==0);
+    CHECK(memory.dma_source[1]==0x02000030);
+    hn_write16(&memory,0x040000C6,0x0400);
+    hn_write16(&memory,0x040000C6,0xB600);
+    CHECK(memory.dma_source[1]==0x02000000);
+    CHECK(memcmp(&queued,&apu.fifo[0],sizeof(queued))==0);
+    /* Already queued bytes survive restart, then DMA reads the new buffer. */
+    for(unsigned i=26;i<=48;i++){advance(64);CHECK(apu.fifo[0].sample==(int)i);}
+    advance(64);CHECK(apu.fifo[0].sample==1);
     /* Non-repeat DMA disables after its first four-word refill. */
     reset();hn_write32(&memory,0x040000BC,0x0200000C);hn_write32(&memory,0x040000C0,0x040000A4);
     hn_write32(&memory,0x040000C4,0xB080FFFF);hn_dma_sound(&memory,1);

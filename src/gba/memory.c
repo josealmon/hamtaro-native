@@ -90,14 +90,21 @@ static void store_io32(HNMemory *m, unsigned o, uint32_t v)
 {
     for (unsigned i=0;i<4;i++) m->io[o+i] = (uint8_t)(v >> (8*i));
 }
+static void dma_transfer(HNMemory *,unsigned channel,unsigned timing,bool sound);
 static void dma_control_written(HNMemory *m,unsigned channel)
 {
     unsigned offset=0xB0+12*channel;
-    m->dma_latched[channel]=(io32(m,offset+8)&0x80000000u)!=0;
-    if(m->dma_latched[channel]){
+    bool enabled=(io32(m,offset+8)&0x80000000u)!=0;
+    /* Only the enable edge latches addresses and schedules immediate DMA.
+       The audio driver rewrites timing/repeat while stopping an active DMA. */
+    if(!enabled)m->dma_latched[channel]=false;
+    else if(!m->dma_latched[channel]){
+        m->dma_latched[channel]=true;
         m->dma_source[channel]=io32(m,offset);
         m->dma_destination[channel]=io32(m,offset+4);
-        if(!m->dma_active)hn_dma_trigger(m,0);
+        if(!m->dma_active&&((io32(m,offset+8)>>28)&3)==0){
+            m->dma_active=true;dma_transfer(m,channel,0,false);m->dma_active=false;
+        }
     }
 }
 void hn_write8(HNMemory *m, GameAddr a, uint8_t v)

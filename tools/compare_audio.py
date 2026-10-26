@@ -198,6 +198,34 @@ def dma(c, rng):
             if step % 8 == 0:
                 c.compare(f"DMA case {case} step {step}", dma=True)
 
+def dma_restart(c):
+    # Original driver: clear repeat/change timing while enabled, disable, then
+    # re-enable. A control rewrite must not schedule an extra immediate burst.
+    for width in (1, 2, 4):
+        c.reset()
+        for i in range(1024):
+            c.seed(i * 4, (i * 0x070B0D11 + 0x12345678) & 0xFFFFFFFF)
+        c.write(2, 0x84, 0x80)
+        c.write(2, 0x82, 0xA90E)
+        for i in range(2):
+            c.write(4, 0xBC + i * 12, 0x02000000 + i * 2048)
+            c.write(4, 0xC0 + i * 12, 0x040000A0 + i * 4)
+            c.write(4, 0xC4 + i * 12, 0xB6000004)
+        c.write(4, 0x100, 0x0080FC00)
+        c.advance(26 * 1024 + 128)
+        c.compare(f"DMA restart width {width} before", dma=True)
+        for i in range(2):
+            offset = 0xC4 + i * 12
+            c.write(width, offset + (4 - width), 0x84400004 >> ((4 - width) * 8))
+        c.advance(128)
+        c.compare(f"DMA restart width {width} enabled rewrite", dma=True)
+        for i in range(2):
+            c.write(2, 0xC6 + i * 12, 0x0400)
+            c.write(2, 0xC6 + i * 12, 0xB600)
+        for step in range(32):
+            c.advance(1024)
+            c.compare(f"DMA restart width {width} step {step}", dma=True)
+
 def psg(c, rng):
     for case in range(32):
         c.reset()
@@ -271,6 +299,7 @@ def main():
         timers(c, rng)
         fifos(c, rng)
         dma(c, rng)
+        dma_restart(c)
         psg(c, rng)
         waves(c, rng)
         sweeps(c, rng)

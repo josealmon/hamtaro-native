@@ -79,6 +79,34 @@ static void dma_and_bios(void)
     hn_dma_trigger(&memory,1);
     CHECK(hn_read32(&memory,0x03000100)==0xAABBCCDD);
     CHECK(hn_read16(&memory,0x04000202)&0x800);
+    /* Rewriting an enabled channel preserves working addresses. Only a new
+       enable edge latches the programmed source/destination registers. */
+    for(unsigned channel=0;channel<4;channel++)for(unsigned width=1;width<=4;width*=2){
+        reset();unsigned base=0x040000B0+channel*12;
+        hn_write32(&memory,0x02000000,0x11111111);hn_write32(&memory,0x02000004,0x22222222);
+        hn_write32(&memory,0x02000100,0x33333333);
+        hn_write32(&memory,base,0x02000000);hn_write32(&memory,base+4,0x03000000);
+        hn_write32(&memory,base+8,0xA6000001);hn_dma_trigger(&memory,2);
+        hn_write32(&memory,base,0x02000100);hn_write32(&memory,base+4,0x03000100);
+        if(width==1)hn_write8(&memory,base+11,0xA6);
+        else if(width==2)hn_write16(&memory,base+10,0xA600);
+        else hn_write32(&memory,base+8,0xA6000001);
+        hn_dma_trigger(&memory,2);
+        CHECK(hn_read32(&memory,0x03000000)==0x11111111);
+        CHECK(hn_read32(&memory,0x03000004)==0x22222222&&hn_read32(&memory,0x03000100)==0);
+        hn_write16(&memory,base+10,0x2600);hn_write16(&memory,base+10,0xA600);
+        hn_dma_trigger(&memory,2);
+        CHECK(hn_read32(&memory,0x03000100)==0x33333333&&!memory.fault);
+    }
+    /* Starting another immediate channel must not trigger an enabled channel
+       whose timing was rewritten without a new enable edge. */
+    reset();hn_write32(&memory,0x02000000,0x12345678);
+    hn_write32(&memory,0x040000B0,0x02000000);hn_write32(&memory,0x040000B4,0x03000000);
+    hn_write32(&memory,0x040000B8,0xA6000001);hn_write32(&memory,0x040000B8,0x84000001);
+    hn_write32(&memory,0x040000D4,0x02000000);hn_write32(&memory,0x040000D8,0x03000100);
+    hn_write32(&memory,0x040000DC,0x84000001);
+    CHECK(hn_read32(&memory,0x03000100)==0x12345678&&hn_read32(&memory,0x03000000)==0);
+    reset();hn_write32(&memory,0x02000000,0xAABBCCDD);
     CHECK(hn_bios_cpu_set(&memory,0x02000000,0x03000200,0x05000003));
     CHECK(hn_read32(&memory,0x03000208)==0xAABBCCDD);
     CHECK(hn_bios_cpu_fast_set(&memory,0x02000000,0x03000300,0x01000001));

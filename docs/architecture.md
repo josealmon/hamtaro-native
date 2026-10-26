@@ -1310,13 +1310,17 @@ before adding FIFO PCM, with the wave channel's opposite polarity. This follows
 the documented digital DAC contract rather than adding unipolar signals to the
 FIFO range. Final clipping/quantization stays in the shared PWM path.
 
-The hardware harness now covers 10,432 synthetic snapshots, totaling 698,616
+The hardware harness now covers 10,534 synthetic snapshots, totaling 703,410
 field checks including the Direct Sound cases above. PSG checks cover steady
 pulse/noise periods and envelopes, wave order/attenuation/bank rotation,
 sweep/length/control state and routing/master volume. Native analytic tests
 also cover first-step suppression, retriggers, deferred period reload, both
 two-bank starting selections, complete polynomial cycles, physical mix polarity
 and partition-invariant stereo output with all four generators plus PCM.
+DMA restart cases cover byte, halfword and word control writes, queued samples
+across disable/re-enable, and both sound channels. Working addresses latch only
+on an enable edge; rewriting timing/repeat on an enabled channel must not start
+another transfer. Immediate starts target only the newly enabled channel.
 
 These are component comparisons with explicit oracle limits. Noise tests inject
 GBATEK's initial polynomial seed into the test oracle; stock mGBA 0.10.5 uses
@@ -1330,11 +1334,15 @@ inactive digital zero and inverted wave polarity for the mix component test;
 stock mGBA's final PSG DAC waveform is not asserted equal. No source/library
 from that oracle is linked into the native hardware model.
 
-Game-loop/host delivery now runs in the native window, with clear menu playback
-confirmed by the user. Analog filtering, real trigger/retrigger timing and complete
-pre-device game-output comparisons remain pending. The hardware checks and driver
-comparisons do not establish correct sound throughout the game. Hardware captures
-are still needed to resolve the startup and model-specific uncertainties.
+An input-only name-entry capture exposed spurious DMA transfers during the
+driver's periodic buffer restart. They produced short incorrect sample blocks
+about every 150 ms. Correcting the enable-edge contract removes those blocks;
+the user confirmed that the corrected recording no longer has the background
+clicks. Separate before/after runs through name entry and the bedroom preserve
+all 9,870 rendered frames and final guest RAM/IO/SRAM, while correcting audio.
+This bounded capture does not assert waveform equality with stock mGBA or
+correct sound throughout the game. Real trigger/retrigger timing, analog output
+and hardware captures remain needed to resolve model-specific uncertainties.
 
 The optional mGBA 0.10.5 software PPU oracle is a separate test build; its code and
 runtime never enter the application or package. Static synthetic comparisons
