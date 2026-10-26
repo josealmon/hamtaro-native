@@ -895,6 +895,14 @@ The runtime follows the source's VBlank service, input, Main, follower motion,
 actors, tasks, background/object/graphics scripts, mosaic and PRNG update order.
 CPU instruction costs and timed CPU transfers are not modeled. Source-level and
 clocked native schedules are separate evidence; neither proves full-machine parity.
+The source/ROM background inventory covers 585 fields and 3,281 command/stop
+positions, including the older positional builtins. Static calls, jumps and both
+conditional successors stay within that source inventory. No command uses the
+CPU queue (9C through 9F). A separate source review covers all 322 active literal
+Main background targets, 466 descriptor/table pointers and twelve zero-pointer
+commands whose masks deactivate the slot. This establishes the reviewed retail
+resource domain; it does not implement queue timing or support arbitrary script
+mutation. A nonempty CPU queue still stops explicitly.
 
 Scanline object culling preserves OAM order, transparent priority effects, mosaic
 bounds and raster register changes between lines. On the local test machine it
@@ -1075,8 +1083,11 @@ Surface-height updates retain unsigned region boundaries, one-step overshoot and
 leader/follower aliases. Region audio reads its records from the player's ROM,
 preserves inclusive signed bounds, truncated volume products and song suppression.
 The original clamped-approach zero-duration path and inside-region audio modes
-above two read uninitialized source values; these cases fail explicitly until a
-defined caller contract is established. They are not silently replaced with host data.
+above two read uninitialized source values. All 56 literal clamped-approach calls
+have an immediately preceding positive duration write, followed only by three
+control writes; no named entry jumps bypass that setup. All nine literal regional
+audio calls use modes zero, one or two. The native guards retain explicit failure
+outside these reviewed caller domains instead of inventing source values.
 
 Shared scene motion is grouped in scene_motion.c. Its two complete source families
 retain strict rectangle edges, signed-half coordinate wrapping, midpoint rounding,
@@ -1399,6 +1410,14 @@ source contracts distinguish the 36 editor declarations from ordinary gameplay.
 Shared scripts also contain normal game subroutines, which remain adapted.
 This review does not claim a universal indirect call graph or support for the
 internal editors. The four link declarations remain outside the first release.
+
+Task-text F4 consumes a one-byte callback index. Its function address is set by
+Main opcode 25, not stored after F4 in the text stream. The typed-store inventory
+checks all 215 source initializers against their six compiled ROM bytes: their
+208 distinct targets all have explicit text-task dispatch. A Main binding alone
+does not satisfy that check. This replaces the older raw F4-plus-pointer candidate
+scan; index lifetime and callback semantics still have their separate source and
+function comparisons.
 
 | Batch order | Source families and purpose | Completion evidence |
 | --- | --- | --- |

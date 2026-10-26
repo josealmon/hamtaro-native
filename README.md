@@ -1,6 +1,6 @@
 # Hamtaro Native
 
-Windows x64 native-port work for Hamtaro: Ham-Ham Heartbreak (European AH3P revision 0).
+Windows x64 native-port candidate for Hamtaro: Ham-Ham Heartbreak (European AH3P revision 0).
 You must provide your own compatible .gba file. No game assets or ROM are included.
 
 The application imports and validates a ROM, runs adapted native game logic,
@@ -32,10 +32,11 @@ entry fees, the nine-rock reward, replay rejection and saved continuation.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 
-This development build does not yet have verified coverage of every single-player
+This candidate does not yet have verified coverage of every single-player
 branch. Further optional activities, minigame variants, physical controllers and a
 full desktop playthrough remain unverified. Title language changes, localized
 Status, original saving and Continue are exercised in all five ROM languages.
+Startup on a Windows installation without development tools remains unverified.
 See [docs/architecture.md](docs/architecture.md) for the tested routes and their limits.
 
 ## Build

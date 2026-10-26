@@ -3,6 +3,11 @@
 Build and run CTest as described in the README. Tests stay active in Release
 builds and use explicit checks rather than assertions removed by NDEBUG.
 
+Run the asset-free Python checks with
+`python -B -m unittest discover -s tests/unit -p "*.py"`. CI uses the same command.
+The 35 tests include the scenario format and inventories that reject unknown
+layouts, corrupt or mismatched ROM/source data and incorrect calling contracts.
+
 - probe: RAM snapshots are byte-for-byte equivalent to the original bus reader,
   including full regions, last bytes, mirrors, IO/ROM fallback, address wrapping,
   partial faults and pre-existing faults. The fast path is test-only.
@@ -104,6 +109,29 @@ entire story through desktop automation; inspect the window when a change affect
 desktop integration or presentation.
 An uninterrupted manual desktop playthrough is supplementary release evidence,
 not a gate for each batch. Physical-controller validation is deferred to the user.
+
+The existing read-only inventory also checks compiled script boundaries:
+
+    python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP --background-scripts --rom PATH_TO_YOUR_AH3P_ROM
+    python -B tools/inventory_reference.py --reference PATH_TO_READ_ONLY_DECOMP --task-callbacks --rom PATH_TO_YOUR_AH3P_ROM
+
+Use `--json` for private metadata on stdout; do not version generated inventories.
+Both modes require the supported ROM hash. The background mode verifies each
+source macro at its physical ROM position and follows static calls, jumps and both
+conditional successors. It includes the positional u8-array builtins omitted by
+the former designated-field-only census: 585 fields and 3,281 command/stop positions,
+with zero CPU-queue instructions. Its bounded layout reader rejects unclassified
+macro uses instead of silently skipping them. The task mode verifies 215 typed
+Main opcode-25 stores, all 208 targets having text-task dispatch. Raw F4-plus-pointer
+patterns are unsuitable because F4 carries an index, not an address.
+
+Synthetic inventory cases cover branch outcomes, calls/continuations, repeat exits,
+stop behavior, misleading operand bytes, bad targets/truncation, positional layouts,
+source/ROM disagreement, Thumb pointers and a Main-only binding rejected as a task
+binding. These checks establish their stated source domains; they do not execute
+gameplay, emulate CPU-transfer timing or prove all store-before-use relationships.
+All native sources and executable/probe hashes remain unchanged, so prior native
+comparisons and story evidence are reused.
 
 The last complete suite passed 5,861,660 checks in 668.028 seconds. It retains
 all 45 preceding named phases and their previous assertion counts, adding 2,502
