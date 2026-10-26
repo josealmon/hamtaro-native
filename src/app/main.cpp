@@ -342,7 +342,7 @@ struct App {
         if(e.type==SDL_EVENT_KEY_DOWN && !e.key.repeat) {
             if(remap_key>=0) {
                 if(e.key.scancode!=SDL_SCANCODE_ESCAPE && e.key.scancode!=SDL_SCANCODE_F11)
-                    settings.keys[remap_key]=e.key.scancode;
+                    settings.bind_key(remap_key,e.key.scancode);
                 remap_key=-1;input.clear();save_preferences();return;
             }
             if(e.key.scancode==SDL_SCANCODE_ESCAPE) {
@@ -462,7 +462,12 @@ struct App {
             }
             ImGui::EndCombo();
         }
+        const bool wasd_available=settings.wasd_available();
+        ImGui::BeginDisabled(!wasd_available);
         bool changed=ImGui::Checkbox(tr(settings,"WASD movement alternative"),&settings.wasd);
+        ImGui::EndDisabled();
+        if(!wasd_available&&ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("%s",tr(settings,"Unassign W, A, S and D in the table to enable this option."));
         ImGui::TextUnformatted(tr(settings,"Stick deadzone"));
         ImGui::SetNextItemWidth(std::min(360.f,ImGui::GetContentRegionAvail().x));
         ImGui::SliderInt("##stick_deadzone",&settings.deadzone,5,80,"%d%%");
@@ -497,7 +502,7 @@ struct App {
         }
         if(ImGui::Button(tr(settings,"Reset controls"))) {
             auto defaults=hn::Settings::defaults();settings.keys=defaults.keys;settings.buttons=defaults.buttons;
-            settings.deadzone=defaults.deadzone;settings.wasd=true;remap_key=-1;remap_button=-1;changed=true;
+            settings.deadzone=defaults.deadzone;settings.wasd=defaults.wasd;remap_key=-1;remap_button=-1;changed=true;
         }
         if(changed)save_preferences();
     }

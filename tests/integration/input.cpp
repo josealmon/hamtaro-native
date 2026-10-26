@@ -80,6 +80,26 @@ int main()
             focus.type=SDL_EVENT_WINDOW_FOCUS_GAINED;input.event(focus);
             CHECK(input.buttons(settings)==0);
             CHECK(!input.sample(settings));
+            // Every WASD key assigned to any action disables the alternative,
+            // so a press produces only the selected action, including short taps.
+            const auto defaults=hn::Settings::defaults();
+            CHECK(defaults.wasd&&defaults.wasd_available());
+            for(auto code:{SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D}) {
+                for(unsigned action=0;action<10;action++) {
+                    settings=defaults;input.clear();settings.bind_key(action,code);
+                    CHECK(!settings.wasd&&!settings.wasd_available());
+                    const auto expected=static_cast<std::uint16_t>(1u<<action);
+                    key(input,code,true);CHECK(input.buttons(settings)==expected);
+                    key(input,code,false);CHECK(input.sample(settings)==expected&&!input.sample(settings));
+                    settings.bind_key(action,defaults.keys[action]);
+                    CHECK(!settings.wasd&&settings.wasd_available());
+                }
+            }
+            settings.bind_key(0,SDL_SCANCODE_W);settings.bind_key(1,SDL_SCANCODE_A);
+            settings.bind_key(0,defaults.keys[0]);CHECK(!settings.wasd_available()&&!settings.wasd);
+            settings.bind_key(1,defaults.keys[1]);CHECK(settings.wasd_available()&&!settings.wasd);
+            settings.wasd=true;key(input,SDL_SCANCODE_W,true);CHECK(input.sample(settings)==HN_UP);
+            key(input,SDL_SCANCODE_W,false);input.clear();settings=defaults;
             SDL_VirtualJoystickDesc desc{};SDL_INIT_INTERFACE(&desc);
             desc.type=SDL_JOYSTICK_TYPE_GAMEPAD;desc.naxes=SDL_GAMEPAD_AXIS_COUNT;
             desc.nbuttons=SDL_GAMEPAD_BUTTON_COUNT;desc.name="Hamtaro synthetic test gamepad";

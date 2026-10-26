@@ -10,6 +10,8 @@ struct Settings {
     bool fullscreen=false,integer_scale=false,mute=false,wasd=true,pause_unfocused=false;
     int language=automatic_language;
     static Settings defaults();
+    bool wasd_available() const;
+    void bind_key(std::size_t action,int scancode);
 };
 Settings load_settings(const Paths &);
 void save_settings(const Paths &,const Settings &);

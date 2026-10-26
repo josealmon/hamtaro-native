@@ -28,6 +28,17 @@ Settings Settings::defaults()
                SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER,SDL_GAMEPAD_BUTTON_LEFT_SHOULDER};
     return s;
 }
+bool Settings::wasd_available() const
+{
+    return std::none_of(keys.begin(),keys.end(),[](int key){
+        return key==SDL_SCANCODE_W||key==SDL_SCANCODE_A||key==SDL_SCANCODE_S||key==SDL_SCANCODE_D;
+    });
+}
+void Settings::bind_key(std::size_t action,int scancode)
+{
+    keys.at(action)=scancode;
+    if(!wasd_available())wasd=false;
+}
 Settings load_settings(const Paths &paths)
 {
     auto s=Settings::defaults();
@@ -62,6 +73,7 @@ Settings load_settings(const Paths &paths)
         s.keys[i]=integer("key."+std::string(action_names[i]),s.keys[i],1,SDL_SCANCODE_COUNT-1);
         s.buttons[i]=integer("pad."+std::string(action_names[i]),s.buttons[i],0,SDL_GAMEPAD_BUTTON_COUNT-1);
     }
+    if(!s.wasd_available())s.wasd=false;
     return s;
 }
 void save_settings(const Paths &paths,const Settings &s)

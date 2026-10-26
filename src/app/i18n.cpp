@@ -24,6 +24,7 @@ constexpr std::array<const char *,5> messages[]={
     {"Sin mando conectado","No gamepad connected","Aucune manette connectée","Kein Controller verbunden","Nessun controller collegato"},
     {"Mando activo","Active gamepad","Manette active","Aktiver Controller","Controller attivo"},
     {"WASD como alternativa de movimiento","WASD movement alternative","Déplacement alternatif avec WASD","Alternativ mit WASD bewegen","Movimento alternativo con WASD"},
+    {"Libera W, A, S y D en la tabla para activar esta opción.","Unassign W, A, S and D in the table to enable this option.","Libérez W, A, S et D dans le tableau pour activer cette option.","Entferne die Belegungen für W, A, S und D in der Tabelle, um diese Option zu aktivieren.","Rimuovi le assegnazioni di W, A, S e D nella tabella per attivare questa opzione."},
     {"Zona muerta del stick","Stick deadzone","Zone morte du stick","Stick-Totzone","Zona morta dello stick"},
     {"Pulsa un botón de la tabla para cambiarlo. Escape cancela.","Select a binding to change it. Escape cancels.","Choisissez une touche à modifier. Échap annule.","Zum Ändern eine Belegung wählen. Esc bricht ab.","Seleziona un comando da modificare. Esc annulla."},
     {"Acción GBA","GBA action","Action GBA","GBA-Aktion","Azione GBA"},

@@ -85,6 +85,8 @@ Directions: arrows or WASD / D-pad or left stick. GBA A: Z / south button.
 GBA B: X / east button. L/R: Q/E / shoulders. Start: Enter / Start.
 Select: right Shift / Back. Port menu: Escape / right-stick click. Fullscreen: F11.
 Bindings, deadzone, video and sound settings are configurable.
+Assigning W, A, S or D to an action disables the WASD movement alternative.
+It stays unavailable until those keys are unassigned; resetting controls enables it again.
 
 Import an original 32 KiB .sav from Home, or open the save folder to copy it.
 Emulator save states are not compatible. Importing a ROM never replaces an existing save.

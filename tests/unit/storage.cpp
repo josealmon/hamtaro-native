@@ -63,6 +63,14 @@ static std::filesystem::path preferences(const std::filesystem::path &applicatio
         hn::ProfileLock released(profile);
     }
     child(input_test,{L"--settings",profile.root.native()});
+    // A legacy profile may have both an explicit W binding and WASD enabled.
+    // Opening/closing the app must preserve the binding and persist WASD off.
+    settings.keys[0]=SDL_SCANCODE_W;settings.wasd=true;hn::save_settings(profile,settings);
+    child(application,{L"--smoke-test",L"--data-dir",profile.root.native()});
+    const auto normalized=hn::load_settings(profile);
+    CHECK(normalized.keys==settings.keys&&!normalized.wasd&&!normalized.wasd_available());
+    const auto normalized_bytes=hn::read_file(profile.settings(),65536);
+    CHECK(std::string(normalized_bytes.begin(),normalized_bytes.end()).find("\nwasd=0\n")!=std::string::npos);
     const std::string future="version=99\r\nvolume=37\r\nfuture.option=734\r\n";
     hn::atomic_text(profile.settings(),future);
     child(application,{L"--smoke-test",L"--data-dir",profile.root.native()});
@@ -98,6 +106,16 @@ int main()
         CHECK(hn::game_window_size(960,640,900,600)==three_times);
         CHECK(hn::game_window_size(960,640,700,450)==two_times);
         CHECK(!hn::load_settings(paths).pause_unfocused);
+        for(auto key:{SDL_SCANCODE_W,SDL_SCANCODE_A,SDL_SCANCODE_S,SDL_SCANCODE_D}) {
+            hn::atomic_text(paths.settings(),"version=1\nwasd=1\nkey.A="+std::to_string(key)+"\n");
+            auto bound=hn::load_settings(paths);
+            CHECK(bound.keys[0]==key&&!bound.wasd&&!bound.wasd_available());
+            hn::save_settings(paths,bound);CHECK(!hn::load_settings(paths).wasd);
+            bound.bind_key(0,SDL_SCANCODE_Z);hn::save_settings(paths,bound);
+            CHECK(hn::load_settings(paths).wasd_available()&&!hn::load_settings(paths).wasd);
+        }
+        hn::save_settings(paths,hn::Settings::defaults());
+        CHECK(hn::load_settings(paths).wasd&&hn::load_settings(paths).wasd_available());
         CHECK(hn::language_from_windows_id(MAKELANGID(LANG_SPANISH,SUBLANG_SPANISH_MEXICAN))==0);
         CHECK(hn::language_from_windows_id(MAKELANGID(LANG_ENGLISH,SUBLANG_ENGLISH_UK))==1);
         CHECK(hn::language_from_windows_id(MAKELANGID(LANG_FRENCH,SUBLANG_FRENCH_CANADIAN))==2);
