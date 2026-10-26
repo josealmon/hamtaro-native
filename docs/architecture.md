@@ -11,6 +11,9 @@ This repository has independent history and contains no resource catalogs from
 the reference. The player imports the 16 MiB European AH3P revision 0 ROM.
 Read-only resource data stays in that private file. Metadata may contain names,
 addresses, lengths and hashes, never an embedded copy of a game resource.
+The launcher and native session share one immutable 16 MiB ROM buffer. The
+session retains ownership while the core holds raw pointers into it; stopping
+the session releases its reference without retaining a second allocation.
 
 C17 compatibility/game code uses GameAddr (uint32_t) for GBA addresses and
 explicit little-endian memory access. Host pointers never enter serialized

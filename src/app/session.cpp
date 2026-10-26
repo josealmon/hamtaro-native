@@ -1,6 +1,7 @@
 #include "app/session.h"
 #include <algorithm>
 #include <stdexcept>
+#include <utility>
 namespace hn {
 void Session::capture_save()
 {
@@ -14,13 +15,13 @@ void Session::persist(const Paths &paths)
     if(!pending_)return;
     write_save(paths,*pending_);committed_=*pending_;pending_.reset();
 }
-bool Session::start(const Paths &paths,std::span<const std::uint8_t> rom)
+bool Session::start(const Paths &paths,Rom rom)
 {
     if(present())throw std::runtime_error("Stop the current game before starting another.");
-    if(validate_rom(rom)!=RomStatus::valid)throw std::runtime_error("A verified AH3P revision 0 ROM is required.");
+    if(!rom||validate_rom(*rom)!=RomStatus::valid)throw std::runtime_error("A verified AH3P revision 0 ROM is required.");
     Save saved=load_save(paths);
-    rom_.assign(rom.begin(),rom.end());game_=std::make_unique<HNGame>();committed_=saved;
-    if(!hn_game_initialize(game_.get(),rom_.data(),rom_.size(),saved.data()))return false;
+    rom_=std::move(rom);game_=std::make_unique<HNGame>();committed_=saved;
+    if(!hn_game_initialize(game_.get(),rom_->data(),rom_->size(),saved.data()))return false;
     capture_save();persist(paths);return true;
 }
 bool Session::frame(const Paths &paths,std::uint16_t buttons)
@@ -32,7 +33,7 @@ bool Session::frame(const Paths &paths,std::uint16_t buttons)
 }
 void Session::stop(const Paths &paths)
 {
-    persist(paths);game_.reset();rom_.clear();
+    persist(paths);game_.reset();rom_.reset();
 }
 std::span<const std::uint32_t> Session::pixels() const
 { return game_?std::span<const std::uint32_t>(game_->pixels):std::span<const std::uint32_t>{}; }

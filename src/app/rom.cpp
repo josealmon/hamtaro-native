@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <limits>
 #include <cstring>
+#include <utility>
 namespace hn {
 std::string sha256(std::span<const std::uint8_t> bytes)
 {
@@ -50,10 +51,10 @@ void import_rom(const Paths &paths,const std::filesystem::path &source)
     if(std::filesystem::exists(paths.rom())&&std::filesystem::equivalent(source,paths.rom())) return;
     atomic_write(paths.rom(),bytes);
 }
-std::vector<std::uint8_t> load_rom(const Paths &paths)
+Rom load_rom(const Paths &paths)
 {
     auto bytes=read_file(paths.rom(),rom_size);
     require_valid(validate_rom(bytes));
-    return bytes;
+    return std::make_shared<const std::vector<std::uint8_t>>(std::move(bytes));
 }
 }

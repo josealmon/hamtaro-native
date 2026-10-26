@@ -5,13 +5,13 @@
 #include <optional>
 namespace hn {
 class Session {
-    std::vector<std::uint8_t> rom_;
+    Rom rom_;
     std::unique_ptr<HNGame> game_;
     Save committed_{};
     std::optional<Save> pending_;
     void capture_save();
 public:
-    bool start(const Paths &,std::span<const std::uint8_t> rom);
+    bool start(const Paths &,Rom rom);
     bool frame(const Paths &,std::uint16_t buttons);
     void persist(const Paths &);
     void stop(const Paths &);

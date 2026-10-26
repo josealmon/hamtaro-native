@@ -30,12 +30,17 @@ int main(int argc,char **argv)
         CHECK(!session.present()&&!session.playable()&&session.pixels().empty()&&session.samples().empty());
         session.persist(paths);session.stop(paths);CHECK(!std::filesystem::exists(paths.save()));
         rejects([&]{session.start(paths,{});});CHECK(!session.present());
+        rejects([&]{session.start(paths,std::make_shared<const std::vector<std::uint8_t>>());});
+        CHECK(!session.present());
         if(argc>=2&&argc<=7) {
-            const auto rom=hn::read_file(hn::from_utf8(argv[1]),hn::rom_size);
+            const auto read_rom=[&]{return std::make_shared<const std::vector<std::uint8_t>>(
+                hn::read_file(hn::from_utf8(argv[1]),hn::rom_size));};
+            auto rom=read_rom();
             const std::uint8_t damaged[]={1,2,3};hn::atomic_write(paths.save(),damaged);
             rejects([&]{session.start(paths,rom);});CHECK(std::filesystem::file_size(paths.save())==3&&!session.present());
             std::filesystem::remove(paths.save());hn::Save blank;blank.fill(0xFF);hn::write_save(paths,blank);
             CHECK(session.start(paths,rom)&&session.playable()&&!session.save_pending());
+            CHECK(session.game()->memory.rom==rom->data());
             const auto initialized=hn::load_save(paths);CHECK(initialized!=blank);
             CHECK(hn::read_file(paths.backup(),hn::save_size)==std::vector<std::uint8_t>(blank.begin(),blank.end()));
             rejects([&]{session.start(paths,rom);});CHECK(hn::load_save(paths)==initialized);
@@ -57,6 +62,18 @@ int main(int argc,char **argv)
             CHECK(!session.frame(paths,0)&&game->fault==HN_GAME_IRQ);
             CHECK(!session.save_pending()&&hn::load_save(paths)==committed);
             session.stop(paths);CHECK(!session.present()&&hn::load_save(paths)==committed);
+            // The session retains the shared ROM after its caller releases it,
+            // then frees it on stop. Repeat to cover restart and replacement.
+            for(unsigned restart=0;restart<3;restart++) {
+                CHECK(session.start(paths,rom));
+                CHECK(session.game()->memory.rom==rom->data());
+                std::weak_ptr<const std::vector<std::uint8_t>> lifetime=rom;
+                rom.reset();CHECK(!lifetime.expired());
+                for(unsigned frame=0;frame<6;frame++)CHECK(session.frame(paths,0));
+                session.stop(paths);CHECK(lifetime.expired()&&!session.present());
+                CHECK(hn::load_save(paths)==committed);
+                rom=read_rom();
+            }
             if(argc>=4) {
                 CHECK(std::string(argv[2])=="--replay");Workspace replay;hn::Session playing;
                 auto initial=blank;std::filesystem::path desktop_path;
@@ -101,7 +118,7 @@ int main(int argc,char **argv)
                 if(!desktop_path.empty()) {
                     hn::Paths desktop{desktop_path};CHECK(std::filesystem::create_directory(desktop.root));
                     hn::ProfileLock lock(desktop);hn::import_rom(desktop,hn::from_utf8(argv[1]));hn::write_save(desktop,saved);
-                    CHECK(hn::load_save(desktop)==saved&&hn::load_rom(desktop)==rom);
+                    CHECK(hn::load_save(desktop)==saved&&*hn::load_rom(desktop)==*rom);
                     std::cout<<"Validated ROM and tested SRAM retained in the caller's new private desktop profile.\n";
                 }
                 std::cout<<total<<" input updates persisted to private 32 KiB SRAM; a fresh host session continued with the same map, position, words, seeds, partner and rescued-love count.\n";

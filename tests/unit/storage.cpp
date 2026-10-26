@@ -155,13 +155,13 @@ int main()
             auto reference=hn::read_file(original,hn::rom_size);
             CHECK(hn::validate_rom(reference)==hn::RomStatus::valid);
             hn::import_rom(paths,original);
-            CHECK(hn::load_rom(paths)==reference);
+            CHECK(*hn::load_rom(paths)==reference);
             CHECK(hn::load_save(paths)==save);
             reference[0x200]^=1;
             CHECK(hn::validate_rom(reference)==hn::RomStatus::wrong_hash);
             auto modified=temp.path/"changed.gba";hn::atomic_write(modified,reference);
             rejects([&]{hn::import_rom(paths,modified);});
-            CHECK(hn::validate_rom(hn::load_rom(paths))==hn::RomStatus::valid);
+            CHECK(hn::validate_rom(*hn::load_rom(paths))==hn::RomStatus::valid);
         }
         std::cout<<checks<<" storage and ROM checks passed.\n";return 0;
     }catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}

@@ -221,7 +221,7 @@ struct App {
     Texture logo,cover;
     Animation mascot;
     std::shared_ptr<DialogState> dialog=std::make_shared<DialogState>();
-    std::vector<std::uint8_t> rom;
+    hn::Rom rom;
     std::string message;
     bool error=false,paused=false,running=true,settings_writable=true;
     int remap_key=-1,remap_button=-1,page=0;
@@ -405,7 +405,7 @@ struct App {
                 y+=gif_height+12.f;
             }
             ImGui::SetCursorPos(ImVec2(button_x,y));
-            ImGui::BeginDisabled(session.present()?!session.playable():rom.empty());
+            ImGui::BeginDisabled(session.present()?!session.playable():!rom);
             ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(1.f,0.64f,0.24f,1));
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(1.f,0.72f,0.36f,1));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.96f,0.52f,0.13f,1));
@@ -425,8 +425,8 @@ struct App {
                 }
                 y+=42.f;
             }
-            const char *rom_label=tr(settings,rom.empty()?"Select ROM":"Change ROM");
-            const char *status=tr(settings,rom.empty()?"Europe (.gba)":"ROM ready");
+            const char *rom_label=tr(settings,!rom?"Select ROM":"Change ROM");
+            const char *status=tr(settings,!rom?"Europe (.gba)":"ROM ready");
             const float rom_width=ImGui::CalcTextSize(rom_label).x+32.f;
             const float row_width=rom_width+12.f+ImGui::CalcTextSize(status).x;
             ImGui::SetCursorPos(ImVec2(right_x+(right_width-row_width)/2,y));
@@ -434,7 +434,7 @@ struct App {
             if(ImGui::Button(rom_label,ImVec2(rom_width,34)))choose_file(window,dialog,FileAction::rom,settings.language);
             ImGui::EndDisabled();
             ImGui::SameLine(0,12);ImGui::AlignTextToFramePadding();
-            ImGui::TextColored(rom.empty()?ImVec4(0.51f,0.43f,0.34f,1):ImVec4(0.32f,0.45f,0.21f,1),"%s",status);
+            ImGui::TextColored(!rom?ImVec4(0.51f,0.43f,0.34f,1):ImVec4(0.32f,0.45f,0.21f,1),"%s",status);
 
             const float footer_y=card_height-padding-footer_height;
             ImGui::SetCursorPos(ImVec2(padding,footer_y-12.f));ImGui::Separator();
