@@ -11,7 +11,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN = {".gba", ".sav", ".sram", ".state", ".rgba", ".pcm", ".wav", ".zip",
              ".7z", ".exe", ".dll", ".pdb", ".obj", ".o", ".elf", ".bin", ".log", ".env"}
-PACKAGE_FILES = {"hamtaro-native.exe", "NOTICE.md", "licenses/SDL.txt", "licenses/Dear-ImGui.txt", "licenses/mGBA-MPL-2.0.txt"}
+PACKAGE_FILES = {"Hamtaro - Ham-Ham Heartbreak.exe", "NOTICE.md", "licenses/SDL.txt", "licenses/Dear-ImGui.txt", "licenses/mGBA-MPL-2.0.txt"}
 ARTWORK = {
     "assets/launcher/logo.png": b"\x89PNG\r\n\x1a\n",
     "assets/launcher/cover.png": b"\x89PNG\r\n\x1a\n",

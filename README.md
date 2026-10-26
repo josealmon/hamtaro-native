@@ -60,7 +60,7 @@ Launcher artwork lives in assets/launcher/ and the Windows icon in assets/window
 The supplied logo, cover and animated GIF are embedded at build time. No separate
 artwork files are needed beside the executable. The ROM and saves remain user-supplied.
 
-Run build/Release/hamtaro-native.exe. Import a compatible ROM through the application.
+Run `build/Release/Hamtaro - Ham-Ham Heartbreak.exe`. Import a compatible ROM through the application.
 Choose Play to start; Escape or right-stick click opens the pause/settings menu.
 Press Escape again to resume. Automatic pausing when switching applications is off
 by default and can be enabled in Video and audio.

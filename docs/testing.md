@@ -209,7 +209,7 @@ and physical controller coverage remain separate work.
 
 The executable also accepts:
 
-    hamtaro-native.exe --verify-rom PATH_TO_YOUR_AH3P_ROM
+    & ".\Hamtaro - Ham-Ham Heartbreak.exe" --verify-rom PATH_TO_YOUR_AH3P_ROM
 
 Exit code 0 means identity and full SHA-256 match; 2 means the content does not
 match. No profile import is performed by this command.

@@ -20,7 +20,7 @@ BEGIN
             VALUE "ProductName", "Hamtaro: Ham-Ham Heartbreak\0"
             VALUE "FileVersion", "@PROJECT_VERSION@\0"
             VALUE "ProductVersion", "@PROJECT_VERSION@\0"
-            VALUE "OriginalFilename", "hamtaro-native.exe\0"
+            VALUE "OriginalFilename", "@HN_GAME_FILENAME@.exe\0"
         END
     END
     BLOCK "VarFileInfo"

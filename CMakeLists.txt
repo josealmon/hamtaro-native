@@ -40,6 +40,8 @@ add_library(hn_session STATIC src/app/session.cpp)
 target_include_directories(hn_session PUBLIC src)
 target_link_libraries(hn_session PUBLIC hn_storage hn_core)
 add_executable(hamtaro-native WIN32 src/app/main.cpp)
+set(HN_GAME_FILENAME "Hamtaro - Ham-Ham Heartbreak")
+set_target_properties(hamtaro-native PROPERTIES OUTPUT_NAME "${HN_GAME_FILENAME}")
 enable_language(RC)
 set(HN_BRANDING_FILES
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/windows/hamtaro.ico"
@@ -109,5 +111,5 @@ install(FILES "${imgui_SOURCE_DIR}/LICENSE.txt" DESTINATION licenses RENAME Dear
 install(FILES licenses/mGBA-MPL-2.0.txt DESTINATION licenses)
 set(CPACK_GENERATOR ZIP)
 set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}")
-set(CPACK_PACKAGE_FILE_NAME "hamtaro-native-${PROJECT_VERSION}-windows-x64")
+set(CPACK_PACKAGE_FILE_NAME "${HN_GAME_FILENAME} ${PROJECT_VERSION}")
 include(CPack)
