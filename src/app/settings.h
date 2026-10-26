@@ -7,7 +7,7 @@ inline constexpr std::array<const char *,10> action_names={"A","B","Select","Sta
 struct Settings {
     std::array<int,10> keys{},buttons{};
     int deadzone=25,volume=80,window_width=960,window_height=640;
-    bool fullscreen=false,integer_scale=true,mute=false,wasd=true,pause_unfocused=false;
+    bool fullscreen=false,integer_scale=false,mute=false,wasd=true,pause_unfocused=false;
     int language=automatic_language;
     static Settings defaults();
 };

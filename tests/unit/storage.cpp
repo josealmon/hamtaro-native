@@ -87,6 +87,7 @@ int main()
         CHECK(hn::utf8(paths.root.filename())=="datos con acentos ñ");
         hn::ProfileLock lock(paths);rejects([&]{hn::ProfileLock second(paths);});
         CHECK(hn::Settings::defaults().language==hn::automatic_language);
+        CHECK(!hn::Settings::defaults().integer_scale&&!hn::load_settings(paths).integer_scale);
         CHECK(hn::Settings::defaults().window_width==960&&hn::Settings::defaults().window_height==640);
         const std::array<int,2> four_times={960,640},three_times={720,480},two_times={480,320};
         CHECK(hn::game_window_size(960,720,1904,1001)==four_times);
@@ -141,9 +142,9 @@ int main()
         hn::atomic_write(paths.save(),abc);rejects([&]{hn::load_save(paths);});
         rejects([&]{hn::write_save(paths,save);});
         hn::restore_save(paths);CHECK(hn::load_save(paths)==save);
-        auto settings=hn::Settings::defaults();settings.volume=27;settings.keys[0]=SDL_SCANCODE_C;settings.language=1;
+        auto settings=hn::Settings::defaults();settings.volume=27;settings.keys[0]=SDL_SCANCODE_C;settings.language=1;settings.integer_scale=true;
         hn::save_settings(paths,settings);auto loaded=hn::load_settings(paths);
-        CHECK(loaded.volume==27 && loaded.keys[0]==SDL_SCANCODE_C && loaded.language==1);
+        CHECK(loaded.volume==27 && loaded.keys[0]==SDL_SCANCODE_C && loaded.language==1 && loaded.integer_scale);
         hn::atomic_text(paths.settings(),"version=1\nvolume=-1\nkey.A=9999\ndeadzone=abc\nlanguage=1\r\n");
         loaded=hn::load_settings(paths);
         CHECK(loaded.volume==80 && loaded.keys[0]==SDL_SCANCODE_Z && loaded.deadzone==25 && loaded.language==1);

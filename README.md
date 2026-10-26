@@ -70,7 +70,9 @@ Choose Automatic or a specific language in Video and audio; manual choices persi
 The game's own language setting is independent of the launcher.
 The window opens at a whole multiple of the original 240 x 160 image (960 x 640
 by default), fitting the monitor's work area. Previously saved window sizes are
-adjusted on launch. Manual resizing and fullscreen can still leave black margins.
+adjusted on launch. Integer scaling is off by default: resizing and fullscreen fit
+the largest image with its original proportions, leaving margins on just one axis
+when needed. Integer scaling can be enabled in Video and audio.
 ROM, settings and saves live in the profile's .hamtaro-native directory, independently
 of the program folder. Use --data-dir PATH for a separate test profile.
 
