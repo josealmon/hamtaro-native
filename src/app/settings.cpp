@@ -43,7 +43,7 @@ Settings load_settings(const Paths &paths)
     s.volume=integer("volume",s.volume,0,100);
     s.window_width=integer("window_width",s.window_width,640,7680);
     s.window_height=integer("window_height",s.window_height,480,4320);
-    s.language=integer("language",s.language,0,1);
+    s.language=integer("language",s.language,automatic_language,static_cast<int>(language_names.size())-1);
     s.fullscreen=integer("fullscreen",s.fullscreen,0,1)!=0;
     s.integer_scale=integer("integer_scale",s.integer_scale,0,1)!=0;
     s.mute=integer("mute",s.mute,0,1)!=0;

@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <functional>
 #include <algorithm>
+#include <string_view>
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -49,11 +50,12 @@ static std::filesystem::path preferences(const std::filesystem::path &applicatio
     hn::Save previous,current;previous.fill(0x71);current.fill(0x52);
     hn::write_save(profile,previous);hn::write_save(profile,current);
     const auto saved=hn::read_file(profile.save(),hn::save_size),backup=hn::read_file(profile.backup(),hn::save_size);
-    for(unsigned restart=0;restart<2;restart++){
+    for(int language=-1;language<5;language++){
+        settings.language=language;hn::save_settings(profile,settings);
         child(application,{L"--smoke-test",L"--data-dir",profile.root.native()});
         auto loaded=hn::load_settings(profile);
         CHECK(loaded.keys==settings.keys&&loaded.buttons==settings.buttons);
-        CHECK(loaded.language==1&&loaded.volume==37&&loaded.mute&&loaded.deadzone==39);
+        CHECK(loaded.language==language&&loaded.volume==37&&loaded.mute&&loaded.deadzone==39);
         CHECK(loaded.fullscreen&&!loaded.integer_scale&&!loaded.pause_unfocused&&!loaded.wasd);
         CHECK(loaded.window_width==944&&loaded.window_height==656);
         CHECK(hn::read_file(profile.save(),hn::save_size)==saved&&hn::read_file(profile.backup(),hn::save_size)==backup);
@@ -83,6 +85,27 @@ int main()
         Temporary temp;hn::Paths paths{temp.path/hn::from_utf8("datos con acentos ñ")};
         CHECK(hn::utf8(paths.root.filename())=="datos con acentos ñ");
         hn::ProfileLock lock(paths);rejects([&]{hn::ProfileLock second(paths);});
+        CHECK(hn::Settings::defaults().language==hn::automatic_language);
+        CHECK(!hn::load_settings(paths).pause_unfocused);
+        CHECK(hn::language_from_windows_id(MAKELANGID(LANG_SPANISH,SUBLANG_SPANISH_MEXICAN))==0);
+        CHECK(hn::language_from_windows_id(MAKELANGID(LANG_ENGLISH,SUBLANG_ENGLISH_UK))==1);
+        CHECK(hn::language_from_windows_id(MAKELANGID(LANG_FRENCH,SUBLANG_FRENCH_CANADIAN))==2);
+        CHECK(hn::language_from_windows_id(MAKELANGID(LANG_GERMAN,SUBLANG_GERMAN_SWISS))==3);
+        CHECK(hn::language_from_windows_id(MAKELANGID(LANG_ITALIAN,SUBLANG_ITALIAN_SWISS))==4);
+        CHECK(hn::language_from_windows_id(MAKELANGID(LANG_PORTUGUESE,SUBLANG_PORTUGUESE_BRAZILIAN))==1);
+        CHECK(hn::language_from_windows_id(0)==1);
+        const char *play[]={"Jugar","Play","Jouer","Spielen","Gioca"};
+        for(int language=0;language<5;language++)CHECK(std::string_view(hn::translate(language,"Play"))==play[language]);
+        CHECK(std::string_view(hn::translate(hn::automatic_language,"Play"))==play[hn::system_language()]);
+        CHECK(std::string_view(hn::translate(99,"Play"))=="Play");
+        CHECK(std::string_view(hn::translate(3,"Unknown device diagnostic"))=="Unknown device diagnostic");
+        for(int language=-1;language<5;language++) {
+            auto preference=hn::Settings::defaults();preference.language=language;preference.pause_unfocused=true;
+            hn::save_settings(paths,preference);const auto restored=hn::load_settings(paths);
+            CHECK(restored.language==language&&restored.pause_unfocused);
+        }
+        hn::atomic_text(paths.settings(),"version=1\nlanguage=99\n");
+        CHECK(hn::load_settings(paths).language==hn::automatic_language);
         CHECK(hn::sha256({})=="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
         const std::uint8_t abc[]={'a','b','c'};
         CHECK(hn::sha256(abc)=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");

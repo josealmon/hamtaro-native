@@ -62,6 +62,12 @@ artwork files are needed beside the executable. The ROM and saves remain user-su
 
 Run build/Release/hamtaro-native.exe. Import a compatible ROM through the application.
 Choose Play to start; Escape or right-stick click opens the pause/settings menu.
+Press Escape again to resume. Automatic pausing when switching applications is off
+by default and can be enabled in Video and audio.
+The launcher supports English, Spanish, French, German and Italian. It follows the
+Windows display language by default, falling back to English for other languages.
+Choose Automatic or a specific language in Video and audio; manual choices persist.
+The game's own language setting is independent of the launcher.
 ROM, settings and saves live in the profile's .hamtaro-native directory, independently
 of the program folder. Use --data-dir PATH for a separate test profile.
 

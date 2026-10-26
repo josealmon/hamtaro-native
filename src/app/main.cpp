@@ -30,7 +30,7 @@ constexpr const char *game_title="Hamtaro: Ham-Ham Heartbreak";
 enum class FileAction { rom, import_save };
 struct Selection { FileAction action; std::filesystem::path path; std::string error; };
 struct DialogState { std::mutex mutex; bool pending=false; std::optional<Selection> result; };
-struct DialogRequest { std::shared_ptr<DialogState> state; FileAction action; };
+struct DialogRequest { std::shared_ptr<DialogState> state; FileAction action; SDL_DialogFileFilter filter; };
 void SDLCALL selected_file(void *user,const char *const *files,int)
 {
     std::unique_ptr<DialogRequest> request(static_cast<DialogRequest *>(user));
@@ -39,18 +39,15 @@ void SDLCALL selected_file(void *user,const char *const *files,int)
     if(!files) request->state->result=Selection{request->action,{},SDL_GetError()};
     else if(files[0]) request->state->result=Selection{request->action,hn::from_utf8(files[0]),{}};
 }
-void choose_file(SDL_Window *window,const std::shared_ptr<DialogState> &state,FileAction action)
+void choose_file(SDL_Window *window,const std::shared_ptr<DialogState> &state,FileAction action,int language)
 {
-    static constexpr SDL_DialogFileFilter rom_filter[]={{"Game Boy Advance ROM","gba"}};
-    static constexpr SDL_DialogFileFilter save_filter[]={{"GBA SRAM save","sav"}};
     {
         std::lock_guard lock(state->mutex);
         if(state->pending) return;
         state->pending=true;
     }
-    auto *request=new DialogRequest{state,action};
-    SDL_ShowOpenFileDialog(selected_file,request,window,
-                          action==FileAction::rom?rom_filter:save_filter,1,nullptr,false);
+    auto *request=new DialogRequest{state,action,{hn::translate(language,action==FileAction::rom?"Game Boy Advance ROM":"GBA save"),action==FileAction::rom?"gba":"sav"}};
+    SDL_ShowOpenFileDialog(selected_file,request,window,&request->filter,1,nullptr,false);
 }
 struct SDLSession {
     SDLSession() {
@@ -213,7 +210,7 @@ struct ImGuiSession {
         ImGui_ImplSDLRenderer3_Shutdown(); ImGui_ImplSDL3_Shutdown(); ImGui::DestroyContext();
     }
 };
-const char *tr(const hn::Settings &s,const char *es,const char *en){ return s.language?en:es; }
+const char *tr(const hn::Settings &s,const char *english){ return hn::translate(s.language,english); }
 struct App {
     hn::Paths paths;
     hn::Settings settings;
@@ -231,14 +228,13 @@ struct App {
     bool waiting_release=true,audio_pending=false,frame_ready=false;
     Uint64 last_tick=0;
     double elapsed=0;
-    void notice(std::string text,bool failed=false){ message=std::move(text);error=failed; }
+    void notice(std::string text,bool failed=false){ message=failed?hn::translate(settings.language,text.c_str()):std::move(text);error=failed; }
     void pause_game() {
         paused=true;input.clear();audio.pause(true);last_tick=0;elapsed=0;
     }
     void game_fault() {
         pause_game();
-        notice(tr(settings,"El juego ha llegado a una función pendiente del port. Puedes volver al menú. La última partida guardada se conserva.",
-                           "The game reached an unfinished part of the port. You can return to the menu. Your last completed save is preserved."),true);
+        notice(tr(settings,"The game reached an unfinished part of the port. You can return to the menu. Your last completed save is preserved."),true);
         if(const auto *g=session.game()) {
             std::ostringstream detail;
             detail<<"Native runtime fault "<<g->fault<<", detail "<<g->detail<<", opcode "<<g->opcode
@@ -278,8 +274,7 @@ struct App {
         try{
             for(unsigned catchup=0;elapsed>=interval&&catchup<4;catchup++) {
                 if(audio_pending) {
-                    if(!audio.submit(session.samples()))throw std::runtime_error(tr(settings,"No se ha podido enviar el audio. Comprueba el dispositivo y pulsa Continuar.",
-                                                                                           "Audio delivery failed. Check the output device and choose Resume."));
+                    if(!audio.submit(session.samples()))throw std::runtime_error(tr(settings,"Audio delivery failed. Check the output device and choose Resume."));
                     audio_pending=false;
                 }
                 if(audio.available()&&audio.queued_frames()>32768/8){elapsed=std::min(elapsed,interval);break;}
@@ -323,16 +318,14 @@ struct App {
         try {
             if(!result->error.empty()) throw std::runtime_error(result->error);
             if(session.present())
-                throw std::runtime_error(tr(settings,"Vuelve al menú antes de cambiar la ROM o la partida.",
-                                                    "Return to the menu before replacing the ROM or save."));
+                throw std::runtime_error(tr(settings,"Return to the menu before replacing the ROM or save."));
             switch(result->action) {
             case FileAction::rom:
                 hn::import_rom(paths,result->path); rom=hn::load_rom(paths);
-                notice(tr(settings,"ROM importada y verificada.","ROM imported and verified."));break;
+                notice(tr(settings,"ROM imported and verified."));break;
             case FileAction::import_save:
                 hn::import_save(paths,result->path);
-                notice(tr(settings,"Partida importada. Se ha conservado la anterior cuando era válida.",
-                                          "Save imported. The previous valid save was backed up."));break;
+                notice(tr(settings,"Save imported. The previous valid save was backed up."));break;
             }
         }catch(const std::exception &e){notice(e.what(),true);}
     }
@@ -351,7 +344,11 @@ struct App {
                 remap_key=-1;input.clear();save_preferences();return;
             }
             if(e.key.scancode==SDL_SCANCODE_ESCAPE) {
-                remap_button=-1;pause_game();
+                if(remap_button>=0){remap_button=-1;input.clear();return;}
+                bool dialog_pending;
+                {std::lock_guard lock(dialog->mutex);dialog_pending=dialog->pending;}
+                if(dialog_pending||ImGui::IsPopupOpen(nullptr,ImGuiPopupFlags_AnyPopup))return;
+                if(session.playable()){if(paused)resume_game();else pause_game();}
             }
             if(e.key.scancode==SDL_SCANCODE_F11) {
                 settings.fullscreen=!settings.fullscreen;
@@ -413,7 +410,7 @@ struct App {
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(1.f,0.72f,0.36f,1));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.96f,0.52f,0.13f,1));
             ImGui::PushFont(nullptr,21.f);
-            if(ImGui::Button(tr(settings,session.present()?"Continuar":"Jugar",session.present()?"Resume":"Play"),ImVec2(button_width,play_height))) {
+            if(ImGui::Button(tr(settings,session.present()?"Resume":"Play"),ImVec2(button_width,play_height))) {
                 if(session.present())resume_game();else start_game();
             }
             ImGui::PopFont();ImGui::PopStyleColor(3);ImGui::EndDisabled();
@@ -421,23 +418,21 @@ struct App {
             if(session.present()) {
                 ImGui::SetCursorPos(ImVec2(button_x,y));
                 const float half=(button_width-8.f)/2;
-                if(ImGui::Button(tr(settings,"Reiniciar","Restart"),ImVec2(half,32)))start_game();
+                if(ImGui::Button(tr(settings,"Restart"),ImVec2(half,32)))start_game();
                 ImGui::SameLine(0,8);
-                if(ImGui::Button(tr(settings,"Volver al menú","Back to menu"),ImVec2(half,32))) {
+                if(ImGui::Button(tr(settings,"Back to menu"),ImVec2(half,32))) {
                     try{stop_game();message.clear();}catch(const std::exception&e){notice(e.what(),true);}
                 }
                 y+=42.f;
             }
-            const char *rom_label=tr(settings,rom.empty()?"Seleccionar ROM":"Cambiar ROM",rom.empty()?"Select ROM":"Change ROM");
-            const char *status=tr(settings,rom.empty()?"Europa (.gba)":"ROM lista",rom.empty()?"Europe (.gba)":"ROM ready");
-            const float rom_width=ImGui::CalcTextSize(rom_label).x+24.f;
+            const char *rom_label=tr(settings,rom.empty()?"Select ROM":"Change ROM");
+            const char *status=tr(settings,rom.empty()?"Europe (.gba)":"ROM ready");
+            const float rom_width=ImGui::CalcTextSize(rom_label).x+32.f;
             const float row_width=rom_width+12.f+ImGui::CalcTextSize(status).x;
             ImGui::SetCursorPos(ImVec2(right_x+(right_width-row_width)/2,y));
-            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
-            ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0,0,0,0));
             ImGui::BeginDisabled(session.present());
-            if(ImGui::Button(rom_label,ImVec2(rom_width,34)))choose_file(window,dialog,FileAction::rom);
-            ImGui::EndDisabled();ImGui::PopStyleColor();ImGui::PopStyleVar();
+            if(ImGui::Button(rom_label,ImVec2(rom_width,34)))choose_file(window,dialog,FileAction::rom,settings.language);
+            ImGui::EndDisabled();
             ImGui::SameLine(0,12);ImGui::AlignTextToFramePadding();
             ImGui::TextColored(rom.empty()?ImVec4(0.51f,0.43f,0.34f,1):ImVec4(0.32f,0.45f,0.21f,1),"%s",status);
 
@@ -446,76 +441,72 @@ struct App {
             ImGui::SetCursorPos(ImVec2(padding,footer_y));
             const float half=(inner-12.f)/2;
             ImGui::BeginDisabled(session.present());
-            if(ImGui::Button(tr(settings,"Importar partida","Import save"),ImVec2(half,footer_height)))choose_file(window,dialog,FileAction::import_save);
+            if(ImGui::Button(tr(settings,"Import save"),ImVec2(half,footer_height)))choose_file(window,dialog,FileAction::import_save,settings.language);
             ImGui::EndDisabled();ImGui::SameLine(0,12);
-            if(ImGui::Button(tr(settings,"Abrir carpeta","Open save folder"),ImVec2(half,footer_height)))
+            if(ImGui::Button(tr(settings,"Open save folder"),ImVec2(half,footer_height)))
                 ShellExecuteW(nullptr,L"open",paths.save().parent_path().c_str(),nullptr,nullptr,SW_SHOWNORMAL);
         }
         ImGui::EndChild();ImGui::PopStyleVar();
     }
     void controls() {
         ImGui::Spacing();
-        const char *name=input.active()?SDL_GetGamepadName(input.active()):tr(settings,"Sin mando conectado","No gamepad connected");
-        if(ImGui::BeginCombo(tr(settings,"Mando activo","Active gamepad"),name)) {
+        const char *name=input.active()?SDL_GetGamepadName(input.active()):tr(settings,"No gamepad connected");
+        if(ImGui::BeginCombo(tr(settings,"Active gamepad"),name)) {
             for(auto *pad:input.pads()) {
                 bool active=pad==input.active();
                 if(ImGui::Selectable(SDL_GetGamepadName(pad),active)) input.select(SDL_GetGamepadID(pad));
             }
             ImGui::EndCombo();
         }
-        bool changed=ImGui::Checkbox(tr(settings,"WASD como alternativa de movimiento","WASD movement alternative"),&settings.wasd);
-        changed|=ImGui::SliderInt(tr(settings,"Zona muerta del stick","Stick deadzone"),&settings.deadzone,5,80,"%d%%");
-        ImGui::TextDisabled("%s",tr(settings,"Pulsa un botón de la tabla para cambiarlo. Escape cancela.",
-                                            "Select a binding to change it. Escape cancels."));
+        bool changed=ImGui::Checkbox(tr(settings,"WASD movement alternative"),&settings.wasd);
+        changed|=ImGui::SliderInt(tr(settings,"Stick deadzone"),&settings.deadzone,5,80,"%d%%");
+        ImGui::TextDisabled("%s",tr(settings,"Select a binding to change it. Escape cancels."));
         float table_height=std::max(130.0f,ImGui::GetContentRegionAvail().y-110.0f);
         if(ImGui::BeginTable("bindings",3,ImGuiTableFlags_BordersInnerH|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY,ImVec2(0,table_height))) {
             ImGui::TableSetupScrollFreeze(0,1);
-            ImGui::TableSetupColumn(tr(settings,"Acción GBA","GBA action"),ImGuiTableColumnFlags_WidthFixed,105);
-            ImGui::TableSetupColumn(tr(settings,"Teclado","Keyboard"));
-            ImGui::TableSetupColumn(tr(settings,"Mando","Gamepad"));ImGui::TableHeadersRow();
+            ImGui::TableSetupColumn(tr(settings,"GBA action"),ImGuiTableColumnFlags_WidthFixed,105);
+            ImGui::TableSetupColumn(tr(settings,"Keyboard"),ImGuiTableColumnFlags_WidthStretch,1.f);
+            ImGui::TableSetupColumn(tr(settings,"Gamepad"),ImGuiTableColumnFlags_WidthStretch,1.f);ImGui::TableHeadersRow();
             for(int i=0;i<10;i++) {
                 ImGui::PushID(i);ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);ImGui::TextUnformatted(hn::action_names[i]);
+                ImGui::TableSetColumnIndex(0);ImGui::TextUnformatted(tr(settings,hn::action_names[i]));
                 ImGui::TableSetColumnIndex(1);
-                const char *key=remap_key==i?tr(settings,"Pulsa una tecla...","Press a key..."):SDL_GetScancodeName(static_cast<SDL_Scancode>(settings.keys[i]));
+                const char *key=remap_key==i?tr(settings,"Press a key..."):tr(settings,settings.keys[i]==SDL_SCANCODE_HOME?"Home key":SDL_GetScancodeName(static_cast<SDL_Scancode>(settings.keys[i])));
                 if(ImGui::Button(key,ImVec2(-1,0))) {remap_key=i;remap_button=-1;input.clear();}
                 ImGui::TableSetColumnIndex(2);ImGui::BeginDisabled(!input.active());
-                const char *button=remap_button==i?tr(settings,"Pulsa un botón...","Press a button..."):hn::button_label(input.active(),settings.buttons[i]);
+                const char *button=remap_button==i?tr(settings,"Press a button..."):tr(settings,hn::button_label(input.active(),settings.buttons[i]));
                 if(ImGui::Button(button,ImVec2(-1,0))) {remap_button=i;remap_key=-1;input.clear();}
                 ImGui::EndDisabled();ImGui::PopID();
             }
             ImGui::EndTable();
         }
-        if(ImGui::Button(tr(settings,"Restablecer controles","Reset controls"))) {
+        if(ImGui::Button(tr(settings,"Reset controls"))) {
             auto defaults=hn::Settings::defaults();settings.keys=defaults.keys;settings.buttons=defaults.buttons;
             settings.deadzone=defaults.deadzone;settings.wasd=true;remap_key=-1;remap_button=-1;changed=true;
         }
-        auto buttons=input.buttons(settings);
-        ImGui::SameLine();ImGui::TextDisabled("%s",tr(settings,buttons?"Entrada detectada":"Sin botones pulsados",
-                                                                                buttons?"Input detected":"No buttons held"));
         if(changed)save_preferences();
     }
     void presentation(SDL_Window *window) {
         ImGui::Spacing();
-        int language=settings.language;
-        const char *languages[]={"Español","English"};
-        if(ImGui::Combo(tr(settings,"Idioma de la aplicación","Application language"),&language,languages,2)) {
-            settings.language=language;save_preferences();
+        int choice=settings.language+1;
+        const auto automatic=std::string(tr(settings,"Automatic"))+" ("+hn::language_names[hn::system_language()]+")";
+        const char *languages[]={automatic.c_str(),hn::language_names[0],hn::language_names[1],hn::language_names[2],hn::language_names[3],hn::language_names[4]};
+        ImGui::TextUnformatted(tr(settings,"Application language"));
+        ImGui::SetNextItemWidth(std::min(360.f,ImGui::GetContentRegionAvail().x));
+        if(ImGui::Combo("##application_language",&choice,languages,6)) {
+            settings.language=choice-1;save_preferences();
         }
         ImGui::Spacing();
         bool changed=false;
-        if(ImGui::Checkbox(tr(settings,"Pantalla completa (F11)","Fullscreen (F11)"),&settings.fullscreen)) {
+        if(ImGui::Checkbox(tr(settings,"Fullscreen (F11)"),&settings.fullscreen)) {
             SDL_SetWindowFullscreen(window,settings.fullscreen);changed=true;
         }
-        changed|=ImGui::Checkbox(tr(settings,"Escalado entero y píxeles nítidos","Integer scaling and sharp pixels"),&settings.integer_scale);
-        changed|=ImGui::Checkbox(tr(settings,"Pausar al cambiar de aplicación","Pause when switching applications"),&settings.pause_unfocused);
-        ImGui::TextWrapped("%s",tr(settings,"El juego conservará su proporción original de 240 × 160.",
-                                                          "The game retains its original 240 × 160 aspect ratio."));
+        changed|=ImGui::Checkbox(tr(settings,"Integer scaling and sharp pixels"),&settings.integer_scale);
+        changed|=ImGui::Checkbox(tr(settings,"Pause when switching applications"),&settings.pause_unfocused);
         ImGui::Spacing();ImGui::Separator();ImGui::Spacing();
-        changed|=ImGui::SliderInt(tr(settings,"Volumen","Volume"),&settings.volume,0,100,"%d%%");
-        changed|=ImGui::Checkbox(tr(settings,"Silencio","Mute"),&settings.mute);
-        if(!audio.available()) ImGui::TextWrapped("%s",tr(settings,
-            "No hay dispositivo de audio disponible.","No audio device is available."));
+        changed|=ImGui::SliderInt(tr(settings,"Volume"),&settings.volume,0,100,"%d%%");
+        changed|=ImGui::Checkbox(tr(settings,"Mute"),&settings.mute);
+        if(!audio.available()) ImGui::TextWrapped("%s",tr(settings,"No audio device is available."));
         audio.gain(settings.volume,settings.mute);
         if(changed)save_preferences();
     }
@@ -528,7 +519,7 @@ struct App {
         if(logo.value)draw_artwork(logo.value,300.f,std::clamp(viewport->WorkSize.y*0.14f,60.f,100.f),true);
         else ImGui::TextUnformatted(game_title);
         ImGui::Spacing();
-        const char *pages[]={tr(settings,"Inicio","Home"),tr(settings,"Controles","Controls"),tr(settings,"Pantalla y sonido","Video and audio")};
+        const char *pages[]={tr(settings,"Home"),tr(settings,"Controls"),tr(settings,"Video and audio")};
         float navigation_width=16.f;
         for(const auto *label:pages)navigation_width+=ImGui::CalcTextSize(label).x+36.f;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.f,(ImGui::GetContentRegionAvail().x-navigation_width)/2));
@@ -549,9 +540,7 @@ struct App {
             ImGui::PushStyleColor(ImGuiCol_Text,error?ImVec4(0.68f,0.19f,0.13f,1):ImVec4(0.29f,0.43f,0.19f,1));
             ImGui::TextWrapped("%s",message.c_str());ImGui::PopStyleColor();
         }
-        if(!settings_writable) ImGui::TextWrapped("%s",tr(settings,
-            "No se modificarán los ajustes existentes. Los cambios de esta sesión no se guardarán.",
-            "Existing settings are preserved. Changes in this session will not be saved."));
+        if(!settings_writable) ImGui::TextWrapped("%s",tr(settings,"Existing settings are preserved. Changes in this session will not be saved."));
         ImGui::End();
     }
 };
@@ -641,7 +630,7 @@ int main(int argc,char **argv)
     try{return run(argc,argv);}
     catch(const std::exception &e) {
         std::cerr<<e.what()<<'\n';
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,game_title,e.what(),nullptr);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,game_title,hn::translate(hn::automatic_language,e.what()),nullptr);
         return 1;
     }
 }

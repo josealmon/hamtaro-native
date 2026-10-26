@@ -26,7 +26,7 @@ add_library(hn_core STATIC
     src/game/audio_psg.c src/game/audio_mixer.c)
 target_include_directories(hn_core PUBLIC src)
 add_library(hn_storage STATIC
-    src/app/storage.cpp src/app/settings.cpp src/app/rom.cpp)
+    src/app/storage.cpp src/app/settings.cpp src/app/rom.cpp src/app/i18n.cpp)
 target_include_directories(hn_storage PUBLIC src)
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/config/rom.json" HN_ROM_SPEC)
 string(JSON HN_ROM_SHA256 GET "${HN_ROM_SPEC}" sha256)
