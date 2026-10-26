@@ -35,7 +35,7 @@ constexpr std::array<const char *,5> messages[]={
     {"Idioma de la aplicación","Application language","Langue de l’application","Sprache der Anwendung","Lingua dell’applicazione"},
     {"Automático","Automatic","Automatique","Automatisch","Automatico"},
     {"Pantalla completa (F11)","Fullscreen (F11)","Plein écran (F11)","Vollbild (F11)","Schermo intero (F11)"},
-    {"Escalado entero y píxeles nítidos","Integer scaling and sharp pixels","Échelle entière et pixels nets","Ganzzahlige Skalierung und scharfe Pixel","Scala intera e pixel nitidi"},
+    {"Escalado entero","Integer scaling","Échelle entière","Ganzzahlige Skalierung","Scala intera"},
     {"Pausar al cambiar de aplicación","Pause when switching applications","Mettre en pause en changeant d’application","Beim Wechsel der Anwendung pausieren","Pausa al cambio di applicazione"},
     {"Volumen","Volume","Volume","Lautstärke","Volume"},
     {"Silencio","Mute","Couper le son","Stumm","Disattiva audio"},

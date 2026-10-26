@@ -501,7 +501,7 @@ struct App {
         if(ImGui::Checkbox(tr(settings,"Fullscreen (F11)"),&settings.fullscreen)) {
             SDL_SetWindowFullscreen(window,settings.fullscreen);changed=true;
         }
-        changed|=ImGui::Checkbox(tr(settings,"Integer scaling and sharp pixels"),&settings.integer_scale);
+        changed|=ImGui::Checkbox(tr(settings,"Integer scaling"),&settings.integer_scale);
         changed|=ImGui::Checkbox(tr(settings,"Pause when switching applications"),&settings.pause_unfocused);
         ImGui::Spacing();ImGui::Separator();ImGui::Spacing();
         changed|=ImGui::SliderInt(tr(settings,"Volume"),&settings.volume,0,100,"%d%%");
