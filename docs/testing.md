@@ -102,6 +102,8 @@ are removed to shorten the run. A narrow callback correction uses the affected
 family comparison and CTest. Reuse existing story proofs rather than repeating the
 entire story through desktop automation; inspect the window when a change affects
 desktop integration or presentation.
+An uninterrupted manual desktop playthrough is supplementary release evidence,
+not a gate for each batch. Physical-controller validation is deferred to the user.
 
 The last complete suite passed 5,861,660 checks in 668.028 seconds. It retains
 all 45 preceding named phases and their previous assertion counts, adding 2,502
@@ -1798,7 +1800,7 @@ duplicate in slot 63, and all counter values. The focused run takes 1.939 second
 These checks also run in the full comparison. Complete room/activity progression
 remains a separate integration requirement.
 
-The independent `postgame.json --route quarry` continuation supplies normal-input
+The independent `quarry.json` continuation supplies normal-input
 integration for both shared quarry rooms in the Star Key region. It starts from
 the original postgame save with five rocks, collects all six outer positions and
 all eight inner positions, exercises both sides of the ledges, and checks that
@@ -1817,7 +1819,21 @@ executable and probe hashes remain unchanged; existing native comparisons are
 reused. Alternate pillar Ham-lift actions and other regional presentations remain
 outside this route.
 
-    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route quarry --save PATH_TO_PRIVATE_STAR_KEY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_QUARRY_PROFILE
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/quarry.json --save PATH_TO_PRIVATE_STAR_KEY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_QUARRY_PROFILE
+
+The independent `quarry_lift` route starts from the same five-rock prerequisite
+and covers all four pillar Ham-lift choices before Tack-Q. It checks zero-to-two
+selection transitions, one allocation per action, retained old records, result
+types and polish counts, no seed charge, and the original Save/Continue result.
+The fixed special rock and ordinary ground pickup remain available. Its 10,220
+updates and seven checkpoints pass in 16.46 seconds; 12,550 host-session checks
+pass in 19.03 seconds. Scout, SDK and host agree on all 32 KiB. A separate fresh
+process reloads and opens Status in 2,103 updates and 2.735 seconds. All native
+source, executable and probe hashes are unchanged, so existing native comparisons
+are reused. No complete story or desktop replay is required for this input-only
+addition; other regional presentations are outside this focused route.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/quarry.json --route quarry_lift --save PATH_TO_PRIVATE_STAR_KEY_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_QUARRY_LIFT_PROFILE
 
 The local music/record presentation and selection families have a focused command:
 
