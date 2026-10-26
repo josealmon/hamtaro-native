@@ -125,7 +125,7 @@ def check_shared_motion(*, entries, rom, memory, bind, call, both, fresh,
         for offset in (0x18, 0x1C, 0x20, 0x24, 0x28, 0x2C):
             fixture(offset, 0x03002BB0 - 5 * 104 - offset)
             both(args, b"\x05");check(row, "captured slot/offset alias")
-    print("Eleven shared actor geometry functions, ten Main contracts and three task targets passed; full scene integration remains unverified.")
+    print("Eleven shared actor geometry functions, ten Main contracts and three task targets passed.")
 
 
 def check_scene_effects(*, entries, rom, memory, bind, call, both, fresh,
@@ -191,4 +191,4 @@ def check_scene_effects(*, entries, rom, memory, bind, call, both, fresh,
         fixture(0);both(controls + 0x60, bytes([mode, 15, 128, rate, 62, 254]))
         for frame in range(320):
             check(shake, f"continuous phase/decay {mode}/{rate}/{frame}")
-    print("Eight shared screen/shake functions and their Main/F4 contracts passed; timed story integration remains unverified.")
+    print("Eight shared screen/shake functions and their Main/F4 contracts passed.")

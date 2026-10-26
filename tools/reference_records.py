@@ -482,4 +482,4 @@ def check_records(*, entries, rom, memory, cpu, bind, call, both, fresh,
     apply = bind("hn_preset_apply", C.c_int, C.c_void_p, C.c_uint32)
     fixture(0);equal(apply(memory, batch["address"] | 1), 0, "argument-dependent batch rejected by F4")
     compare("rejected record batch preserves memory", ranges)
-    print("Nine record allocation/query/consume/counter functions across five families passed; full inventory/save UI integration remains unverified.")
+    print("Nine record allocation/query/consume/counter functions across five families passed.")

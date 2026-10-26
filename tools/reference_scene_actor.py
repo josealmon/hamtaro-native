@@ -232,4 +232,4 @@ def check_scene_actors(*, entries, reference, rom, memory, cpu, bind, call, both
             both(argument, bytes([secondary, 0x33, 3]))
             both(0x03002DC0, b"\x01");both(0x03002E10, b"\x01")
             check_main(selection, f"selection arguments captured before slot reset {secondary}/{offset}", argument)
-    print("45 scene actor/panel functions across 16 families and one shared condition passed; area/story completion remains unverified.")
+    print("45 scene actor/panel functions across 16 families and one shared condition passed.")

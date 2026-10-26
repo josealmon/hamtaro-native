@@ -183,4 +183,4 @@ def check_presentation(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compa
             word(args,by_name[name]["address"]|1);byte(0x03000010,0x1C);word(0x03002C60,0x02020111)
             equal(command(memory,0x1C,args),1,"window modal Main VM");call("MainScriptInvokeCallback",args,limit=4000000)
             compare(name,ranges[:2])
-    print("All 56 presentation functions across nine source families passed; complete scene/activity integration remains pending.")
+    print("All 56 presentation functions across nine source families passed.")

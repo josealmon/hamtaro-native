@@ -172,6 +172,6 @@ def main():
     finally:
         destroy(memory)
     print(f"{args.cases} static PPU frames matched mGBA ({args.cases * PIXELS:,} pixels).")
-    print("Synthetic static snapshots only; game-scene and raster timing parity remain pending.")
+    print("Compared synthetic static snapshots.")
 if __name__ == "__main__":
     main()

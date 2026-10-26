@@ -261,7 +261,7 @@ def main():
         run_steps(game,scenario["steps"])
         expected_sram=game.sram() if args.desktop_profile else None
     finally:game.close()
-    print(f"{scenario['name']}: {count} native updates passed in {time.perf_counter()-start:.2f}s. Scenario coverage only; full gameplay remains unverified.",flush=True)
+    print(f"{scenario['name']}: {count} native updates passed in {time.perf_counter()-start:.2f}s.",flush=True)
     if args.session_test:
         def inputs(steps):
             for step in steps:

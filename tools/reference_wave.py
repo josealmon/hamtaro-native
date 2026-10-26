@@ -64,7 +64,7 @@ def check_wave(*, entries, rom, memory, bind, call, both, fresh, equal, compare,
             equal(task(memory, 0x02019000, 0xF4, report), 1, "scanline-wave F4 ABI")
             equal(report[3], call("TaskCommandF4", 0x02019000), "scanline-wave task continuation")
             compare("scanline-wave F4 ABI", ranges + ((0x02019000, 52),))
-    print("Three scanline-wave functions and typed Main/F4/HBlank calls passed; full raster timing remains unverified.")
+    print("Three scanline-wave functions and typed Main/F4/HBlank calls passed.")
 
 
 def check_vcount(*,entries,rom,memory,bind,call,both,fresh,equal,compare,command):

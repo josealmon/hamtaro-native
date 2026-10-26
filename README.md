@@ -1,92 +1,124 @@
-# Hamtaro Native
+<p align="center">
+  <img src="assets/launcher/logo.png" alt="Hamtaro: Ham-Ham Heartbreak" width="560">
+</p>
 
-Windows x64 native-port candidate for Hamtaro: Ham-Ham Heartbreak (European AH3P revision 0).
-You must provide your own compatible .gba file. The launcher includes its artwork;
-the ROM and gameplay resources are supplied by the player.
+# Hamtaro: Ham-Ham Heartbreak — Native PC Port
 
-The application imports and validates a ROM, runs adapted native game logic,
-configures keyboard/gamepad input and manages compatible saves.
+A native Windows port of **Hamtaro: Ham-Ham Heartbreak** for Game Boy Advance,
+based on the [game's decompilation](https://github.com/josealmon/hamtaro-heartbreak).
+The game logic runs as compiled x64 code, with SDL3 handling the desktop window,
+audio and controllers.
 
-Recorded native input covers Spat's defeat, complete credits, all 21
-reconciliations and their epilogue, and saved postgame control. Optional routes
-reach all 86 Ham-Chats, including Lalalala, Goodgo and the expert Ham-Jam reward. They also
-cover Sunny Peak's bridge, keys, songs, sand bath and temple rock pickups;
-epilogue-strength polishing; accessory commissioning, manual crafting failures
-and success, trading and accessory disposal; outfit purchases and saved photos; Haunted House's piano; and
-local Ham-Jam composition followed by beginner, intermediate and expert contest
-wins, the perfect-ending credits and polishing both retained contest prizes.
-Postie's four-answer Ham-Chat contest also delivers all four keys through the
-original letter, departure and return sequence.
-Sunny Peak's locked Rainbow cave, protection against a duplicate special rock
-and polishing that rock into a Rainbow Stone are also covered. Wildwoods' Sun Key
-cave adds its fixed rock, Sun Stone polishing, and a successful special-stone
-recipe that spends one Sun Stone and 45 seeds. Sandy Bay's Wave Key cave also
-covers polishing, duplicate prevention while the polished gem is owned, and
-crafting with a special stone plus ordinary gems.
-Shared-quarry routes also collect all six outer-room and eight inner-room rocks,
-including hidden drops, ledge interactions and the fixed Ham-lift rock, then
-retain their types and remaining polishes through original save and reload.
-A separate route uses Ham-lift directly at all four pillars before Tack-Q,
-checks one new rock per action and preserves the results through save and reload.
-Fun Land's pair board also has complete winning and losing routes, including
-entry fees, the nine-rock reward, replay rejection and saved continuation.
-The scenarios check original Save/Continue and compare complete
-32 KiB saves between independent native runtimes.
+**You need your own European ROM to play.** The ROM and extracted gameplay
+resources are not included.
 
-This candidate does not yet have verified coverage of every single-player
-branch. Further optional activities, minigame variants, physical controllers and a
-full desktop playthrough remain unverified. Title language changes, localized
-Status, original saving and Continue are exercised in all five ROM languages.
-Startup on a Windows installation without development tools remains unverified.
-See [docs/architecture.md](docs/architecture.md) for the tested routes and their limits.
+## Features
 
-## Build
+- **Keyboard and gamepad support**, with remappable buttons, optional WASD
+  movement, controller selection and adjustable stick deadzone.
+- **Resizable window and fullscreen**, preserving the original aspect ratio.
+  Nearest-neighbor rendering keeps pixels sharp; integer scaling is optional.
+- **Volume and mute controls**, plus optional pausing when switching applications.
+- **Five launcher languages:** English, Spanish, French, German and Italian.
+  The launcher follows the Windows display language, falling back to English,
+  and lets you choose a language manually.
+- **Compatible save files:** import an original 32 KiB `.sav` and continue playing.
+  Saves and settings stay in your profile when you replace the executable.
+- **Pause and resume with Escape**, with access to settings while playing.
 
-Use Visual Studio 2026 C++ Build Tools, CMake 4.2+ and Windows 10/11 x64
-for the supplied preset. The project also builds with Visual Studio 2022
-and CMake 3.25+ using a matching generator (as in CI).
+Single-player routes have been tested through the ending, all 21 reconciliations
+and all 86 Ham-Chats. Cable Link and multiplayer are not supported.
+See [tested scope](docs/architecture.md#tested-scope) for coverage details.
 
-    cmake --preset windows
-    cmake --build --preset release
-    ctest --preset release
-    cmake --install build --config Release --prefix build/package
-    cpack --config build/CPackConfig.cmake -C Release -B build
+## Getting started
 
-Dependencies are pinned with SHA-256 hashes and stored outside this checkout,
-under HAMTARO_NATIVE_WORK (default: the user profile's .hamtaro-native-dev folder).
-An Internet connection is needed for the first dependency download, not for normal use.
+1. Extract the Windows ZIP into a folder.
+2. Run **`Hamtaro - Ham-Ham Heartbreak.exe`**.
+3. Select your compatible `.gba` file in the launcher.
+4. Choose **Play**.
 
-Launcher artwork lives in assets/launcher/ and the Windows icon in assets/windows/.
-The supplied logo, cover and animated GIF are embedded at build time. No separate
-artwork files are needed beside the executable. The ROM and saves remain user-supplied.
+Requires **Windows 10 or 11, 64-bit**. No BIOS file is needed, and the game works
+offline. The launcher copies the validated ROM into your local profile; it does
+not modify the file you selected.
 
-Run `build/Release/Hamtaro - Ham-Ham Heartbreak.exe`. Import a compatible ROM through the application.
-Choose Play to start; Escape or right-stick click opens the pause/settings menu.
-Press Escape again to resume. Automatic pausing when switching applications is off
-by default and can be enabled in Video and audio.
-The launcher supports English, Spanish, French, German and Italian. It follows the
-Windows display language by default, falling back to English for other languages.
-Choose Automatic or a specific language in Video and audio; manual choices persist.
-The game's own language setting is independent of the launcher.
-The window opens at a whole multiple of the original 240 x 160 image (960 x 640
-by default), fitting the monitor's work area. Previously saved window sizes are
-adjusted on launch. Integer scaling is off by default: resizing and fullscreen fit
-the largest image with its original proportions, leaving margins on just one axis
-when needed. Integer scaling can be enabled in Video and audio.
-ROM, settings and saves live in the profile's .hamtaro-native directory, independently
-of the program folder. Use --data-dir PATH for a separate test profile.
+### Supported ROM
 
-The SHA-256 of the supported ROM is
-401968322b3245381da64dab35bdaacb3f82a404425c584867f00c45e469ffd8.
+| Property | Required version |
+| --- | --- |
+| Game | Hamtaro: Ham-Ham Heartbreak |
+| Region | Europe |
+| Game code | `AH3P` |
+| Revision | `0` |
+| Size | 16 MiB (16,777,216 bytes) |
+| Languages | English, French, German, Spanish and Italian |
 
-## Controls
+The launcher checks the ROM's identity and full SHA-256 hash:
 
-Directions: arrows or WASD / D-pad or left stick. GBA A: Z / south button.
-GBA B: X / east button. L/R: Q/E / shoulders. Start: Enter / Start.
-Select: right Shift / Back. Port menu: Escape / right-stick click. Fullscreen: F11.
-Bindings, deadzone, video and sound settings are configurable.
-Assigning W, A, S or D to an action disables the WASD movement alternative.
-It stays unavailable until those keys are unassigned; resetting controls enables it again.
+```text
+401968322b3245381da64dab35bdaacb3f82a404425c584867f00c45e469ffd8
+```
 
-Import an original 32 KiB .sav from Home, or open the save folder to copy it.
-Emulator save states are not compatible. Importing a ROM never replaces an existing save.
+Other regions, revisions and modified ROMs are not supported. The game's language
+is selected in its own title menu, independently of the launcher language.
+
+## Default controls
+
+| Action | Keyboard | Gamepad |
+| --- | --- | --- |
+| Move | Arrow keys or WASD | D-pad or left stick |
+| A | Z | South face button |
+| B | X | East face button |
+| L / R | Q / E | Left / right shoulder |
+| Start | Enter | Start |
+| Select | Right Shift | Back / View |
+| Open pause menu | Escape | Right-stick click |
+| Resume | Escape, or Resume in the menu | Resume in the menu |
+| Toggle fullscreen | F11 | — |
+
+Change game bindings in **Controls**. Assigning W, A, S or D to an action disables
+the WASD movement shortcut until those keys are free. Resetting controls restores
+the default bindings and enables WASD again.
+
+## Saves and settings
+
+The launcher stores your ROM, settings and save in `%USERPROFILE%\.hamtaro-native`.
+Use **Import save** or **Open save folder** on Home to manage your save. The game
+uses its original save system and keeps one previous save backup. Emulator save
+states are not supported.
+
+For a separate profile, launch the application with `--data-dir "PATH_TO_PROFILE"`.
+
+## Building from source
+
+Install Visual Studio C++ Build Tools with a Windows SDK and CMake. The supplied
+preset uses **Visual Studio 2026 and CMake 4.2+**:
+
+```powershell
+cmake --preset windows
+cmake --build --preset release --parallel 4
+ctest --preset release --parallel 1
+```
+
+The executable is created in `build/Release/`. For **Visual Studio 2022 and
+CMake 3.25+**, configure a separate build directory:
+
+```powershell
+cmake -S . -B build-vs2022 -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=ON
+cmake --build build-vs2022 --config Release --parallel 4
+ctest --test-dir build-vs2022 -C Release --output-on-failure --parallel 1
+```
+
+SDL3 and Dear ImGui are downloaded automatically on the first build, with pinned
+versions and SHA-256 checks. Dependency sources are stored in
+`%USERPROFILE%\.hamtaro-native-dev`, or the directory set by `HAMTARO_NATIVE_WORK`.
+Building and running the synthetic tests does not require a ROM.
+
+## Documentation and credits
+
+- [Architecture and tested scope](docs/architecture.md)
+- [Testing and packaging](docs/testing.md)
+- [Hamtaro: Ham-Ham Heartbreak decompilation](https://github.com/josealmon/hamtaro-heartbreak)
+- [Third-party notices](NOTICE.md)
+
+This is an unofficial fan project, with no affiliation with Nintendo or the
+Hamtaro rights holders. Code and third-party licensing details are in `NOTICE.md`.

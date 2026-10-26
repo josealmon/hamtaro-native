@@ -195,7 +195,7 @@ def check_bank3_games(*, entries, rom, memory, cpu, bind, call, both, fresh, equ
         equal(main(memory, 0x0804CDBD, args, C.byref(consumed)), 1, "pair-board continuous selection")
         equal(consumed.value, call("ScriptCallbackSelectMapBank3PairBoardPosition", args), "pair-board selection return")
         compare("pair-board continuous selection", ranges)
-    print("Bank-3 source/spawn entries, pair-board, phase/orbit, record and endpoint contracts passed; full activity progression remains unverified.")
+    print("Bank-3 source/spawn entries, pair-board, phase/orbit, record and endpoint contracts passed.")
 
 
 def check_bank3_chain(*, entries, rom, memory, cpu, bind, call, both, fresh, equal,
@@ -486,7 +486,7 @@ def check_bank3_presets(*, entries, reference, rom, memory, cpu, bind, call, bot
             fixture(0);both(selector, bytes([index]))
             both(0x03002D98, struct.pack("<I", selector - index * 104 - 4))
             direct(row, "animation overwrites live class selector")
-    print("212 bank-3 scene presets and all 23 base-actor functions passed; full area integration remains unverified.")
+    print("212 bank-3 scene presets and all 23 base-actor functions passed.")
 
 
 def check_bank3_late(*, entries, reference, rom, memory, cpu, bind, call, both,
@@ -676,4 +676,4 @@ def check_bank3_late(*, entries, reference, rom, memory, cpu, bind, call, both,
     equal(apply(memory, track_row["address"] | 1), 0, "argumentful audio restart rejected by F4")
     equal(main(memory, track_row["address"] | 1, args, C.byref(consumed)), 0, "argumentful audio restart rejected by Main")
     compare("rejected audio restart contract preserves memory", ranges)
-    print("31 late bank-3 functions plus song-43 restart and stopped-track helper passed; full area integration remains unverified.")
+    print("31 late bank-3 functions plus song-43 restart and stopped-track helper passed.")

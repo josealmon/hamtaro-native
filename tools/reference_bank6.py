@@ -171,4 +171,4 @@ def check_bank6(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compare,nati
         fixture(case);set=0x02030000;positions=0x02031000;both(positions,rng.randbytes(1024));word(set,positions);half(set+12,0x100);half(set+14,0x101)
         ctrl(0x100,case%256);ctrl(0x101,(case+1)%256);byte(args,255);cpu.reg_write(UC_ARM_REG_R5,set)
         equal(restore(memory,args,set),True,"incoming R5 descriptor on unmatched selector");call("ScriptCallbackRestoreMapBank6Targets",args);compare("explicit retained descriptor",ranges)
-    print("Complete bank-6 main/final families (243 functions), typed helpers and one neighbor-pair dependency passed; chain callbacks and full area/story integration remain unverified.")
+    print("Complete bank-6 main/final families (243 functions), typed helpers and one neighbor-pair dependency passed.")

@@ -123,7 +123,7 @@ def check_bank4(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compare,nati
     check_bank4_helpers(entries=entries,rom=rom,memory=memory,cpu=cpu,bind=bind,call=call,both=both,fresh=fresh,
                         equal=equal,compare=compare,native_bytes=native_bytes,fixture=fixture,prepare=prepare,rows=rows,
                         base=base,controls=controls,args=args,output=output,ranges=ranges,rng=rng)
-    if not dynamics_only:print("All 483 bank-4 functions and the complete shared indicator family passed; full area/story integration remains unverified.")
+    if not dynamics_only:print("All 483 bank-4 functions and the complete shared indicator family passed.")
 
 
 def check_bank4_helpers(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compare,native_bytes,
@@ -249,4 +249,4 @@ def check_bank4_helpers(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,comp
         for case in range(18):
             path_fixture(row,case)
             for frame in range(64):path_check(row,f"continuous {case}/{frame}",normal=True)
-    print("Bank-4 dynamic Main/task/animation/helper contracts passed; presentation presets are a separate group. Full area/story integration remains unverified.")
+    print("Bank-4 dynamic Main/task/animation/helper contracts passed; presentation presets are a separate group.")

@@ -345,7 +345,7 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
                     both(0x0201CC20,rng.randbytes(257))
                     value=native_bytes(0x03002180,1)[0];byte(0x03002180,(value|4) if enabled else (value&~4))
                     check(keys_row,"all held keys, disabled flag and L/R/up/down priority")
-        print("All 14 shared map-10/5 selection functions and three complete dependency families passed; complete inventory/story integration remains unverified.")
+        print("All 14 shared map-10/5 selection functions and three complete dependency families passed.")
         return
     if record_menus:
         navigation=next(r for r in rows if r["name"]=="ScriptCallbackNavigateRecordSelection")
@@ -358,7 +358,7 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
         for high in range(256):
             for low in (0,1,255):
                 fixture(high);both(0x03002C70,struct.pack("<H",high*256+low));check(window,"scanline-window high-byte threshold and halfword wrap")
-        print("All 18 record-selection functions and typed Main/task contracts passed; complete Items/Gems integration remains unverified.")
+        print("All 18 record-selection functions and typed Main/task contracts passed.")
         return
     mask_rows = [r for r in rows if r["name"] in {"ScriptCallbackSelectNextSaveGroup3MaskBit", "ScriptCallbackSelectPreviousSaveGroup3MaskBit", "ScriptCallbackRecordSaveGroup3SelectedMaskBit"}]
     for row in mask_rows:
@@ -386,4 +386,4 @@ def check_group3_scenes(*, entries, rom, memory, cpu, bind, call, both, fresh, e
             for enabled in (False,True):
                 fixture(selection);ctrl(0x180,selection);both(args,bytes([direction]));value=native_bytes(0x0300219F,1)[0]
                 byte(0x0300219F,(value|32) if enabled else (value&~32));check(navigation,"all byte selections, grid directions and flag 253")
-    print(f"All 67 functions across seven SaveGroup3 families accounted for: {len(rows)} Main callbacks and 16 helpers; full activities remain unverified.")
+    print(f"All 67 functions across seven SaveGroup3 families accounted for: {len(rows)} Main callbacks and 16 helpers.")

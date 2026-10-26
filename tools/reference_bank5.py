@@ -179,4 +179,4 @@ def check_bank5(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compare,nati
             if row["name"].startswith("Animation"):animation_check(row,base+16*104,case)
             else:main_check(row,case)
     vm_contracts()
-    print("All 207 bank-5 functions, VBlank registration and the complete four-function stairs/idle dependency family passed; full area/story integration remains unverified.")
+    print("All 207 bank-5 functions, VBlank registration and the complete four-function stairs/idle dependency family passed.")

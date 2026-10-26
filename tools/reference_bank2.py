@@ -168,4 +168,4 @@ def check_bank2(*, entries, reference, rom, memory, cpu, bind, call, both,
             equal(command(memory, 0x51, 0x02020000), 1, "bank-2 Main51 dispatch")
             call("MainScriptDispatchArgumentWord", 0x02020000)
             compare("bank-2 Main51 no-op", ranges)
-    print("Complete bank-2 family comparisons passed: 120 C functions, 3 Main51 leaves; story integration pending.")
+    print("Complete bank-2 family comparisons passed: 120 C functions, 3 Main51 leaves.")

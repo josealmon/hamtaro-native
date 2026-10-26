@@ -304,7 +304,7 @@ def main():
         waves(c, rng)
         sweeps(c, rng)
         print(f"{c.checks} timer/PSG/FIFO/DMA/PWM checks matched across {c.snapshots} synthetic snapshots.")
-        print("Component-level hardware evidence; game output, analog filtering and startup quirks remain unverified.")
+        print("Compared digital audio components before desktop filtering and resampling.")
     finally:
         c.close()
 

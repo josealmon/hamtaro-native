@@ -281,4 +281,4 @@ def check_wander(*, entries, rom, memory, cpu, bind, call, both, fresh,
         equal(main_callback(memory, 0x0801CA75, args, C.byref(consumed)), 1, "actor turn animation alias")
         equal(consumed.value, call("ScriptCallbackStepActorTurnAnimation", args), "actor turn alias consumed")
         compare(f"actor turn animation alias {case}", ranges)
-    print("Twenty-three connected actor motion/direction functions and typed contracts passed; complete gameplay remains unverified.")
+    print("Twenty-three connected actor motion/direction functions and typed contracts passed.")

@@ -154,8 +154,8 @@ def check_actor_presets(*, entries, reference, rom, memory, cpu, bind, call,
                     both(0x03003070,struct.pack("<I",0x02015000));both(0x03002E10,b"\x01")
                     equal(apply(memory,row["address"]|1),1,"sequence preset live selector")
                     call(name);compare("sequence preset constructor/selector alias",ranges)
-        print("48 argument-free actor sequence presets and typed F4 contracts passed; complete activity progression remains unverified.")
+        print("48 argument-free actor sequence presets and typed F4 contracts passed.")
     elif animation_families:
-        print("446 argument-free graphics/directional/extended actor presets across three complete families passed; later-area integration remains unverified.")
+        print("446 argument-free graphics/directional/extended actor presets across three complete families passed.")
     else:
-        print("476 argument-free actor presets across five source families passed; full area integration remains unverified.")
+        print("476 argument-free actor presets across five source families passed.")

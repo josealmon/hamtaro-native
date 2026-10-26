@@ -47,6 +47,6 @@ def main():
         for x,y in pairs:
             if atan2(x,y)!=oracle.call(10,x,y)[0]:raise AssertionError(f"ArcTan2 mismatch at {x}, {y}.")
             checks+=1
-    print(f"{checks} ROM-free BIOS angular comparisons passed; hardware BIOS behavior remains unverified.")
+    print(f"{checks} ROM-free BIOS angular comparisons passed.")
 
 if __name__=="__main__":main()

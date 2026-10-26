@@ -189,4 +189,4 @@ def check_record_selection(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,c
     equal(all(outcomes.values()),True,'all three retail transaction outcomes exercised')
     equal(refunded_keys,{1,2,3,4,5,6},'all six special material refunds compared')
     print(f'All 80 retail recipes / four original rolls matched payment and outcome chains: {outcomes}.')
-    print('Packed palettes, cached/random candidates, raw selectors, five-language graphics and counter-source aliases passed; full activity integration remains pending.')
+    print('Packed palettes, cached/random candidates, raw selectors, five-language graphics and counter-source aliases passed.')

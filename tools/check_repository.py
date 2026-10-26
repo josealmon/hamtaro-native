@@ -33,7 +33,7 @@ def check_name(name: str) -> list[str]:
 
 def check_source(name: str, data: bytes) -> list[str]:
     failures = check_name(name)
-    # Only the four launcher assets explicitly requested by the user are allowed.
+    # Only the four embedded artwork files are allowed.
     if name in ARTWORK:
         if not data.startswith(ARTWORK[name]) or len(data) > 4 * 1024 * 1024:
             failures.append(f"Invalid launcher artwork: {name}")

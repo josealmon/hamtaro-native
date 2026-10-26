@@ -91,4 +91,4 @@ def check_bank7(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compare,nati
     for name in ("ConfigureSceneClass2AnimationAndIndicatorB98BC","ConfigureSceneClass2AnimationAndNeighborB99DC"):
         fixture(19);word(0x03003070,0x03002C04-4*44);row=by_name[name]
         equal(task(memory,row["address"]|1),1,"live graphics class alias");call(name);compare(name+" graphics mode changes class",ranges)
-    print("Bank-7 cursor transitions, all byte selectors/directions, signed helper offsets, live board/class aliases and captured arrow coordinates passed; complete puzzle/area integration remains pending.")
+    print("Bank-7 cursor transitions, all byte selectors/directions, signed helper offsets, live board/class aliases and captured arrow coordinates passed.")

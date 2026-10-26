@@ -117,4 +117,4 @@ def check_counter_scene(*, entries, rom, memory, bind, call, both, fresh,
     before = native_bytes(tiles, 100)
     equal(apply(memory, draw["address"], 0), 2, "unreviewed incoming R6 selector rejected")
     equal(native_bytes(tiles, 100), before, "invalid counter selector preserves tile banks")
-    print("Thirteen counter/sequence functions and typed contracts passed; complete Select menu integration remains unverified.")
+    print("Thirteen counter/sequence functions and typed contracts passed.")

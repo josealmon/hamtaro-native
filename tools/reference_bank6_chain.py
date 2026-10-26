@@ -124,5 +124,5 @@ def check_bank6_chain(*,entries,rom,memory,cpu,bind,call,both,fresh,equal,compar
     for name in ('AnimationCallbackUpdateMapBank6Chains','AnimationCallbackUpdateMapBank6SineFlight','AnimationCallbackLandMapBank6AtClassPosition'):
         for count in (0,1,64,255):
             fixture(count);byte(0x03002DC0,count);animation_check(by_name[name],base+22*104+1,'unrecognized unaligned slot')
-    print('Bank-6 chains: full-word phases, zero affine sentinel/exhaustion, raw slots, captured/live aliases, strict rectangles, landing, flight and wrap boundaries passed; area/story integration remains unverified.')
+    print('Bank-6 chains: full-word phases, zero affine sentinel/exhaustion, raw slots, captured/live aliases, strict rectangles, landing, flight and wrap boundaries passed.')
     if mapped_null:cpu.mem_unmap(0,0x1000)

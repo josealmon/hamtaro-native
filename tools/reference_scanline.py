@@ -274,4 +274,4 @@ def check_scanlines(*,entries,rom,memory,bind,call,both,fresh,equal,compare,nati
                     equal(actual,expected,f'all pixels: case{case}/selector{selector}/frame{frame}/VCOUNT{combined}, source callbacks plus independent PPU')
                 equal(changed,selector not in (0,2,3),'each non-noop effect changes visible pixels')
             finally:destroy(game)
-    print('46 clocked native frames matched per-line source state and independent mGBA PPU output across all 19 selectors, including HBlank DMA, wrap, scrolling, circle initialization, stepped widths, effect completion and combined VCOUNT/window phases; original CPU latency remains unverified.')
+    print('46 clocked native frames matched per-line source state and independent mGBA PPU output across all 19 selectors, including HBlank DMA, wrap, scrolling, circle initialization, stepped widths, effect completion and combined VCOUNT/window phases.')
