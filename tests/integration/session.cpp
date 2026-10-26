@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <cmath>
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
@@ -23,9 +24,33 @@ struct FileLock {
     { CHECK(handle!=INVALID_HANDLE_VALUE); }
     ~FileLock(){CloseHandle(handle);}
 };
+static void audio_output_filter()
+{
+    hn::AudioDcBlocker filter;
+    CHECK(filter.sample(0,0)==0&&filter.sample(0,1)==0);
+    float left=0,right=0;
+    for(unsigned i=0;i<32768;i++){
+        left=filter.sample(-20000,0);right=filter.sample(7000,1);
+    }
+    CHECK(std::abs(left)<1.0f/32768&&std::abs(right)<1.0f/32768);
+    // A sustained tone over different DC offsets keeps its amplitude and
+    // recentres both channels, without coupling the stereo channels together.
+    double input_power=0,output_power=0,mean=0;float right_peak=0;
+    for(unsigned i=0;i<65536;i++){
+        const auto tone=static_cast<std::int16_t>(3000*std::sin(i*2*3.141592653589793*440/32768));
+        left=filter.sample(static_cast<std::int16_t>(-20000+tone),0);
+        right=filter.sample(7000,1);
+        right_peak=std::max(right_peak,std::abs(right));
+        if(i>=32768){input_power+=double(tone)*tone/(32768.0*32768.0);output_power+=double(left)*left;mean+=left;}
+    }
+    CHECK(right_peak<1.0f/32768&&std::abs(mean/32768)<1.0/32768);
+    CHECK(output_power/input_power>0.99&&output_power/input_power<1.01);
+    filter={};CHECK(filter.sample(0,0)==0&&filter.sample(0,1)==0);
+}
 int main(int argc,char **argv)
 {
     try{
+        audio_output_filter();
         Workspace workspace;const auto &paths=workspace.paths;hn::Session session;
         CHECK(!session.present()&&!session.playable()&&session.pixels().empty()&&session.samples().empty());
         session.persist(paths);session.stop(paths);CHECK(!std::filesystem::exists(paths.save()));

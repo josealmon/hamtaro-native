@@ -27,6 +27,11 @@ The frontend uses C++20, SDL3 and Dear ImGui. Its menus support keyboard and
 gamepad navigation. The native game loop drives a nearest-filtered 240x160 texture
 and 32768 Hz stereo PCM. SDL converts PCM to the output device's format. The game
 clock runs at 16777216/280896 Hz independently of the display refresh.
+The desktop output removes the DAC's DC offset with a two-channel, approximately
+10 Hz coupling filter before SDL resampling. Filter state spans audio packets and
+pauses; restarting clears it. Floating-point delivery preserves headroom after
+coupling. This is output conditioning, not a change to the guest mixer, PWM or
+the raw PCM used by core/reference comparisons.
 The release PE imports only Windows system DLLs and links the MSVC runtime
 statically. A separate clean-machine validation remains pending.
 

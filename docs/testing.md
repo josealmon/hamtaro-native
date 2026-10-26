@@ -80,6 +80,9 @@ layouts, corrupt or mismatched ROM/source data and incorrect calling contracts.
   verifies initialization persistence, failed-write retry, retained backups and
   rejection of partially modified SRAM after a native runtime fault. Shared ROM
   identity, caller release, final-owner release and repeated restarts are checked.
+  Synthetic desktop-output checks verify DC rejection, independent stereo channels,
+  440 Hz tone preservation and filter reset. The optional `--audio` run checks
+  600 paced frames through the floating-point SDL stream with no sample shortages.
 - app-smoke: creates an isolated temporary profile, initializes the actual
   SDL renderer and menus for six frames, closes cleanly and removes that profile.
   No graphics, settings, ROM or save files are written in the checkout.

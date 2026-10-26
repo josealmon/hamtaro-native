@@ -5,7 +5,7 @@
 namespace hn {
 Audio::Audio()
 {
-    SDL_AudioSpec source{SDL_AUDIO_S16,2,32768};
+    SDL_AudioSpec source{SDL_AUDIO_F32,2,32768};
     stream_=SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,&source,
         [](void *user,SDL_AudioStream *,int additional,int) {
             if(additional>0)static_cast<Audio*>(user)->shortages_.fetch_add(1,std::memory_order_relaxed);
@@ -17,10 +17,18 @@ void Audio::gain(int percent,bool mute)
 { if(stream_) SDL_SetAudioStreamGain(stream_,mute?0.0f:std::clamp(percent,0,100)/100.0f); }
 bool Audio::submit(std::span<const std::int16_t> samples)
 {
-    if(!stream_ || samples.size()%2 || samples.size_bytes()>std::numeric_limits<int>::max()) return false;
+    if(!stream_ || samples.size()%2 || samples.size()>std::numeric_limits<int>::max()/sizeof(float)) return false;
     /* Backpressure belongs to the frame scheduler; do not discard queued game audio. */
-    if(SDL_GetAudioStreamQueued(stream_)>32768*2*2) return false;
-    return SDL_PutAudioStreamData(stream_,samples.data(),static_cast<int>(samples.size_bytes()));
+    if(queued_frames()>32768) return false;
+    std::array<float,2048> output;
+    while(!samples.empty()) {
+        const auto count=std::min(samples.size(),output.size());
+        auto next=filter_;
+        for(std::size_t i=0;i<count;i++)output[i]=next.sample(samples[i],static_cast<unsigned>(i%2));
+        if(!SDL_PutAudioStreamData(stream_,output.data(),static_cast<int>(count*sizeof(float))))return false;
+        filter_=next;samples=samples.subspan(count);
+    }
+    return true;
 }
 bool Audio::pause(bool pause)
 {
@@ -35,6 +43,6 @@ bool Audio::pause(bool pause)
     return SDL_ResumeAudioStreamDevice(stream_);
 }
 unsigned Audio::queued_frames() const
-{ return stream_?static_cast<unsigned>(std::max(0,SDL_GetAudioStreamQueued(stream_)))/4:0; }
-void Audio::clear(){if(stream_)SDL_ClearAudioStream(stream_);}
+{ return stream_?static_cast<unsigned>(std::max(0,SDL_GetAudioStreamQueued(stream_)))/(2*sizeof(float)):0; }
+void Audio::clear(){if(!stream_||SDL_ClearAudioStream(stream_))filter_={};}
 }
