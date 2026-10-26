@@ -17,14 +17,17 @@
 #include <string>
 #include <algorithm>
 #include <sstream>
+#include <cstring>
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
 #include <windows.h>
 #include <shellapi.h>
+#include <objidl.h>
+#include <gdiplus.h>
 
 namespace {
 constexpr const char *game_title="Hamtaro: Ham-Ham Heartbreak";
-enum class FileAction { rom, import_save, export_save };
+enum class FileAction { rom, import_save };
 struct Selection { FileAction action; std::filesystem::path path; std::string error; };
 struct DialogState { std::mutex mutex; bool pending=false; std::optional<Selection> result; };
 struct DialogRequest { std::shared_ptr<DialogState> state; FileAction action; };
@@ -46,10 +49,8 @@ void choose_file(SDL_Window *window,const std::shared_ptr<DialogState> &state,Fi
         state->pending=true;
     }
     auto *request=new DialogRequest{state,action};
-    if(action==FileAction::export_save)
-        SDL_ShowSaveFileDialog(selected_file,request,window,save_filter,1,"game.sav");
-    else SDL_ShowOpenFileDialog(selected_file,request,window,
-                                action==FileAction::rom?rom_filter:save_filter,1,nullptr,false);
+    SDL_ShowOpenFileDialog(selected_file,request,window,
+                          action==FileAction::rom?rom_filter:save_filter,1,nullptr,false);
 }
 struct SDLSession {
     SDLSession() {
@@ -71,6 +72,102 @@ struct Texture {
     SDL_Texture *value=nullptr;
     ~Texture(){if(value)SDL_DestroyTexture(value);}
 };
+SDL_Texture *load_artwork(SDL_Renderer *renderer,int id)
+{
+    const auto module=GetModuleHandleW(nullptr);
+    const auto resource=FindResourceW(module,MAKEINTRESOURCEW(id),MAKEINTRESOURCEW(10)); // RCDATA
+    if(!resource)return nullptr;
+    const auto data=LockResource(LoadResource(module,resource));
+    const auto size=SizeofResource(module,resource);
+    if(!data||!size)throw std::runtime_error("Could not read the embedded launcher image.");
+    auto *stream=SDL_IOFromConstMem(data,size);
+    if(!stream)throw std::runtime_error(SDL_GetError());
+    std::unique_ptr<SDL_Surface,decltype(&SDL_DestroySurface)> surface(SDL_LoadPNG_IO(stream,true),SDL_DestroySurface);
+    if(!surface)throw std::runtime_error(SDL_GetError());
+    auto *texture=SDL_CreateTextureFromSurface(renderer,surface.get());
+    if(!texture)throw std::runtime_error(SDL_GetError());
+    SDL_SetTextureScaleMode(texture,SDL_SCALEMODE_LINEAR);
+    return texture;
+}
+void draw_artwork(SDL_Texture *texture,float max_width,float max_height,bool centered=false)
+{
+    if(!texture)return;
+    float width=0,height=0;SDL_GetTextureSize(texture,&width,&height);
+    const float scale=std::min(max_width/width,max_height/height);
+    if(centered)ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.f,(ImGui::GetContentRegionAvail().x-width*scale)/2));
+    ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerFromTex,nullptr);
+    ImGui::Image(reinterpret_cast<ImTextureID>(texture),ImVec2(width*scale,height*scale));
+    ImGui::GetWindowDrawList()->AddCallback(ImGui::GetPlatformIO().DrawCallback_SetSamplerLinear,nullptr);
+}
+struct Animation {
+    ULONG_PTR token=0;
+    IStream *stream=nullptr;
+    std::unique_ptr<Gdiplus::Bitmap> image;
+    Texture texture;
+    std::vector<Uint32> delays;
+    Uint64 duration=0,started=0;
+    UINT frame=~0u;
+    ~Animation() {
+        image.reset();if(stream)stream->Release();
+        if(token)Gdiplus::GdiplusShutdown(token);
+    }
+    void load(SDL_Renderer *renderer) {
+        const auto module=GetModuleHandleW(nullptr);
+        const auto resource=FindResourceW(module,MAKEINTRESOURCEW(104),MAKEINTRESOURCEW(10));
+        if(!resource)return;
+        Gdiplus::GdiplusStartupInput options;
+        if(Gdiplus::GdiplusStartup(&token,&options,nullptr)!=Gdiplus::Ok)
+            throw std::runtime_error("Could not initialize launcher animation.");
+        const auto size=SizeofResource(module,resource);
+        const auto data=LockResource(LoadResource(module,resource));
+        if(!data||!size)throw std::runtime_error("Could not read launcher animation.");
+        auto memory=GlobalAlloc(GMEM_MOVEABLE,size);
+        if(!memory)throw std::bad_alloc();
+        auto *bytes=GlobalLock(memory);
+        if(!bytes){GlobalFree(memory);throw std::bad_alloc();}
+        std::memcpy(bytes,data,size);GlobalUnlock(memory);
+        if(FAILED(CreateStreamOnHGlobal(memory,TRUE,&stream))) {
+            GlobalFree(memory);throw std::runtime_error("Could not read launcher animation.");
+        }
+        image.reset(Gdiplus::Bitmap::FromStream(stream));
+        if(!image||image->GetLastStatus()!=Gdiplus::Ok)
+            throw std::runtime_error("Invalid launcher animation.");
+        const auto count=image->GetFrameCount(&Gdiplus::FrameDimensionTime);
+        if(!count)throw std::runtime_error("Launcher animation has no frames.");
+        delays.assign(count,100);
+        std::vector<std::uint8_t> property(image->GetPropertyItemSize(PropertyTagFrameDelay));
+        if(!property.empty()) {
+            auto *item=reinterpret_cast<Gdiplus::PropertyItem *>(property.data());
+            if(image->GetPropertyItem(PropertyTagFrameDelay,static_cast<UINT>(property.size()),item)==Gdiplus::Ok&&item->type==PropertyTagTypeLong&&item->length/sizeof(UINT)>=count) {
+                for(UINT i=0;i<count;i++)delays[i]=std::max(1u,static_cast<const UINT *>(item->value)[i])*10;
+            }
+        }
+        for(auto delay:delays)duration+=delay;
+        texture.value=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_BGRA32,SDL_TEXTUREACCESS_STREAMING,image->GetWidth(),image->GetHeight());
+        if(!texture.value)throw std::runtime_error(SDL_GetError());
+        SDL_SetTextureScaleMode(texture.value,SDL_SCALEMODE_NEAREST);
+        SDL_SetTextureBlendMode(texture.value,SDL_BLENDMODE_BLEND);
+        started=SDL_GetTicks();
+    }
+    SDL_Texture *current() {
+        if(!texture.value)return nullptr;
+        auto elapsed=(SDL_GetTicks()-started)%duration;
+        UINT next=0;
+        while(next+1<delays.size()&&elapsed>=delays[next])elapsed-=delays[next++];
+        if(next!=frame) {
+            if(image->SelectActiveFrame(&Gdiplus::FrameDimensionTime,next)!=Gdiplus::Ok)
+                throw std::runtime_error("Could not decode launcher animation frame.");
+            Gdiplus::Rect area(0,0,image->GetWidth(),image->GetHeight());Gdiplus::BitmapData pixels{};
+            if(image->LockBits(&area,Gdiplus::ImageLockModeRead,PixelFormat32bppARGB,&pixels)!=Gdiplus::Ok)
+                throw std::runtime_error("Could not read launcher animation frame.");
+            const bool updated=SDL_UpdateTexture(texture.value,nullptr,pixels.Scan0,pixels.Stride);
+            image->UnlockBits(&pixels);
+            if(!updated)throw std::runtime_error(SDL_GetError());
+            frame=next;
+        }
+        return texture.value;
+    }
+};
 struct ImGuiSession {
     ImGuiSession(SDL_Window *window,SDL_Renderer *renderer) {
         IMGUI_CHECKVERSION(); ImGui::CreateContext();
@@ -88,6 +185,8 @@ struct ImGuiSession {
         s.Colors[ImGuiCol_ButtonActive]=ImVec4(0.58f,0.36f,0.12f,1);
         s.Colors[ImGuiCol_CheckMark]=ImVec4(1,0.70f,0.31f,1);
         s.Colors[ImGuiCol_SliderGrab]=ImVec4(0.95f,0.62f,0.27f,1);
+        s.Colors[ImGuiCol_Tab]=ImVec4(0.14f,0.16f,0.19f,1);
+        s.Colors[ImGuiCol_TabHovered]=ImVec4(0.40f,0.29f,0.16f,1);
         s.Colors[ImGuiCol_TabSelected]=ImVec4(0.30f,0.24f,0.16f,1);
         s.Colors[ImGuiCol_NavCursor]=ImVec4(1,0.70f,0.31f,1);
         ImGui_ImplSDL3_InitForSDLRenderer(window,renderer);
@@ -105,6 +204,8 @@ struct App {
     hn::Audio audio;
     hn::Session session;
     SDL_Texture *texture=nullptr;
+    Texture logo,cover;
+    Animation mascot;
     std::shared_ptr<DialogState> dialog=std::make_shared<DialogState>();
     std::vector<std::uint8_t> rom;
     std::string message;
@@ -204,7 +305,7 @@ struct App {
         input.clear();
         try {
             if(!result->error.empty()) throw std::runtime_error(result->error);
-            if(result->action!=FileAction::export_save&&session.present())
+            if(session.present())
                 throw std::runtime_error(tr(settings,"Vuelve al menú antes de cambiar la ROM o la partida.",
                                                     "Return to the menu before replacing the ROM or save."));
             switch(result->action) {
@@ -215,9 +316,6 @@ struct App {
                 hn::import_save(paths,result->path);
                 notice(tr(settings,"Partida importada. Se ha conservado la anterior cuando era válida.",
                                           "Save imported. The previous valid save was backed up."));break;
-            case FileAction::export_save:
-                hn::export_save(paths,result->path);
-                notice(tr(settings,"Partida exportada.","Save exported."));break;
             }
         }catch(const std::exception &e){notice(e.what(),true);}
     }
@@ -255,54 +353,45 @@ struct App {
     }
     void home(SDL_Window *window) {
         ImGui::Spacing();
-        if(session.present()) {
-            ImGui::BeginDisabled(!session.playable());
-            if(ImGui::Button(tr(settings,"Continuar","Resume")))resume_game();
-            ImGui::EndDisabled();ImGui::SameLine();
-            if(ImGui::Button(tr(settings,"Reiniciar juego","Restart game")))start_game();
-            ImGui::SameLine();
-            if(ImGui::Button(tr(settings,"Volver al menú","Back to menu"))) {
-                try{stop_game();message.clear();}catch(const std::exception&e){notice(e.what(),true);}
+        const float available=ImGui::GetContentRegionAvail().x;
+        const float cover_width=std::min({220.f,available*0.32f,std::max(100.f,(ImGui::GetContentRegionAvail().y-28.f)/1.6f)});
+        if(ImGui::BeginTable("home_layout",2,ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableSetupColumn("art",ImGuiTableColumnFlags_WidthFixed,cover_width);
+            ImGui::TableSetupColumn("actions",ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableNextRow();ImGui::TableSetColumnIndex(0);
+            draw_artwork(cover.value,cover_width,cover_width);
+            ImGui::Spacing();
+            draw_artwork(mascot.current(),cover_width,cover_width*0.60f);
+            ImGui::TableSetColumnIndex(1);
+            ImGui::BeginDisabled(session.present()?!session.playable():rom.empty());
+            ImGui::PushStyleColor(ImGuiCol_Button,ImVec4(0.88f,0.46f,0.10f,1));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,ImVec4(1.f,0.59f,0.18f,1));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,ImVec4(0.76f,0.35f,0.06f,1));
+            ImGui::PushStyleColor(ImGuiCol_Text,ImVec4(0.10f,0.07f,0.03f,1));
+            if(ImGui::Button(tr(settings,session.present()?"Continuar":"Jugar",session.present()?"Resume":"Play"),ImVec2(-1,52))) {
+                if(session.present())resume_game();else start_game();
             }
-            ImGui::Spacing();ImGui::Separator();ImGui::Spacing();
-        } else {
-            ImGui::BeginDisabled(rom.empty());
-            if(ImGui::Button(tr(settings,"Jugar","Play")))start_game();
-            ImGui::EndDisabled();ImGui::Spacing();
-        }
-        ImGui::TextColored(ImVec4(1,0.73f,0.39f,1),"%s",
-            tr(settings,"Tu ROM. Tu partida.","Your ROM. Your save."));
-        ImGui::TextWrapped("%s",tr(settings,
-            "Importa tu copia de Ham-Ham Heartbreak para preparar el juego en este PC.",
-            "Import your copy of Ham-Ham Heartbreak to prepare the game on this PC."));
-        ImGui::Spacing();
-        ImGui::BeginDisabled(session.present());
-        if(ImGui::Button(tr(settings,rom.empty()?"Seleccionar mi ROM":"Cambiar ROM",
-                                               rom.empty()?"Select my ROM":"Change ROM")))
-            choose_file(window,dialog,FileAction::rom);
-        ImGui::EndDisabled();
-        ImGui::SameLine();
-        ImGui::TextUnformatted(tr(settings,rom.empty()?"ROM pendiente":"AH3P · ROM verificada",
-                                                     rom.empty()?"ROM needed":"AH3P · ROM verified"));
-        ImGui::Spacing();ImGui::Separator();ImGui::Spacing();
-        ImGui::TextWrapped("%s",tr(settings,
-            "Port en desarrollo. El juego todavía puede detenerse en funciones pendientes. Pulsa Escape o el stick derecho para pausar y abrir los ajustes.",
-            "Port in development. Gameplay can still stop at unfinished functions. Press Escape or the right stick to pause and open settings."));
-        ImGui::Spacing();
-        ImGui::TextWrapped("%s",tr(settings,
-            "Formato admitido: archivo .gba europeo, revisión 0. La importación no modifica tu archivo original.",
-            "Supported format: European revision 0 .gba. Importing leaves your original file untouched."));
-        ImGui::Spacing();
-        ImGui::TextWrapped("%s",tr(settings,
-            "Las partidas y ajustes se guardan aparte del programa. Puedes actualizarlo sin reemplazarlos.",
-            "Saves and settings are stored separately from the program, so updates do not replace them."));
-        if(ImGui::Button(tr(settings,"Abrir carpeta de datos","Open data folder")))
-            ShellExecuteW(nullptr,L"open",paths.root.c_str(),nullptr,nullptr,SW_SHOWNORMAL);
-        ImGui::Spacing();
-        int language=settings.language;
-        const char *languages[]={"Español","English"};
-        if(ImGui::Combo(tr(settings,"Idioma de la aplicación","Application language"),&language,languages,2)) {
-            settings.language=language;save_preferences();
+            ImGui::PopStyleColor(4);ImGui::EndDisabled();
+            if(session.present()) {
+                if(ImGui::Button(tr(settings,"Reiniciar juego","Restart game"),ImVec2(-1,0)))start_game();
+                if(ImGui::Button(tr(settings,"Volver al menú","Back to menu"),ImVec2(-1,0))) {
+                    try{stop_game();message.clear();}catch(const std::exception&e){notice(e.what(),true);}
+                }
+            }
+            ImGui::Spacing();
+            ImGui::BeginDisabled(session.present());
+            if(ImGui::Button(tr(settings,rom.empty()?"Seleccionar ROM":"Cambiar ROM",rom.empty()?"Select ROM":"Change ROM"),ImVec2(-1,0)))
+                choose_file(window,dialog,FileAction::rom);
+            ImGui::EndDisabled();
+            ImGui::TextDisabled("%s",tr(settings,rom.empty()?"ROM europea (.gba)":"ROM lista",rom.empty()?"European ROM (.gba)":"ROM ready"));
+            ImGui::Separator();
+            ImGui::BeginDisabled(session.present());
+            if(ImGui::Button(tr(settings,"Importar partida","Import save"),ImVec2(-1,0)))
+                choose_file(window,dialog,FileAction::import_save);
+            ImGui::EndDisabled();
+            if(ImGui::Button(tr(settings,"Abrir carpeta de la partida","Open save folder"),ImVec2(-1,0)))
+                ShellExecuteW(nullptr,L"open",paths.save().parent_path().c_str(),nullptr,nullptr,SW_SHOWNORMAL);
+            ImGui::EndTable();
         }
     }
     void controls() {
@@ -349,6 +438,12 @@ struct App {
     }
     void presentation(SDL_Window *window) {
         ImGui::Spacing();
+        int language=settings.language;
+        const char *languages[]={"Español","English"};
+        if(ImGui::Combo(tr(settings,"Idioma de la aplicación","Application language"),&language,languages,2)) {
+            settings.language=language;save_preferences();
+        }
+        ImGui::Spacing();
         bool changed=false;
         if(ImGui::Checkbox(tr(settings,"Pantalla completa (F11)","Fullscreen (F11)"),&settings.fullscreen)) {
             SDL_SetWindowFullscreen(window,settings.fullscreen);changed=true;
@@ -365,57 +460,20 @@ struct App {
         audio.gain(settings.volume,settings.mute);
         if(changed)save_preferences();
     }
-    void saves(SDL_Window *window) {
-        ImGui::Spacing();
-        bool exists=std::filesystem::exists(paths.save());
-        ImGui::TextWrapped("%s",tr(settings,exists?"Hay una partida guardada en este perfil.":"Todavía no hay una partida guardada.",
-                                             exists?"This profile has a saved game.":"This profile has no saved game yet."));
-        ImGui::TextWrapped("%s",tr(settings,
-            "Puedes usar partidas .sav de 32 KiB de esta versión del juego. Los estados rápidos del emulador no son compatibles.",
-            "Use 32 KiB .sav battery files for this game version. Emulator save states are not compatible."));
-        ImGui::BeginDisabled(session.present());
-        if(ImGui::Button(tr(settings,"Importar partida .sav","Import .sav")))
-            choose_file(window,dialog,FileAction::import_save);
-        ImGui::EndDisabled();
-        ImGui::SameLine();ImGui::BeginDisabled(!exists);
-        if(ImGui::Button(tr(settings,"Exportar partida","Export save")))
-            choose_file(window,dialog,FileAction::export_save);
-        ImGui::EndDisabled();
-        if(std::filesystem::exists(paths.backup())) {
-            ImGui::BeginDisabled(session.present());
-            if(ImGui::Button(tr(settings,"Restaurar partida anterior","Restore previous save")))
-                ImGui::OpenPopup("restore");
-            ImGui::EndDisabled();
-            if(ImGui::BeginPopupModal("restore",nullptr,ImGuiWindowFlags_AlwaysAutoResize)) {
-                ImGui::TextUnformatted(tr(settings,"¿Restaurar la copia anterior?","Restore the previous copy?"));
-                if(ImGui::Button(tr(settings,"Restaurar","Restore"))) {
-                    try{hn::restore_save(paths);notice(tr(settings,"Partida restaurada.","Save restored."));}
-                    catch(const std::exception&e){notice(e.what(),true);}
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::SameLine();
-                if(ImGui::Button(tr(settings,"Cancelar","Cancel")))ImGui::CloseCurrentPopup();
-                ImGui::EndPopup();
-            }
-        }
-        if(session.present())ImGui::TextWrapped("%s",tr(settings,"Vuelve al menú antes de importar o restaurar otra partida.",
-                                                                              "Return to the menu before importing or restoring another save."));
-    }
     void draw(SDL_Window *window) {
         if(session.playable()&&!paused)return;
         auto *viewport=ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);ImGui::SetNextWindowSize(viewport->WorkSize);
         ImGui::Begin(game_title,nullptr,ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoCollapse|ImGuiWindowFlags_NoMove|
                                               ImGuiWindowFlags_NoSavedSettings);
-        ImGui::TextColored(ImVec4(1,0.73f,0.39f,1),"HAMTARO NATIVE");
-        ImGui::TextDisabled("Ham-Ham Heartbreak");
+        if(logo.value)draw_artwork(logo.value,320.f,viewport->WorkSize.y*0.16f,true);
+        else ImGui::TextColored(ImVec4(1,0.73f,0.39f,1),"%s",game_title);
         if(session.present())ImGui::TextUnformatted(tr(settings,"PAUSA","PAUSED"));
         ImGui::Spacing();
         if(ImGui::BeginTabBar("pages")) {
             if(ImGui::BeginTabItem(tr(settings,"Inicio","Home"))){home(window);ImGui::EndTabItem();}
             if(ImGui::BeginTabItem(tr(settings,"Controles","Controls"))){controls();ImGui::EndTabItem();}
             if(ImGui::BeginTabItem(tr(settings,"Pantalla y sonido","Video and audio"))){presentation(window);ImGui::EndTabItem();}
-            if(ImGui::BeginTabItem(tr(settings,"Partidas","Saves"))){saves(window);ImGui::EndTabItem();}
             ImGui::EndTabBar();
         }
         if(!message.empty()) {
@@ -426,7 +484,6 @@ struct App {
         if(!settings_writable) ImGui::TextWrapped("%s",tr(settings,
             "No se modificarán los ajustes existentes. Los cambios de esta sesión no se guardarán.",
             "Existing settings are preserved. Changes in this session will not be saved."));
-        ImGui::Spacing();ImGui::TextDisabled("%s",tr(settings,"0.1.0 · En desarrollo","0.1.0 · Development build"));
         ImGui::End();
     }
 };
@@ -473,6 +530,9 @@ int run(int argc,char **argv)
         SDL_SetRenderVSync(renderer.value,0);
         ImGuiSession gui(window.value,renderer.value);
         App app{paths,settings};
+        app.logo.value=load_artwork(renderer.value,102);
+        app.cover.value=load_artwork(renderer.value,103);
+        app.mascot.load(renderer.value);
         Texture texture;texture.value=SDL_CreateTexture(renderer.value,SDL_PIXELFORMAT_RGBA32,SDL_TEXTUREACCESS_STREAMING,HN_WIDTH,HN_HEIGHT);
         if(!texture.value)throw std::runtime_error(SDL_GetError());
         SDL_SetTextureScaleMode(texture.value,SDL_SCALEMODE_NEAREST);app.texture=texture.value;

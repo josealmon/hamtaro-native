@@ -1,7 +1,8 @@
 # Hamtaro Native
 
 Windows x64 native-port candidate for Hamtaro: Ham-Ham Heartbreak (European AH3P revision 0).
-You must provide your own compatible .gba file. No game assets or ROM are included.
+You must provide your own compatible .gba file. The launcher includes its artwork;
+the ROM and gameplay resources are supplied by the player.
 
 The application imports and validates a ROM, runs adapted native game logic,
 configures keyboard/gamepad input and manages compatible saves.
@@ -55,10 +56,9 @@ Dependencies are pinned with SHA-256 hashes and stored outside this checkout,
 under HAMTARO_NATIVE_WORK (default: the user profile's .hamtaro-native-dev folder).
 An Internet connection is needed for the first dependency download, not for normal use.
 
-Optional personal executable artwork can be supplied with
-`-DHAMTARO_NATIVE_ICON=PATH_TO_YOUR_PRIVATE_ICON.ico` when configuring CMake.
-Windows Explorer, the title bar and the taskbar use the embedded icon. Keep that
-artwork outside the repository; builds without it remain asset-free.
+Launcher artwork lives in assets/launcher/ and the Windows icon in assets/windows/.
+The supplied logo, cover and animated GIF are embedded at build time. No separate
+artwork files are needed beside the executable. The ROM and saves remain user-supplied.
 
 Run build/Release/hamtaro-native.exe. Import a compatible ROM through the application.
 Choose Play to start; Escape or right-stick click opens the pause/settings menu.
@@ -75,5 +75,5 @@ GBA B: X / east button. L/R: Q/E / shoulders. Start: Enter / Start.
 Select: right Shift / Back. Port menu: Escape / right-stick click. Fullscreen: F11.
 Bindings, deadzone, video and sound settings are configurable.
 
-Original 32 KiB .sav files can be imported and exported. Emulator save states
-are not compatible. Importing a ROM never replaces an existing save.
+Import an original 32 KiB .sav from Home, or open the save folder to copy it.
+Emulator save states are not compatible. Importing a ROM never replaces an existing save.

@@ -12,6 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 FORBIDDEN = {".gba", ".sav", ".sram", ".state", ".rgba", ".pcm", ".wav", ".zip",
              ".7z", ".exe", ".dll", ".pdb", ".obj", ".o", ".elf", ".bin", ".log", ".env"}
 PACKAGE_FILES = {"hamtaro-native.exe", "README.md", "NOTICE.md", "docs/architecture.md", "licenses/SDL.txt", "licenses/Dear-ImGui.txt", "licenses/mGBA-MPL-2.0.txt"}
+ARTWORK = {
+    "assets/launcher/logo.png": b"\x89PNG\r\n\x1a\n",
+    "assets/launcher/cover.png": b"\x89PNG\r\n\x1a\n",
+    "assets/launcher/mascot.gif": b"GIF89a",
+    "assets/windows/hamtaro.ico": b"\x00\x00\x01\x00",
+}
 
 def git(*args: str) -> bytes:
     return subprocess.check_output(["git", "-C", str(ROOT), *args])
@@ -27,6 +33,11 @@ def check_name(name: str) -> list[str]:
 
 def check_source(name: str, data: bytes) -> list[str]:
     failures = check_name(name)
+    # Only the four launcher assets explicitly requested by the user are allowed.
+    if name in ARTWORK:
+        if not data.startswith(ARTWORK[name]) or len(data) > 4 * 1024 * 1024:
+            failures.append(f"Invalid launcher artwork: {name}")
+        return failures
     if len(data) > 256 * 1024:
         failures.append(f"Unexpectedly large versioned source: {name}")
     if b"\x00" in data or (len(data) >= 0xC0 and data[0xAC:0xB0] == b"AH3P"):

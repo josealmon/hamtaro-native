@@ -2,7 +2,12 @@
 
 Hamtaro Native is an independent, unofficial compatibility and native-port project.
 Game names identify the supported game and imply no affiliation or endorsement.
-Players supply their own compatible ROM. No game resources are distributed.
+Players supply their own compatible ROM. No ROM or extracted gameplay resources
+are distributed. The launcher logo, cover, animated character and Windows icon
+are included in assets/ at the user's request and are separate from the code
+licenses below. Hamtaro names, characters and artwork belong to their respective
+rights holders. The animated GIF source is
+https://i.pinimg.com/originals/30/29/e0/3029e081d7064945c3ad85cc00b39b19.gif.
 
 SDL 3.4.18 is Copyright (C) 1997-2026 Sam Lantinga and contributors, under the zlib license.
 Dear ImGui 1.93.0 is Copyright (c) 2014-2026 Omar Cornut and contributors, under the MIT license.
