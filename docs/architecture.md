@@ -54,9 +54,9 @@ statically. A separate clean-machine validation remains pending.
 | Actor reflections | Adapted | Complete actor_animation_mirror.c animation contract compared: 23/18-entry mutable tables, wrapped Z, changed/retained animation offsets, fallbacks and companion aliases; dressing-room introduction and movement execute natively |
 | Shared scene actor control | Adapted | All 40 functions in class_anchor_presets.c and scene_control_callbacks.c compared: anchors/modes, vectors, signed rectangles/corridors, aiming, background alignment/offsets and clone phases; later-activity runtime integration remains pending |
 | Scene render presets | Adapted | All 77 functions in script_callbacks_render_presets.c and 28 required actor helpers compared; typed F4/task calls and 35 defined-zero Main callbacks, linked slots, indicators, graphics and live class selectors; full area/activity integration remains pending |
-| Bank-2 actor and scene families | Adapted | All 120 functions in map_bank2_render_callbacks.c, map_bank2_scene_control.c, map_bank2_scene_presets.c and map_bank2_height_callbacks.c compared; 116 argument-free task targets, 70 Main contracts, panel stages, randomized motion, height latches and one full-word animation yield; complete Sunny Peak integration remains pending |
+| Bank-2 actor and scene families | Adapted and exercised | All 120 functions in map_bank2_render_callbacks.c, map_bank2_scene_control.c, map_bank2_scene_presets.c and map_bank2_height_callbacks.c compared; 116 argument-free task targets, 70 Main contracts, panel stages, randomized motion, height latches and one full-word animation yield; native Sunny Peak story, reunions, temple, bridge, sand bath and key-cave routes are recorded below; this does not cover every scene variant |
 | Bank-3 late scene family | Adapted | All 31 functions in map_bank3_late_callbacks.c compared: 25 void presets, four animation callbacks and two Main modal callbacks; 27 F4 targets, song pan/tempo, mirror/affine scales and raw actor snapshot roundtrips; full area integration remains pending |
-| Bank-3 main scene/activity family | Adapted | All 282 source functions accounted for across presets, source/spawn entries, pair board, phases/orbits, record text, chains and one shared condition; typed Main/task/animation contracts and helpers compared, including live links, byte wrapping and retained-register paths; complete activity progression and area integration remain pending |
+| Bank-3 main scene/activity family | Adapted and exercised | All 282 source functions accounted for across presets, source/spawn entries, pair board, phases/orbits, record text, chains and one shared condition; typed Main/task/animation contracts and helpers compared, including live links, byte wrapping and retained-register paths; native story and optional routes include a complete pair-board win, a four-attempt loss, prize allocation and saved continuation; other random layouts and outcome variants rely on the function comparisons |
 | Bank-4 scene/path family | Adapted | All 483 map_bank4_callbacks.c functions and the shared screen-indicator family compared; presentation, jump stages/windows, byte counters, audio distance scaling and three path followers retain reviewed Main/task/animation/helper contracts; complete area story/activity and timed scene integration remain pending |
 | Bank-5 scene/mechanism family | Adapted | All 207 map_bank5_callbacks.c functions and the four-function stairs/idle dependency family compared; grid choices, actor mirrors, lane states/outcomes, round timing and a typed VBlank callback; complete area progression and timed desktop integration remain pending |
 | Bank-6 main/final scene families | Adapted | All 243 functions in map_bank6_callbacks.c and map_bank6_final_callbacks.c plus the complete neighbor-pair dependency compared; oscillators/orbits, projected motion, cursor/rectangles, target selection/restore, task patterns and typed helpers; full area integration remains pending |
@@ -701,6 +701,20 @@ the retained Heart Earrings, gem counters, empty rock slots, clothing and photos
 Original Save/Continue and an independent fresh process restore the central
 plaza with those records. This lesson does not establish complete pair-board
 minigame coverage.
+
+The independent `pair_board.json` route starts from that genuine Goodgo save.
+It reads the original instructions, pays three seeds and matches all four pairs
+in four attempts using ordinary movement and action inputs. Matched tiles become
+unavailable. The reward sequence awards twenty seeds and nine rocks: three
+key-29 records with one polish, one key-18 record with three polishes and five
+key-11 records with three polishes. A second paid game skips the instructions
+and deliberately mismatches all four attempts. No tiles are removed and no
+further reward is issued. Declining each replay costs nothing. Original End Game,
+Continue and a fresh process retain 36 seeds, all nine typed rock records,
+82 words, 21 reconciliations, the accessory and existing gem counters. This
+separate branch preserves the main story profile and earlier Fun Land routes.
+Other randomized layouts, the wildcard and mixed-result games remain distinct
+from these two input traces and retain their function-level comparison evidence.
 
 `optional_words.json --route byeq` continues from that save through Wildwoods.
 Hamha introduces the pair's exercise and changes phase 0xCA from zero to one;
@@ -1374,6 +1388,17 @@ The expanded declaration census covers all 275 recovered graphics/script sources
 declarations come from shared_main_scripts.c; four come from link-related sources,
 including the communication render-copy animation. This extends the map-bank-only
 census and does not establish callback reachability or gameplay completion.
+
+The shared editor entry at 0x080211D8 has 116 explicit calls in the recovered
+map scripts. Each local entry is guarded by action four, either by comparison
+or the fourth case of a one-based dispatch table. The original motion-control
+producer, mirrored by motion.c, emits only zero through three from ordinary
+buttons; movement resets the action byte before updating it. The bank-zero
+bootstrap also skips the internal editor menu and enters the title bank. These
+source contracts distinguish the 36 editor declarations from ordinary gameplay.
+Shared scripts also contain normal game subroutines, which remain adapted.
+This review does not claim a universal indirect call graph or support for the
+internal editors. The four link declarations remain outside the first release.
 
 | Batch order | Source families and purpose | Completion evidence |
 | --- | --- | --- |

@@ -2056,6 +2056,26 @@ pair-board gameplay and full desktop progression remain separate checks.
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/postgame.json --route accessory_toss --save PATH_TO_PRIVATE_CRAFT_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_TOSS_PROFILE
     python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/fun_land_optional.json --route goodgo --save PATH_TO_PRIVATE_CRAFT_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_GOODGO_PROFILE
 
+`pair_board.json` reuses that Goodgo save for the complete original instructions,
+a four-match/four-attempt win, and a second paid game with four deliberate
+mismatches. It checks the three-seed entry fees, tile removal on success only,
+attempt/match counters, replay rejection and rewards. The perfect win gives
+twenty seeds and nine rocks; every reward slot checks its type and original
+initial polish count. The subsequent loss leaves those rocks intact and awards
+nothing. Original End Game/Continue retains 36 seeds, nine rocks, 82 words,
+21 loves, the accessory, gem counters, clothing, photos and all 51 choreographies.
+
+The 26,760-update route contains 17 checkpoints and 379 steps. SDK replay passes
+in 42.27 seconds; 29,807 host-session checks pass in 42.49 seconds. Scout, SDK and
+host agree on all 32 KiB. A fresh process reloads and opens Status in 2,103 updates
+and 2.862 seconds. Both group-three payloads and all group-four records/mirrors
+remain byte-identical to the source. All 138 native source files and executable/
+probe hashes are unchanged; previous native comparisons and story routes are
+reused. Twenty-one parser tests pass. Other random layouts, wildcard/mixed games
+and a complete desktop activity remain outside these input traces.
+
+    python -B tools/run_scenario.py --rom PATH_TO_YOUR_AH3P_ROM --scenario tests/scenarios/pair_board.json --save PATH_TO_PRIVATE_GOODGO_PROFILE/game.sav --session-test build/Release/hn_session_tests.exe --desktop-profile PATH_TO_NEW_PRIVATE_PAIR_BOARD_PROFILE
+
 The seven complete SaveGroup3 families, the 18-function record-selection family,
 shared item-selection families and two strided-transfer helpers can be compared separately:
 

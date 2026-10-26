@@ -27,6 +27,8 @@ including hidden drops, ledge interactions and the fixed Ham-lift rock, then
 retain their types and remaining polishes through original save and reload.
 A separate route uses Ham-lift directly at all four pillars before Tack-Q,
 checks one new rock per action and preserves the results through save and reload.
+Fun Land's pair board also has complete winning and losing routes, including
+entry fees, the nine-rock reward, replay rejection and saved continuation.
 The scenarios check original Save/Continue and compare complete
 32 KiB saves between independent native runtimes.
 
