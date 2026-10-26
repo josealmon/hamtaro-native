@@ -451,7 +451,9 @@ struct App {
     void controls() {
         ImGui::Spacing();
         const char *name=input.active()?SDL_GetGamepadName(input.active()):tr(settings,"No gamepad connected");
-        if(ImGui::BeginCombo(tr(settings,"Active gamepad"),name)) {
+        ImGui::TextUnformatted(tr(settings,"Active gamepad"));
+        ImGui::SetNextItemWidth(std::min(360.f,ImGui::GetContentRegionAvail().x));
+        if(ImGui::BeginCombo("##active_gamepad",name)) {
             for(auto *pad:input.pads()) {
                 bool active=pad==input.active();
                 if(ImGui::Selectable(SDL_GetGamepadName(pad),active)) input.select(SDL_GetGamepadID(pad));
@@ -459,7 +461,9 @@ struct App {
             ImGui::EndCombo();
         }
         bool changed=ImGui::Checkbox(tr(settings,"WASD movement alternative"),&settings.wasd);
-        changed|=ImGui::SliderInt(tr(settings,"Stick deadzone"),&settings.deadzone,5,80,"%d%%");
+        ImGui::TextUnformatted(tr(settings,"Stick deadzone"));
+        ImGui::SetNextItemWidth(std::min(360.f,ImGui::GetContentRegionAvail().x));
+        changed|=ImGui::SliderInt("##stick_deadzone",&settings.deadzone,5,80,"%d%%");
         ImGui::TextDisabled("%s",tr(settings,"Select a binding to change it. Escape cancels."));
         float table_height=std::max(130.0f,ImGui::GetContentRegionAvail().y-110.0f);
         if(ImGui::BeginTable("bindings",3,ImGuiTableFlags_BordersInnerH|ImGuiTableFlags_SizingStretchProp|ImGuiTableFlags_ScrollY,ImVec2(0,table_height))) {
