@@ -470,7 +470,15 @@ struct App {
             ImGui::TableSetupScrollFreeze(0,1);
             ImGui::TableSetupColumn(tr(settings,"GBA action"),ImGuiTableColumnFlags_WidthFixed,105);
             ImGui::TableSetupColumn(tr(settings,"Keyboard"),ImGuiTableColumnFlags_WidthStretch,1.f);
-            ImGui::TableSetupColumn(tr(settings,"Gamepad"),ImGuiTableColumnFlags_WidthStretch,1.f);ImGui::TableHeadersRow();
+            ImGui::TableSetupColumn(tr(settings,"Gamepad"),ImGuiTableColumnFlags_WidthStretch,1.f);
+            ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+            for(int column=0;column<3;column++) {
+                if(!ImGui::TableSetColumnIndex(column))continue;
+                const char *heading=ImGui::TableGetColumnName();
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.f,
+                    (ImGui::GetContentRegionAvail().x-ImGui::CalcTextSize(heading).x)/2));
+                ImGui::TableHeader(heading);
+            }
             for(int i=0;i<10;i++) {
                 ImGui::PushID(i);ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex(0);ImGui::TextUnformatted(tr(settings,hn::action_names[i]));
