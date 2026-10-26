@@ -68,6 +68,9 @@ The launcher supports English, Spanish, French, German and Italian. It follows t
 Windows display language by default, falling back to English for other languages.
 Choose Automatic or a specific language in Video and audio; manual choices persist.
 The game's own language setting is independent of the launcher.
+The window opens at a whole multiple of the original 240 x 160 image (960 x 640
+by default), fitting the monitor's work area. Previously saved window sizes are
+adjusted on launch. Manual resizing and fullscreen can still leave black margins.
 ROM, settings and saves live in the profile's .hamtaro-native directory, independently
 of the program folder. Use --data-dir PATH for a separate test profile.
 

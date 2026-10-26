@@ -1,4 +1,5 @@
 #include "app/settings.h"
+#include "gba/video.h"
 #include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_gamepad.h>
 #include <sstream>
@@ -7,6 +8,14 @@
 #include <algorithm>
 #include <stdexcept>
 namespace hn {
+std::array<int,2> game_window_size(int width,int height,int available_width,int available_height)
+{
+    const int limit=std::max(1,std::min(available_width/HN_WIDTH,available_height/HN_HEIGHT));
+    const int nearest=std::min((width+HN_WIDTH/2)/HN_WIDTH,(height+HN_HEIGHT/2)/HN_HEIGHT);
+    // Prefer at least 3x for launcher readability, within the monitor's work area.
+    const int scale=std::clamp(nearest,std::min(3,limit),limit);
+    return {HN_WIDTH*scale,HN_HEIGHT*scale};
+}
 Settings Settings::defaults()
 {
     Settings s;

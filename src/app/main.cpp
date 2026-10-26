@@ -576,10 +576,23 @@ int run(int argc,char **argv)
         SDL_SetNumberProperty(properties,SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,settings.window_width);
         SDL_SetNumberProperty(properties,SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,settings.window_height);
         SDL_SetBooleanProperty(properties,SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,true);
-        SDL_SetBooleanProperty(properties,SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN,smoke);
+        SDL_SetBooleanProperty(properties,SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN,true);
         window.value=SDL_CreateWindowWithProperties(properties);SDL_DestroyProperties(properties);
         if(!window.value)throw std::runtime_error(SDL_GetError());
-        SDL_SetWindowMinimumSize(window.value,640,480);
+        SDL_Rect work_area{};
+        const auto display=SDL_GetDisplayForWindow(window.value);
+        const bool have_work_area=SDL_GetDisplayUsableBounds(display,&work_area);
+        int top=0,left=0,bottom=0,right=0;
+        SDL_GetWindowBordersSize(window.value,&top,&left,&bottom,&right);
+        const auto size=hn::game_window_size(settings.window_width,settings.window_height,
+            have_work_area?work_area.w-left-right:settings.window_width,
+            have_work_area?work_area.h-top-bottom:settings.window_height);
+        settings.window_width=size[0];settings.window_height=size[1];
+        if(!SDL_SetWindowSize(window.value,size[0],size[1]))throw std::runtime_error(SDL_GetError());
+        SDL_SetWindowMinimumSize(window.value,std::min(640,size[0]),std::min(480,size[1]));
+        if(have_work_area)SDL_SetWindowPosition(window.value,
+            work_area.x+(work_area.w-size[0]-left-right)/2+left,
+            work_area.y+(work_area.h-size[1]-top-bottom)/2+top);
         if(settings.fullscreen&&!smoke)SDL_SetWindowFullscreen(window.value,true);
         Renderer renderer;renderer.value=SDL_CreateRenderer(window.value,nullptr);
         if(!renderer.value)throw std::runtime_error(SDL_GetError());
@@ -596,6 +609,7 @@ int run(int argc,char **argv)
         app.audio.gain(settings.volume,settings.mute);
         if(!startup_error.empty()){app.notice(startup_error,true);app.settings_writable=false;}
         app.check_rom();
+        if(!smoke)SDL_ShowWindow(window.value);
         while(app.running) {
             SDL_Event e;
             while(SDL_PollEvent(&e)) {

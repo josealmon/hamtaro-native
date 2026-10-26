@@ -57,7 +57,8 @@ static std::filesystem::path preferences(const std::filesystem::path &applicatio
         CHECK(loaded.keys==settings.keys&&loaded.buttons==settings.buttons);
         CHECK(loaded.language==language&&loaded.volume==37&&loaded.mute&&loaded.deadzone==39);
         CHECK(loaded.fullscreen&&!loaded.integer_scale&&!loaded.pause_unfocused&&!loaded.wasd);
-        CHECK(loaded.window_width==944&&loaded.window_height==656);
+        CHECK(loaded.window_width%240==0&&loaded.window_height%160==0);
+        CHECK(loaded.window_width/240==loaded.window_height/160&&loaded.window_width<=960);
         CHECK(hn::read_file(profile.save(),hn::save_size)==saved&&hn::read_file(profile.backup(),hn::save_size)==backup);
         hn::ProfileLock released(profile);
     }
@@ -86,6 +87,15 @@ int main()
         CHECK(hn::utf8(paths.root.filename())=="datos con acentos ñ");
         hn::ProfileLock lock(paths);rejects([&]{hn::ProfileLock second(paths);});
         CHECK(hn::Settings::defaults().language==hn::automatic_language);
+        CHECK(hn::Settings::defaults().window_width==960&&hn::Settings::defaults().window_height==640);
+        const std::array<int,2> four_times={960,640},three_times={720,480},two_times={480,320};
+        CHECK(hn::game_window_size(960,720,1904,1001)==four_times);
+        CHECK(hn::game_window_size(886,648,1904,1001)==four_times);
+        CHECK(hn::game_window_size(960,640,1904,1001)==four_times);
+        CHECK(hn::game_window_size(640,480,1904,1001)==three_times);
+        CHECK(hn::game_window_size(1920,1080,1000,650)==four_times);
+        CHECK(hn::game_window_size(960,640,900,600)==three_times);
+        CHECK(hn::game_window_size(960,640,700,450)==two_times);
         CHECK(!hn::load_settings(paths).pause_unfocused);
         CHECK(hn::language_from_windows_id(MAKELANGID(LANG_SPANISH,SUBLANG_SPANISH_MEXICAN))==0);
         CHECK(hn::language_from_windows_id(MAKELANGID(LANG_ENGLISH,SUBLANG_ENGLISH_UK))==1);
