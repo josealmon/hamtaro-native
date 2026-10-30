@@ -29,7 +29,7 @@ resources are not included.
   **Create connection** and **Join by IP**.
 
 Single-player routes have been tested through the ending, all 21 reconciliations
-and all 86 Ham-Chats. The story remains single-player.
+and all 86 Ham-Chats.
 See [tested scope](docs/architecture.md#tested-scope) for coverage details.
 
 ## Getting started
