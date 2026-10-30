@@ -551,10 +551,6 @@ struct App {
         ImGui::TextWrapped("%s",tr(settings,status));
         if(!lan.addresses().empty())ImGui::TextWrapped("IP: %s",lan.addresses().c_str());
         if(state!=hn::LanLink::State::disconnected&&ImGui::Button(tr(settings,"Disconnect"))) {lan.disconnect();session.poll_link();}
-        ImGui::Spacing();
-        ImGui::BeginDisabled(!session.playable());
-        if(ImGui::Button(tr(settings,"Resume"),ImVec2(220,0)))resume_game();
-        ImGui::EndDisabled();
     }
     void draw(SDL_Window *window) {
         if(session.playable()&&!paused)return;
