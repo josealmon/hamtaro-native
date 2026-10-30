@@ -105,28 +105,18 @@ For a separate profile, launch the application with `--data-dir "PATH_TO_PROFILE
 
 ## Building from source
 
-Install Visual Studio C++ Build Tools with a Windows SDK and CMake. The supplied
-preset uses **Visual Studio 2026 and CMake 4.2+**:
+Install Visual Studio Build Tools with the **Desktop development with C++**
+workload, including the Windows SDK and the bundled CMake tools (3.25 or newer).
+Run these commands from the repository root in Developer PowerShell.
 
 ```powershell
-cmake --preset windows
-cmake --build --preset release --parallel 4
-ctest --preset release --parallel 1
+cmake -S . -B build -A x64
+cmake --build build --config Release
 ```
 
-The executable is created in `build/Release/`. For **Visual Studio 2022 and
-CMake 3.25+**, configure a separate build directory:
-
-```powershell
-cmake -S . -B build-vs2022 -G "Visual Studio 17 2022" -A x64 -DBUILD_TESTING=ON
-cmake --build build-vs2022 --config Release --parallel 4
-ctest --test-dir build-vs2022 -C Release --output-on-failure --parallel 1
-```
-
-SDL3 and Dear ImGui are downloaded automatically on the first build, with pinned
-versions and SHA-256 checks. Dependency sources are stored in
-`%USERPROFILE%\.hamtaro-native-dev`, or the directory set by `HAMTARO_NATIVE_WORK`.
-Building and running the synthetic tests does not require a ROM.
+CMake fetches SDL3 and Dear ImGui automatically. The executable is written to
+`build/Release/Hamtaro - Ham-Ham Heartbreak.exe`. To run the tests, use
+`ctest --test-dir build -C Release --output-on-failure`.
 
 ## Documentation and credits
 
