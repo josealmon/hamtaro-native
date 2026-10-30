@@ -24,11 +24,11 @@ launcher artwork and the Windows icon.
 | Location | Responsibility |
 | --- | --- |
 | `src/app/` | Launcher, localization, settings, ROM validation, profile storage and game session |
-| `src/platform/` | SDL input and desktop audio output |
+| `src/platform/` | SDL input, desktop audio output and the TCP connection for Cable Link |
 | `src/gba/` | Guest memory, DMA, BIOS helpers, software video, timers, IRQs and sound hardware |
 | `src/game/` | Adapted game logic, script interpreters, typed callbacks, areas, menus and saves |
 | `config/` | Supported ROM identity |
-| `cmake/` | Pinned dependencies and generated Windows resources |
+| `cmake/` | Dependency definitions and templates for the ROM specification and Windows resources |
 | `assets/` | Logo, cover, animated mascot and icon |
 | `tests/unit/` | Synthetic subsystem tests |
 | `tests/integration/` | Host integration tests, native probe and optional reference oracles |
@@ -36,10 +36,9 @@ launcher artwork and the Windows icon.
 | `tools/` | Reference comparisons, inventories, scenario runner and repository checks |
 | `docs/` | Architecture and test instructions |
 
-Build outputs go in `build/`. Dependency sources and private test artifacts live
-outside the checkout under `HAMTARO_NATIVE_WORK`, defaulting to
-`%USERPROFILE%\.hamtaro-native-dev`. ROMs, saves, extracted resources and captures
-are excluded from version control and release packages.
+Build outputs go in `build/`. CMake downloads dependencies into `dependencies/`
+under `HAMTARO_NATIVE_WORK`, which defaults to `%USERPROFILE%\.hamtaro-native-dev`.
+Tests use temporary profiles or an output directory supplied on the command line.
 
 ## Guest memory and callback contracts
 
@@ -50,9 +49,8 @@ order are retained where game behavior depends on them.
 
 ROM function addresses resolve through typed native dispatch for Main, text-task,
 animation, background and interrupt calls. Each binding preserves its own
-arguments, consumed-byte count and yield behavior. Main opcode 25 assigns
-text-task callback addresses; the text command F4 selects a callback by index.
-An address following an arbitrary F4 byte is not a valid callback inventory.
+arguments, consumed-byte count and yield behavior. Main opcode `0x25` assigns
+text-task callback addresses. Text command `0xF4` selects a callback by index.
 
 The interpreters retain guest cursors, variables, return stacks and task state.
 Unknown callbacks, invalid resources and exhausted command budgets return a fault
@@ -122,26 +120,20 @@ closes before a dialog completes.
 
 ## Cable Link
 
-`game/link.c` adapts the original Initialize/Process/StopCommunicationExchange
-callbacks, retaining the send/receive choice, received-record flags, original
-menus and save-slot writes. `platform/lan.cpp` carries the selected 128-byte dance
-and song index over a nonblocking TCP connection. It replaces the GBA serial
-transport; it does not emulate serial registers, IRQ timing or an emulator's
-network protocol. Unrelated serial-device accesses remain unsupported.
+The [exchange callbacks](../src/game/link.c) preserve the original send/receive
+choice, menu transitions and received-record flags. The [LAN implementation](../src/platform/lan.cpp)
+transfers a 128-byte dance record and its song index between two copies of the
+port over a nonblocking TCP connection. The game menu handles save-slot selection.
 
-The host-only mailbox is outside guest RAM/SRAM. Protocol 1 identifies AH3P
-revision 0, uses fixed-size bounded messages and per-exchange IDs, validates
-record ranges, and confirms both records before publishing a received record.
-Partial messages, incompatible versions and disconnected peers cannot supply
-partial records to the game. The game's existing save-slot UI performs the
-actual SRAM writes. Disconnecting after a completed delivery does not roll back
-that delivery or synchronize both PCs' disks atomically.
+Protocol 1 identifies AH3P revision 0. Each exchange has an ID so that a late
+reply to a cancelled trade can be discarded. Incoming records stay in host
+memory until the message is complete, its fields pass validation and both peers
+confirm the transfer. Each player then saves the dance locally.
 
-Networking is idle until explicitly enabled and closes with the game session.
-The launcher continues polling while paused. A peer confirms the exchange via
-the original menu; B cancels an unfinished exchange and releases the peer's wait.
-The LAN protocol is intended for trusted local networks and does not provide
-Internet discovery or authentication.
+Networking starts when the player creates or joins a connection and closes with
+the game session. The launcher polls the connection while paused. Pressing B
+during an unfinished exchange cancels it for both peers. The protocol is intended
+for trusted local networks.
 
 ## Tested scope
 
@@ -160,7 +152,7 @@ every build.
 | Video and sound | Synthetic PPU, BIOS, bus and audio comparisons; sampled clocked raster effects; focused scene regressions and paced SDL audio delivery |
 | Windows frontend | Startup, settings persistence, keyboard remapping/play, pause, fullscreen restoration, artwork and menu layout reviewed in the application |
 | Controllers | SDL virtual-gamepad hotplug, mappings, deadzone, short taps and disconnect tested |
-| Cable Link | Two native processes over loopback TCP; different dances exchanged in both directions, send/receive, original slot saving and fresh-process reload; cancellation and disconnect preserve saves |
+| Cable Link | Two packaged game windows exchanged different dances on one PC and saved them in the original menus. Automated tests also cover one-way transfers, reload, cancellation and disconnect. |
 
 Coverage is not exhaustive across optional branches, random minigame layouts or
 hardware timing. Physical controllers, startup on a clean Windows installation
@@ -179,6 +171,4 @@ subroutines and internal editor entry points; link declarations also need to be
 classified separately.
 
 Adapt related callbacks with their helpers, aliases and calling conventions,
-then run the affected reference comparisons and input scenarios. Keep one
-coverage matrix here, reproducible instructions in `testing.md`, and generated
-reports outside the repository.
+then run the affected [reference comparisons and input scenarios](testing.md).

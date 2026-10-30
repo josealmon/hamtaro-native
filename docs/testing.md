@@ -1,21 +1,22 @@
 # Testing and packaging
 
-Build instructions are in the [README](../README.md#building-from-source).
-Commands below run from the repository root in PowerShell. Replace `PATH_TO_...`
-placeholders with your local paths; keep ROMs, saves and generated reports outside
-the checkout. Run gameplay tests sequentially, using disposable profiles.
+Start with the [Release build in the README](../README.md#building-from-source).
+Run the commands below from the repository root in PowerShell with Python 3
+and Git on `PATH`. For tests that use a ROM or save, replace the example paths
+with your own and keep test profiles outside the checkout.
 
-## Synthetic tests and CI
+## Tests without a ROM
 
 ```powershell
-ctest --preset release --parallel 1
-python -B -m unittest discover -s tests/unit -p "*.py"
-python -B tools/check_repository.py
+ctest --test-dir build -C Release --output-on-failure
+python -m unittest discover -s tests/unit -p "*.py"
+python tools/check_repository.py
 ```
 
-These checks require no ROM. CTest checks remain active in Release builds.
-[Windows CI](../.github/workflows/build.yml) runs the synthetic suites and audits
-the installed package.
+CTest runs the native suites below. The Python tests exercise the scenario
+parser and source inventory. The repository check scans files and Git history
+for generated or private content. [Windows CI](../.github/workflows/build.yml)
+runs all three and also checks the contents of the installed package.
 
 | CTest suite | Coverage |
 | --- | --- |
@@ -33,21 +34,18 @@ the installed package.
 | `app-smoke` | Actual hidden application startup, renderer/menu initialization and clean shutdown |
 | `app-preferences` | Separate application restarts, saved bindings, Unicode paths, preserved SRAM/backup and future settings versions |
 
-The Python tests cover scenario parsing and source inventories, including malformed
-layouts, corrupt ROM/source matches and incorrect callback contracts. Public
-fixtures contain synthetic data, button schedules and scalar observations.
+## Tests with a player-supplied ROM
 
-## Private ROM and host checks
-
-The application can verify a ROM without importing it:
+To verify a ROM without importing it, run the executable and read its exit code.
 
 ```powershell
-& ".\build\Release\Hamtaro - Ham-Ham Heartbreak.exe" --verify-rom "PATH_TO_ROM"
+& ".\build\Release\Hamtaro - Ham-Ham Heartbreak.exe" --verify-rom "PATH_TO_ROM" | Out-Host
+$LASTEXITCODE
 ```
 
-Exit code 0 means the identity and full hash match; 2 means they do not.
-Additional storage/session checks use temporary profiles and preserve the input
-ROM:
+Exit code `0` means the ROM passed validation, `2` indicates a rejected ROM,
+and `1` indicates an error such as a file that could not be read. The storage
+and session checks below use temporary profiles.
 
 ```powershell
 & .\build\Release\hn_storage_tests.exe "PATH_TO_ROM"
@@ -55,28 +53,26 @@ ROM:
 & .\build\Release\hn_session_tests.exe "PATH_TO_ROM" --audio
 ```
 
-The audio option requires an output device and plays 600 paced game frames. It
-checks SDL sample availability as well as session behavior. Listening and waveform
-comparison are separate checks when investigating an audible defect.
+The `--audio` option requires an output device. It plays 600 game frames at
+normal speed and checks that SDL receives enough samples throughout playback.
 
 ## Gameplay scenarios
 
 ### Two-process Cable Link
 
-Use a private save with Ham-Jam and the first two songs unlocked. The worker is a
-test executable, never part of the ZIP. The runner starts two independent
-processes, connects them over loopback TCP, and sends ordinary game inputs.
+Use a save that opens Ham-Jam from the title menu, with different dances available
+for the first two songs and the second slot free for each. Supply a new output
+directory. The runner starts two game processes, connects them over loopback TCP
+and operates the original menus with ordinary button inputs.
 
 ```powershell
-python -B tools/check_lan.py --worker build/Release/hn_link_game.exe --rom "PATH_TO_ROM" --save "PATH_TO_SAVE" --work "PATH_TO_NEW_LAN_PROOF"
+python tools/check_lan.py --worker build/Release/hn_link_game.exe --rom "PATH_TO_ROM" --save "PATH_TO_SAVE" --work "PATH_TO_NEW_LAN_PROOF"
 ```
 
-It verifies two-way trades of different dances, send/receive, exact received
-payloads, in-game slot saving and reload in fresh processes. Cancellation and
-disconnect must return to the original error UI without changing either save.
-Profiles and the result report stay in the requested private directory. The
-source save is hashed before and after. This does not replace a two-PC firewall
-and network check.
+The runner compares the received dances with the ones offered, saves them in
+the game and reloads them in fresh processes. It also checks one-way transfers,
+cancellation and disconnect. The output directory contains the test profiles
+and `proof.json`.
 
 ### Story and activities
 
@@ -87,13 +83,13 @@ save. The test-only native probe defaults to `build/Release/hn_reference_probe.d
 Start the main route from erased SRAM:
 
 ```powershell
-python -B tools/run_scenario.py --rom "PATH_TO_ROM" --scenario tests/scenarios/sunny_peak.json --session-test build/Release/hn_session_tests.exe --desktop-profile "PATH_TO_NEW_SUNNY_PROFILE"
+python tools/run_scenario.py --rom "PATH_TO_ROM" --scenario tests/scenarios/sunny_peak.json --session-test build/Release/hn_session_tests.exe --desktop-profile "PATH_TO_NEW_SUNNY_PROFILE"
 ```
 
 Then continue from its saved result in a new process:
 
 ```powershell
-python -B tools/run_scenario.py --rom "PATH_TO_ROM" --scenario tests/scenarios/sandy_bay.json --save "PATH_TO_NEW_SUNNY_PROFILE/game.sav" --session-test build/Release/hn_session_tests.exe --desktop-profile "PATH_TO_NEW_SANDY_PROFILE"
+python tools/run_scenario.py --rom "PATH_TO_ROM" --scenario tests/scenarios/sandy_bay.json --save "PATH_TO_NEW_SUNNY_PROFILE/game.sav" --session-test build/Release/hn_session_tests.exe --desktop-profile "PATH_TO_NEW_SANDY_PROFILE"
 ```
 
 `--desktop-profile` requires `--session-test`, a new directory outside the checkout
@@ -117,9 +113,8 @@ The main story is a chain of saved continuations, in this order:
 | `spat_tower.json` | Tower puzzle, battle retreat and Hamscope upgrade |
 | `spat_battle.json` | Spat defeat, credits and saved postgame |
 
-Each continuation needs the preceding route's original saved state. Inputs are
-not designed for verbatim concatenation inside one live session. The first
-checkpoint in each scenario describes its prerequisite.
+Start each continuation in a fresh process using the previous route's save.
+The first checkpoint in the scenario describes its starting state.
 
 Additional scenarios and named routes cover:
 
@@ -158,8 +153,8 @@ Unicorn and compares their state with compiled native operations. It requires:
 Use focused groups while changing a subsystem:
 
 ```powershell
-python -B tools/compare_reference.py --rom "PATH_TO_ROM" --reference "PATH_TO_DECOMP" --audio-only
-python -B tools/compare_reference.py --rom "PATH_TO_ROM" --reference "PATH_TO_DECOMP" --bank2-only --bios-oracle "PATH_TO_BIOS_ORACLE"
+python tools/compare_reference.py --rom "PATH_TO_ROM" --reference "PATH_TO_DECOMP" --audio-only
+python tools/compare_reference.py --rom "PATH_TO_ROM" --reference "PATH_TO_DECOMP" --bank2-only --bios-oracle "PATH_TO_BIOS_ORACLE"
 ```
 
 The tool's `--help` lists all family selectors, including scenes, actors,
@@ -167,10 +162,11 @@ collisions, records, area banks, scanlines and local music. A full run with the
 independent video, BIOS and bus checks is:
 
 ```powershell
-python -B tools/compare_reference.py --rom "PATH_TO_ROM" --reference "PATH_TO_DECOMP" --bios-oracle "PATH_TO_BIOS_ORACLE" --video-oracle "PATH_TO_VIDEO_ORACLE" --bus-oracle "PATH_TO_BUS_ORACLE" --timings-json "PATH_OUTSIDE_CHECKOUT/timings.json"
+python tools/compare_reference.py --rom "PATH_TO_ROM" --reference "PATH_TO_DECOMP" --bios-oracle "PATH_TO_BIOS_ORACLE" --video-oracle "PATH_TO_VIDEO_ORACLE" --bus-oracle "PATH_TO_BUS_ORACLE" --timings-json "PATH_OUTSIDE_CHECKOUT/timings.json"
 ```
 
-Use `--oracle-runtime-dir` if oracle executables require compiler runtime DLLs.
+Use `--oracle-runtime-dir` with `compare_reference.py` if the external reference
+executables need compiler runtime DLLs.
 Reports include elapsed time and assertion counts by family. Keep compared
 sources unchanged during a run.
 
@@ -191,11 +187,11 @@ Set `HAMTARO_NATIVE_WORK` to an external work directory and `MGBA_SOURCE` to the
 mGBA source path. With Ninja and a compatible C/C++ toolchain on `PATH`:
 
 ```powershell
-cmake -S tests/integration/mgba -B "$env:HAMTARO_NATIVE_WORK/mgba-oracle" -G Ninja -DCMAKE_BUILD_TYPE=Release -DMGBA_SOURCE="$env:MGBA_SOURCE"
+cmake -S tests/integration/mgba -B "$env:HAMTARO_NATIVE_WORK/mgba-oracle" -G Ninja -DCMAKE_BUILD_TYPE=Release "-DMGBA_SOURCE=$env:MGBA_SOURCE"
 cmake --build "$env:HAMTARO_NATIVE_WORK/mgba-oracle" --target hn-video-oracle hn-audio-oracle hn-bios-oracle hn-bus-oracle
-python -B tools/compare_video.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-video-oracle.exe"
-python -B tools/compare_audio.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-audio-oracle.exe"
-python -B tools/compare_bios.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-bios-oracle.exe"
+python tools/compare_video.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-video-oracle.exe"
+python tools/compare_audio.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-audio-oracle.exe"
+python tools/compare_bios.py --oracle "$env:HAMTARO_NATIVE_WORK/mgba-oracle/hn-bios-oracle.exe"
 ```
 
 Video comparisons use RGB555 precision. Analytical tests in `render` also cover
@@ -207,12 +203,13 @@ hardware output or complete scene timing.
 ### Source inventories
 
 ```powershell
-python -B tools/inventory_reference.py --reference "PATH_TO_DECOMP"
-python -B tools/inventory_reference.py --reference "PATH_TO_DECOMP" --background-scripts --rom "PATH_TO_ROM"
-python -B tools/inventory_reference.py --reference "PATH_TO_DECOMP" --task-callbacks --rom "PATH_TO_ROM"
+python tools/inventory_reference.py --reference "PATH_TO_DECOMP"
+python tools/inventory_reference.py --reference "PATH_TO_DECOMP" --background-scripts --rom "PATH_TO_ROM"
+python tools/inventory_reference.py --reference "PATH_TO_DECOMP" --task-callbacks --rom "PATH_TO_ROM"
 ```
 
-The default inventory groups source families and explicit dispatch bindings.
+The default inventory reads `build/function-symbols.json` from the decompilation
+checkout and groups the functions by source file and native callback binding.
 The ROM-backed modes check compiled background-script layouts and typed
 text-task callback stores, rejecting unknown layouts and source/ROM mismatches.
 Use `--json` for machine-readable output. An inventory identifies dependencies;
@@ -228,24 +225,18 @@ it does not establish reachability or gameplay completion.
 | Scenario only | Parser tests, probe/host replay, full SRAM comparison and fresh save continuation |
 | Documentation or package contents | Links, factual commands, repository/package audit and unchanged executable/probe hashes |
 
-Use existing story results as regression context, with their source revision and
-binary hashes. A narrow change does not require replaying unrelated routes.
-Keep logs, timing reports, captures and saves outside Git. Hardware/controller
-testing and clean-Windows startup remain distinct from hidden smoke tests.
-
 ## Packaging
 
-After a successful Release build:
+Build Release first, then install it and generate the ZIP from that build.
 
 ```powershell
 cmake --install build --config Release --prefix build/package
-cpack --config build/CPackConfig.cmake -C Release -B build
-python -B tools/check_repository.py --package build/package
-git diff --check
+python tools/check_repository.py --package build/package
+cpack --config build/CPackConfig.cmake -C Release -B build/distribution
 ```
 
-The archive is named `Hamtaro - Ham-Ham Heartbreak <version>.zip`, using the
-version in `CMakeLists.txt`. Its contents are:
+The archive is written to `build/distribution/Hamtaro - Ham-Ham Heartbreak <version>.zip`.
+The version comes from `CMakeLists.txt`. The expected files are listed below.
 
 ```text
 Hamtaro - Ham-Ham Heartbreak.exe
@@ -256,13 +247,11 @@ licenses/
   mGBA-MPL-2.0.txt
 ```
 
-README and developer documentation stay in the source repository. The package
-excludes ROMs, saves, settings, tests and reference tools. Check the ZIP entries
-and extracted bytes as well as the install directory; installing into an old
-directory does not remove obsolete files.
+Before distributing the ZIP, check its contents against this list and compare
+the extracted executable's SHA-256 with `build/Release/Hamtaro - Ham-Ham Heartbreak.exe`.
+The repository checker validates the install directory. CPack packages the
+configured build separately.
 
-For a hidden packaged startup check, run the installed executable with
-`--smoke-test`. Without `--data-dir`, it creates and removes its own temporary
-profile. An explicit `--data-dir` is preserved, so use a disposable directory.
-The repository checker audits public files and historical Git objects for
-private/generated content; it does not classify copyright or license rights.
+To check startup, run the extracted executable with `--smoke-test`. It opens a
+hidden window and exits with code `0` on success. When run with just this flag,
+the test creates and removes a temporary profile.

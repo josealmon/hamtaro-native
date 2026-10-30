@@ -71,28 +71,27 @@ is selected in its own title menu, independently of the launcher language.
 | Start | Enter | Start |
 | Select | Right Shift | Back / View |
 | Open pause menu | Escape | Right-stick click |
-| Resume | Escape, or Resume in the menu | Resume in the menu |
+| Resume | Escape, or **Home → Resume** | **Home → Resume** |
 | Toggle fullscreen | F11 | — |
 
-Change game bindings in **Controls**. Assigning W, A, S or D to an action disables
-the WASD movement shortcut until those keys are free. Resetting controls restores
-the default bindings and enables WASD again.
+Change game bindings in **Controls**. Assigning W, A, S or D to an action turns
+off the WASD movement shortcut. Once all four keys are free, you can enable it
+again. **Reset controls** restores the default bindings and enables WASD.
 
 ## Cable Link over LAN
 
 1. Start the game on both PCs, then press **Escape** and open **Cable Link**.
 2. On one PC, choose **Create connection**. On the other, enter the displayed
    IPv4 address for your shared Wi-Fi or Ethernet network and choose **Join by IP**.
-3. Once both show **Connected**, resume and open **Ham-Jam** from the title menu.
-   Choose a song and dance, open **Trade**, and select **Send Ham-Jam** or
-   **Get Ham-Jam**. Confirm the delivery and choose a save slot in the game.
+3. Once both show **Connected**, press **Escape** or choose **Home → Resume**.
+   Open **Ham-Jam** from the game's title menu, choose a song and dance, then open
+   **Trade**. Both players can select **Send Ham-Jam** to swap dances, or one can
+   select **Get Ham-Jam** to receive only. Save each received dance in a slot.
 
 Both PCs need this port with a compatible Cable Link protocol and their own ROM.
-TCP port **24816** must be reachable on the local network; allow the application
-through Windows Firewall on your private network if prompted. No Internet server,
-account or router port forwarding is required. Disconnect from the Cable Link
-panel when finished. This protocol connects copies of this port, not GBA hardware
-or emulator link implementations.
+The host listens on TCP port **24816**. If Windows Firewall prompts the host,
+allow the application on the private network. Choose **Disconnect** in the
+Cable Link tab when finished.
 
 ## Saves and settings
 
