@@ -39,8 +39,8 @@ See [tested scope](docs/architecture.md#tested-scope) for coverage details.
 3. Select your compatible `.gba` file in the launcher.
 4. Choose **Play**.
 
-Requires **Windows 10 or 11, 64-bit**. No BIOS file is needed, and the game works
-offline. The launcher copies the validated ROM into your local profile; it does
+Requires **Windows 10 or 11, 64-bit**. No BIOS file is needed.
+The launcher copies the validated ROM into your local profile; it does
 not modify the file you selected.
 
 ### Supported ROM
