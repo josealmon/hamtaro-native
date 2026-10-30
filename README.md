@@ -25,9 +25,11 @@ resources are not included.
 - **Compatible save files:** import an original 32 KiB `.sav` and continue playing.
   Saves and settings stay in your profile when you replace the executable.
 - **Pause and resume with Escape**, with access to settings while playing.
+- **Cable Link over LAN:** exchange Ham-Jam dances between two PCs using
+  **Create connection** and **Join by IP**.
 
 Single-player routes have been tested through the ending, all 21 reconciliations
-and all 86 Ham-Chats. Cable Link and multiplayer are not supported.
+and all 86 Ham-Chats. The story remains single-player.
 See [tested scope](docs/architecture.md#tested-scope) for coverage details.
 
 ## Getting started
@@ -78,6 +80,22 @@ is selected in its own title menu, independently of the launcher language.
 Change game bindings in **Controls**. Assigning W, A, S or D to an action disables
 the WASD movement shortcut until those keys are free. Resetting controls restores
 the default bindings and enables WASD again.
+
+## Cable Link over LAN
+
+1. Start the game on both PCs, then press **Escape** and open **Cable Link**.
+2. On one PC, choose **Create connection**. On the other, enter the displayed
+   IPv4 address for your shared Wi-Fi or Ethernet network and choose **Join by IP**.
+3. Once both show **Connected**, resume and open **Ham-Jam** from the title menu.
+   Choose a song and dance, open **Trade**, and select **Send Ham-Jam** or
+   **Get Ham-Jam**. Confirm the delivery and choose a save slot in the game.
+
+Both PCs need this port with a compatible Cable Link protocol and their own ROM.
+TCP port **24816** must be reachable on the local network; allow the application
+through Windows Firewall on your private network if prompted. No Internet server,
+account or router port forwarding is required. Disconnect from the Cable Link
+panel when finished. This protocol connects copies of this port, not GBA hardware
+or emulator link implementations.
 
 ## Saves and settings
 

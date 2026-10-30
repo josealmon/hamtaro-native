@@ -1,6 +1,7 @@
 #pragma once
 #include "app/rom.h"
 #include "game/runtime.h"
+#include "platform/lan.h"
 #include <memory>
 #include <optional>
 namespace hn {
@@ -9,8 +10,12 @@ class Session {
     std::unique_ptr<HNGame> game_;
     Save committed_{};
     std::optional<Save> pending_;
+    HNLink link_{};
+    LanLink lan_;
     void capture_save();
 public:
+    LanLink &lan() { return lan_; }
+    void poll_link() { lan_.poll(link_); }
     bool start(const Paths &,Rom rom);
     bool frame(const Paths &,std::uint16_t buttons);
     void persist(const Paths &);

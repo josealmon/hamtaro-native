@@ -19,6 +19,7 @@ the installed package.
 
 | CTest suite | Coverage |
 | --- | --- |
+| `lan` | Real loopback TCP, fragmented messages, invalid version/data, repeated trades, cancellation, disconnect and native record publication |
 | `probe` | Bulk snapshots against guest bus reads, boundaries, mirrors and partial faults |
 | `core` | Memory, DMA, BIOS, video, IRQ/timing, input, PRNG, heap and script control |
 | `game` | Resources, maps, saves, actors, motion, collision, text tasks, dialogs and records |
@@ -59,6 +60,25 @@ checks SDL sample availability as well as session behavior. Listening and wavefo
 comparison are separate checks when investigating an audible defect.
 
 ## Gameplay scenarios
+
+### Two-process Cable Link
+
+Use a private save with Ham-Jam and the first two songs unlocked. The worker is a
+test executable, never part of the ZIP. The runner starts two independent
+processes, connects them over loopback TCP, and sends ordinary game inputs.
+
+```powershell
+python -B tools/check_lan.py --worker build/Release/hn_link_game.exe --rom "PATH_TO_ROM" --save "PATH_TO_SAVE" --work "PATH_TO_NEW_LAN_PROOF"
+```
+
+It verifies two-way trades of different dances, send/receive, exact received
+payloads, in-game slot saving and reload in fresh processes. Cancellation and
+disconnect must return to the original error UI without changing either save.
+Profiles and the result report stay in the requested private directory. The
+source save is hashed before and after. This does not replace a two-PC firewall
+and network check.
+
+### Story and activities
 
 `tools/run_scenario.py` feeds ordinary buttons into the native runtime and checks
 read-only state observations. It does not inject RAM, force RNG or modify an input

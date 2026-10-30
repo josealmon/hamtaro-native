@@ -37,6 +37,7 @@ def dispatches() -> dict[int, list[str]]:
     definitions = (
         ("main", "scene.c", "hn_scene_callback"),
         ("main", "save_group4.c", "hn_group4_callback"),
+        ("main", "link.c", "hn_link_callback"),
         ("main", "save_group4_ui.c", "hn_group4_ui_callback"),
         ("text-task", "save_group4.c", "hn_group4_task"),
         ("main", "text.c", "hn_scene_text_callback"),

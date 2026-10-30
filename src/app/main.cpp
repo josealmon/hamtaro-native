@@ -223,6 +223,7 @@ struct App {
     std::shared_ptr<DialogState> dialog=std::make_shared<DialogState>();
     hn::Rom rom;
     std::string message;
+    char link_ip[64]="";
     bool error=false,paused=false,running=true,settings_writable=true;
     int remap_key=-1,remap_button=-1,page=0;
     bool waiting_release=true,audio_pending=false,frame_ready=false;
@@ -531,6 +532,30 @@ struct App {
         if(changed||volume_changed)audio.gain(settings.volume,settings.mute);
         if(changed)save_preferences();
     }
+    void cable_link() {
+        auto &lan=session.lan();auto state=lan.state();
+        ImGui::Spacing();
+        ImGui::TextWrapped("%s",tr(settings,"Connect two PCs on the same network, then choose Trade in Ham-Jam."));
+        ImGui::Spacing();
+        const bool busy=state==hn::LanLink::State::listening||state==hn::LanLink::State::connecting||state==hn::LanLink::State::connected;
+        ImGui::BeginDisabled(!session.playable()||busy);
+        if(ImGui::Button(tr(settings,"Create connection"),ImVec2(220,0)))lan.host();
+        ImGui::Spacing();ImGui::TextUnformatted(tr(settings,"Other PC's IP (IPv4)"));
+        ImGui::SetNextItemWidth(std::min(300.f,ImGui::GetContentRegionAvail().x));
+        ImGui::InputText("##link-ip",link_ip,sizeof(link_ip));
+        if(ImGui::Button(tr(settings,"Join by IP"),ImVec2(220,0)))lan.join(link_ip);
+        ImGui::EndDisabled();ImGui::Spacing();
+        if(!session.present())ImGui::TextWrapped("%s",tr(settings,"Start the game before connecting."));
+        state=lan.state();
+        const char *status=state==hn::LanLink::State::listening?"Waiting for the other PC...":state==hn::LanLink::State::connecting?"Connecting...":state==hn::LanLink::State::connected?"Connected":state==hn::LanLink::State::error?lan.error().c_str():"Disconnected";
+        ImGui::TextWrapped("%s",tr(settings,status));
+        if(!lan.addresses().empty())ImGui::TextWrapped("IP: %s",lan.addresses().c_str());
+        if(state!=hn::LanLink::State::disconnected&&ImGui::Button(tr(settings,"Disconnect"))) {lan.disconnect();session.poll_link();}
+        ImGui::Spacing();
+        ImGui::BeginDisabled(!session.playable());
+        if(ImGui::Button(tr(settings,"Resume"),ImVec2(220,0)))resume_game();
+        ImGui::EndDisabled();
+    }
     void draw(SDL_Window *window) {
         if(session.playable()&&!paused)return;
         auto *viewport=ImGui::GetMainViewport();
@@ -540,13 +565,13 @@ struct App {
         if(logo.value)draw_artwork(logo.value,300.f,std::clamp(viewport->WorkSize.y*0.14f,60.f,100.f),true);
         else ImGui::TextUnformatted(game_title);
         ImGui::Spacing();
-        const char *pages[]={tr(settings,"Home"),tr(settings,"Controls"),tr(settings,"Video and audio")};
+        const char *pages[]={tr(settings,"Home"),tr(settings,"Controls"),tr(settings,"Video and audio"),"Cable Link"};
         float navigation_width=16.f;
         for(const auto *label:pages)navigation_width+=ImGui::CalcTextSize(label).x+36.f;
         ImGui::SetCursorPosX(ImGui::GetCursorPosX()+std::max(0.f,(ImGui::GetContentRegionAvail().x-navigation_width)/2));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding,18.f);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize,0);
-        for(int i=0;i<3;i++) {
+        for(int i=0;i<4;i++) {
             if(i)ImGui::SameLine(0,8);
             ImGui::PushStyleColor(ImGuiCol_Button,page==i?ImVec4(0.98f,0.85f,0.64f,1):ImVec4(0,0,0,0));
             if(ImGui::Button(pages[i],ImVec2(ImGui::CalcTextSize(pages[i]).x+36.f,36.f)))page=i;
@@ -555,7 +580,8 @@ struct App {
         ImGui::PopStyleVar(2);ImGui::Spacing();
         if(page==0)home(window);
         else if(page==1)controls();
-        else presentation(window);
+        else if(page==2)presentation(window);
+        else cable_link();
         if(!message.empty()) {
             ImGui::Spacing();ImGui::Separator();
             ImGui::PushStyleColor(ImGuiCol_Text,error?ImVec4(0.68f,0.19f,0.13f,1):ImVec4(0.29f,0.43f,0.19f,1));
@@ -642,6 +668,7 @@ int run(int argc,char **argv)
             SDL_Event e;
             while(SDL_PollEvent(&e))dispatch(e);
             app.poll_dialog();
+            if(!app.session.playable()||app.paused)app.session.poll_link();
             const bool updated=app.advance();
             const bool minimized=(SDL_GetWindowFlags(window.value)&SDL_WINDOW_MINIMIZED)!=0;
             const bool playing=app.session.playable()&&!app.paused;

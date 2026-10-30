@@ -120,6 +120,29 @@ unreadable files and future schema versions are reported and preserved. File
 dialogs are asynchronous, and callback result storage remains valid if the app
 closes before a dialog completes.
 
+## Cable Link
+
+`game/link.c` adapts the original Initialize/Process/StopCommunicationExchange
+callbacks, retaining the send/receive choice, received-record flags, original
+menus and save-slot writes. `platform/lan.cpp` carries the selected 128-byte dance
+and song index over a nonblocking TCP connection. It replaces the GBA serial
+transport; it does not emulate serial registers, IRQ timing or an emulator's
+network protocol. Unrelated serial-device accesses remain unsupported.
+
+The host-only mailbox is outside guest RAM/SRAM. Protocol 1 identifies AH3P
+revision 0, uses fixed-size bounded messages and per-exchange IDs, validates
+record ranges, and confirms both records before publishing a received record.
+Partial messages, incompatible versions and disconnected peers cannot supply
+partial records to the game. The game's existing save-slot UI performs the
+actual SRAM writes. Disconnecting after a completed delivery does not roll back
+that delivery or synchronize both PCs' disks atomically.
+
+Networking is idle until explicitly enabled and closes with the game session.
+The launcher continues polling while paused. A peer confirms the exchange via
+the original menu; B cancels an unfinished exchange and releases the peer's wait.
+The LAN protocol is intended for trusted local networks and does not provide
+Internet discovery or authentication.
+
 ## Tested scope
 
 This matrix summarizes recorded function comparisons, native input scenarios and
@@ -137,13 +160,15 @@ every build.
 | Video and sound | Synthetic PPU, BIOS, bus and audio comparisons; sampled clocked raster effects; focused scene regressions and paced SDL audio delivery |
 | Windows frontend | Startup, settings persistence, keyboard remapping/play, pause, fullscreen restoration, artwork and menu layout reviewed in the application |
 | Controllers | SDL virtual-gamepad hotplug, mappings, deadzone, short taps and disconnect tested |
+| Cable Link | Two native processes over loopback TCP; different dances exchanged in both directions, send/receive, original slot saving and fresh-process reload; cancellation and disconnect preserve saves |
 
 Coverage is not exhaustive across optional branches, random minigame layouts or
 hardware timing. Physical controllers, startup on a clean Windows installation
 without development tools, and one uninterrupted full desktop playthrough have
 not been validated. The release imports only Windows system DLLs and links the
 MSVC runtime statically; this is a dependency check, not a clean-machine test.
-Cable Link and internal game editors are outside the supported scope.
+Cable Link between two physical PCs remains to be checked. Internal game editors
+are outside the supported scope.
 
 ## Extending the port
 

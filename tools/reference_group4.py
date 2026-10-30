@@ -220,4 +220,4 @@ def check_group4_ui(*,entries,rom,memory,bind,call,both,fresh,equal,compare,nati
             call('RenderCommunicationTextLine',args,0x02010000,palette,limit=4000000);compare('glyph replacements and unknown characters',ranges)
             fixture();both(args,payload+b'\0');equal(lines(memory,args,0x02010000,palette,255),True,'composer multiline helper')
             call('RenderCommunicationTextLines',args,0x02010000,palette,255,limit=4000000);compare('multiline helper and heap cleanup',ranges)
-    print('All 27 local Ham-Jam UI/text functions matched: Main contracts, five languages, task lifetimes, wrapped tile columns, scroll modes and text helpers. Cable Link transport remains excluded.')
+    print('All 27 local Ham-Jam UI/text functions matched: Main contracts, five languages, task lifetimes, wrapped tile columns, scroll modes and text helpers.')

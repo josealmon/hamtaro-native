@@ -351,7 +351,7 @@ def check_group4(*,entries,rom,memory,bind,call,both,fresh,equal,compare):
             if kind in (2,4):both(0x03002180,bytes(96))
             if kind in (3,5):both(0x03002180,bytes([255])*96)
             exercise("ScriptCallbackCheckReceivedCommunicationFlags")
-    print("Five shared local group4 callbacks matched; full byte/control and column domains, aliases, flags and classification modes. Link transport remains unsupported.")
+    print("Five shared local group4 callbacks matched; full byte/control and column domains, aliases, flags and classification modes.")
 
 
 def check_records(*, entries, rom, memory, cpu, bind, call, both, fresh,

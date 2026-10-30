@@ -1,4 +1,5 @@
 #include "game/scene.h"
+#include "game/link.h"
 #include "game/state.h"
 #include "game/input.h"
 #include "game/background.h"
@@ -524,7 +525,8 @@ HNSceneResult hn_scene_callback(HNMemory *m,GameAddr callback,GameAddr arguments
         hn_write16(m,0x0201DC40,keys);hn_write16(m,0x03002180,(uint16_t)((keys<<6)|(hn_read16(m,0x03002180)&63)));break;
     }
     default:{
-        HNSceneResult result=hn_counter_scene_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        HNSceneResult result=hn_link_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
+        result=hn_counter_scene_callback(m,callback,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_records_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_group4_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;
         result=hn_group3_callback(m,callback,arguments,consumed);if(result!=HN_SCENE_UNKNOWN)return result;

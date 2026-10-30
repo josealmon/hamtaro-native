@@ -22,18 +22,23 @@ bool Session::start(const Paths &paths,Rom rom)
     Save saved=load_save(paths);
     rom_=std::move(rom);game_=std::make_unique<HNGame>();committed_=saved;
     if(!hn_game_initialize(game_.get(),rom_->data(),rom_->size(),saved.data()))return false;
+    game_->memory.link=&link_;
     capture_save();persist(paths);return true;
 }
 bool Session::frame(const Paths &paths,std::uint16_t buttons)
 {
     persist(paths);
+    poll_link();
+    if(game_)game_->memory.link=&link_;
     if(!playable()||!hn_game_frame(game_.get(),buttons))return false;
+    if(game_->frames==0){lan_.disconnect();link_={};}
+    poll_link();
     /* Failed updates may have partially modified SRAM. Never persist those bytes. */
     capture_save();persist(paths);return true;
 }
 void Session::stop(const Paths &paths)
 {
-    persist(paths);game_.reset();rom_.reset();
+    persist(paths);lan_.disconnect();link_={};game_.reset();rom_.reset();
 }
 std::span<const std::uint32_t> Session::pixels() const
 { return game_?std::span<const std::uint32_t>(game_->pixels):std::span<const std::uint32_t>{}; }

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 cmake_policy(SET CMP0091 NEW)
-project(HamtaroNative VERSION 0.1.0 LANGUAGES C CXX)
+project(HamtaroNative VERSION 0.2.0 LANGUAGES C CXX)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -20,7 +20,7 @@ add_library(hn_core STATIC
     src/game/render.c src/game/presets.c src/game/actor_presets.c src/game/map_choice.c src/game/particles.c src/game/bank2.c src/game/bank3.c src/game/bank3_games.c src/game/bank3_chain.c src/game/bank4.c src/game/bank4_presets.c src/game/bank4_path.c src/game/wander.c src/game/scene_actor.c src/game/animation.c src/game/draw.c src/game/background.c src/game/graphics.c src/game/raster.c
     src/game/bank5.c src/game/bank5_presets.c
     src/game/bank6.c src/game/bank6_presets.c src/game/bank6_targets.c src/game/bank6_chain.c
-    src/game/bank7.c src/game/record_selection.c src/game/save_group4.c src/game/save_group4_ui.c src/game/scene_selection.c
+    src/game/bank7.c src/game/record_selection.c src/game/save_group4.c src/game/save_group4_ui.c src/game/scene_selection.c src/game/link.c
     src/game/presentation.c src/game/presentation_background.c src/game/presentation_window.c
     src/game/audio.c src/game/audio_sequence.c src/game/audio_note.c src/game/audio_player.c
     src/game/audio_psg.c src/game/audio_mixer.c)
@@ -37,8 +37,11 @@ add_library(hn_platform STATIC src/platform/input.cpp src/platform/audio.cpp)
 target_include_directories(hn_platform PUBLIC src)
 target_link_libraries(hn_platform PUBLIC SDL3::SDL3-static hn_storage hn_core)
 add_library(hn_session STATIC src/app/session.cpp)
+add_library(hn_lan STATIC src/platform/lan.cpp)
+target_include_directories(hn_lan PUBLIC src)
+target_link_libraries(hn_lan PUBLIC hn_core ws2_32 iphlpapi)
 target_include_directories(hn_session PUBLIC src)
-target_link_libraries(hn_session PUBLIC hn_storage hn_core)
+target_link_libraries(hn_session PUBLIC hn_storage hn_core hn_lan)
 add_executable(hamtaro-native WIN32 src/app/main.cpp)
 set(HN_GAME_FILENAME "Hamtaro - Ham-Ham Heartbreak")
 set_target_properties(hamtaro-native PROPERTIES OUTPUT_NAME "${HN_GAME_FILENAME}")
@@ -53,11 +56,17 @@ target_sources(hamtaro-native PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated/app
 set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/generated/app.rc" PROPERTIES OBJECT_DEPENDS "${HN_BRANDING_FILES}")
 target_link_libraries(hamtaro-native PRIVATE hn_platform hn_imgui hn_session gdiplus)
 if(MSVC)
-    foreach(target hn_core hn_storage hn_platform hn_session hamtaro-native)
+    foreach(target hn_core hn_storage hn_platform hn_session hn_lan hamtaro-native)
         target_compile_options(${target} PRIVATE /W4 /utf-8)
     endforeach()
 endif()
 if(BUILD_TESTING)
+    add_executable(hn_lan_tests tests/integration/lan.cpp)
+    target_link_libraries(hn_lan_tests PRIVATE hn_lan)
+    add_test(NAME lan COMMAND hn_lan_tests)
+    set_tests_properties(lan PROPERTIES TIMEOUT 30)
+    add_executable(hn_link_game tests/integration/link_game.cpp)
+    target_link_libraries(hn_link_game PRIVATE hn_session)
     get_target_property(HN_CORE_SOURCES hn_core SOURCES)
     add_library(hn_reference_probe SHARED ${HN_CORE_SOURCES} tests/integration/reference_probe.c)
     target_include_directories(hn_reference_probe PRIVATE src)

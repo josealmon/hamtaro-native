@@ -10,6 +10,7 @@ typedef uint32_t GameAddr;
 enum { HN_ROM_BASE = 0x08000000, HN_SRAM_SIZE = 32768 };
 struct HNTimers;
 struct HNApu;
+struct HNLink;
 typedef struct {
     const uint8_t *rom;
     size_t rom_size;
@@ -22,6 +23,7 @@ typedef struct {
     /* Optional native devices. These host links are never guest/serialized data. */
     struct HNTimers *timers;
     struct HNApu *apu;
+    struct HNLink *link;
 } HNMemory;
 void hn_memory_init(HNMemory *, const uint8_t *rom, size_t size);
 uint8_t hn_read8(HNMemory *, GameAddr);
