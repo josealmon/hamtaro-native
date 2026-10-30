@@ -12,7 +12,8 @@ are distributed.
   Licensed under the zlib license; see `licenses/SDL.txt` in the Windows package.
 - **Dear ImGui 1.93.0:** Copyright (c) 2014-2026 Omar Cornut and contributors.
   Licensed under the MIT license; see `licenses/Dear-ImGui.txt` in the Windows package.
-- **mGBA 0.10.5:** the BIOS arithmetic helpers in `src/gba/bios_math.c` are adapted
+- **mGBA 0.10.5:** the BIOS arithmetic helpers in
+  [`src/gba/bios_math.c`](https://github.com/josealmon/hamtaro-native/blob/v1.0.0/src/gba/bios_math.c) are adapted
   from code Copyright (c) 2013-2015 Jeffrey Pfau, under MPL 2.0.
   See `licenses/mGBA-MPL-2.0.txt`.
 

@@ -31,7 +31,7 @@ See [tested scope](docs/architecture.md#tested-scope) for coverage details.
 
 ## Getting started
 
-1. Extract the Windows ZIP into a folder.
+1. Download the Windows ZIP from the [latest release](https://github.com/josealmon/hamtaro-native/releases/latest) and extract it into a folder.
 2. Run **`Hamtaro - Ham-Ham Heartbreak.exe`**.
 3. Select your compatible `.gba` file in the launcher.
 4. Choose **Play**.
