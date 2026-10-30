@@ -19,9 +19,6 @@ resources are not included.
 - **Resizable window and fullscreen**, preserving the original aspect ratio.
   Nearest-neighbor rendering keeps pixels sharp; integer scaling is optional.
 - **Volume and mute controls**, plus optional pausing when switching applications.
-- **Five launcher languages:** English, Spanish, French, German and Italian.
-  The launcher follows the Windows display language, falling back to English,
-  and lets you choose a language manually.
 - **Compatible save files:** import an original 32 KiB `.sav` and continue playing.
   Saves and settings stay in your profile when you replace the executable.
 - **Pause and resume with Escape**, with access to settings while playing.
